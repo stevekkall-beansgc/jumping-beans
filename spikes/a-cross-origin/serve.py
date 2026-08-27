@@ -12,6 +12,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         # WebMCP is DISABLED in non-origin-isolated documents (Chrome docs).
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        # CORP lets a COEP:require-corp parent embed our cross-origin assets/iframes.
+        self.send_header("Cross-Origin-Resource-Policy", "cross-origin")
         super().end_headers()
 
 socketserver.ThreadingTCPServer.allow_reuse_address = True
