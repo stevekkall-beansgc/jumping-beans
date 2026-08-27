@@ -1,0 +1,20 @@
+{
+  "$id": "profile.schema.json",
+  "type": "object",
+  "properties": {
+    "personaId": { "type": "string" },
+    "displayName": { "type": "string" },
+    "recurringCategories": {
+      "type": "array", "items": { "type": "string" },
+      "description": "e.g. ['dog-food', 'coffee', 'watches']"
+    },
+    "budgetCeilings": {
+      "type": "object", "additionalProperties": { "type": "number" },
+      "description": "category -> max acceptable price"
+    },
+    "preferredChannels": {
+      "type": "array", "items": { "enum": ["email", "sms", "app"] }
+    }
+  },
+  "required": ["personaId", "recurringCategories"]
+}

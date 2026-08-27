@@ -1,0 +1,56 @@
+[
+  {
+    "sku": "kibble-12",
+    "name": "Kibble 12kg — Chicken & Rice",
+    "category": "dog-food",
+    "listPrice": 31.5,
+    "dealPrice": 24.75,
+    "imageUrl": "/img/kibble-12.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "treats-2pk",
+    "name": "Hearty Treats (2 pack)",
+    "category": "dog-food",
+    "listPrice": 11.0,
+    "dealPrice": 7.5,
+    "imageUrl": "/img/treats-2pk.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "kibble-7",
+    "name": "Kibble 7kg — Salmon",
+    "category": "dog-food",
+    "listPrice": 22.0,
+    "dealPrice": 18.0,
+    "imageUrl": "/img/kibble-7.svg",
+    "expiresAt": "2026-08-30T23:59:00-04:00"
+  },
+  {
+    "sku": "wet-cans-24",
+    "name": "Wet Food Variety (24 cans)",
+    "category": "dog-food",
+    "listPrice": 38.0,
+    "dealPrice": 29.9,
+    "imageUrl": "/img/wet-cans-24.svg",
+    "expiresAt": "2026-09-02T23:59:00-04:00"
+  },
+  {
+    "sku": "litter-10",
+    "name": "Clumping Litter 10kg",
+    "category": "cat-supplies",
+    "listPrice": 14.5,
+    "dealPrice": 11.25,
+    "imageUrl": "/img/litter-10.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "toys-3pk",
+    "name": "Squeaky Toys (3 pack)",
+    "category": "pet-toys",
+    "listPrice": 9.99,
+    "dealPrice": 6.5,
+    "imageUrl": "/img/toys-3pk.svg",
+    "expiresAt": "2026-09-01T23:59:00-04:00"
+  }
+]

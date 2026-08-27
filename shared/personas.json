@@ -1,0 +1,18 @@
+{
+  "personas": [
+    {
+      "personaId": "alex-budget-parent",
+      "displayName": "Alex — budget parent",
+      "recurringCategories": ["dog-food"],
+      "budgetCeilings": { "dog-food": 35 },
+      "preferredChannels": ["email", "app"]
+    },
+    {
+      "personaId": "jamie-gift-shopper",
+      "displayName": "Jamie — gift shopper",
+      "recurringCategories": ["jewelry"],
+      "budgetCeilings": { "jewelry": 500 },
+      "preferredChannels": ["app"]
+    }
+  ]
+}

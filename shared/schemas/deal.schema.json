@@ -1,0 +1,16 @@
+{
+  "$id": "deal.schema.json",
+  "type": "object",
+  "properties": {
+    "sku": { "type": "string" },
+    "name": { "type": "string" },
+    "category": { "type": "string" },
+    "listPrice": { "type": "number" },
+    "dealPrice": { "type": "number" },
+    "imageUrl": { "type": "string" },
+    "partnerId": { "type": "string" },
+    "partnerName": { "type": "string" },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["sku", "name", "category", "listPrice", "dealPrice", "partnerId"]
+}
