@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>spike declarative</title>
+<form id="f" toolname="register_interest"
+      tooldescription="Log the shopper's interest in a product at a target price."
+      toolautosubmit>
+  <label>Product
+    <select name="product" toolparamdescription="Product being considered">
+      <option value="chrono-42">Chrono 42</option>
+      <option value="diver-100">Diver 100</option>
+    </select></label>
+  <label>Target price
+    <input type="number" name="price_point" min="0"
+           toolparamdescription="The price the shopper says they'd pay"></label>
+  <button type="submit">Notify me</button>
+</form>
+<pre id="log"></pre>
+<script>
+  document.getElementById("f").addEventListener("submit", (e) => {
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    console.log("submit", { agentInvoked: e.agentInvoked, data });
+    if (e.agentInvoked) {
+      e.preventDefault();
+      // ⚠️ respondWith() is the agent-response path — under active spec debate.
+      e.respondWith?.(Promise.resolve({ ok: true, stored: data }));
+    }
+    document.getElementById("log").textContent = JSON.stringify(data);
+  });
+</script>
