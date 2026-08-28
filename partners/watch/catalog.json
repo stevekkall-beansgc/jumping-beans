@@ -1,20 +1,38 @@
 [
   {
-    "sku": "watch-a",
-    "name": "Featured Item",
-    "category": "general",
-    "listPrice": 20,
-    "dealPrice": 14.5,
-    "imageUrl": "/img/watch-a.svg",
-    "expiresAt": "2026-08-28T23:59:00-04:00"
+    "sku": "chrono-42",
+    "name": "Chrono 42 — Automatic",
+    "category": "watches",
+    "listPrice": 410.0,
+    "dealPrice": 340.0,
+    "imageUrl": "/img/chrono-42.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
   },
   {
-    "sku": "watch-b",
-    "name": "Second Item",
-    "category": "general",
-    "listPrice": 12,
-    "dealPrice": 8,
-    "imageUrl": "/img/watch-b.svg",
-    "expiresAt": "2026-09-02T23:59:00-04:00"
+    "sku": "field-38",
+    "name": "Field 38 — Leather Strap",
+    "category": "watches",
+    "listPrice": 260.0,
+    "dealPrice": 199.0,
+    "imageUrl": "/img/field-38.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "dive-200",
+    "name": "Dive 200 — Steel Bracelet",
+    "category": "watches",
+    "listPrice": 520.0,
+    "dealPrice": 449.0,
+    "imageUrl": "/img/dive-200.svg",
+    "expiresAt": "2026-08-30T23:59:00-04:00"
+  },
+  {
+    "sku": "quartz-36",
+    "name": "Quartz 36 — Minimal",
+    "category": "watches",
+    "listPrice": 140.0,
+    "dealPrice": 105.0,
+    "imageUrl": "/img/quartz-36.svg",
+    "expiresAt": "2026-09-01T23:59:00-04:00"
   }
 ]

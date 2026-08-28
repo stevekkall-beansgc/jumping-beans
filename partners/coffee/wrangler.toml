@@ -1,0 +1,6 @@
+# Jumping Beans partner — Cloudflare Pages.
+# _headers in this dir sends COOP/COEP/CORP + Origin-Trial.
+# Deploy: npx wrangler pages deploy partners/coffee --project-name coffee
+name = "coffee"
+pages_build_output_dir = "."
+compatibility_date = "2025-01-01"

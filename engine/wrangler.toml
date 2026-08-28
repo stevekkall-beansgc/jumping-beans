@@ -1,0 +1,8 @@
+# Jumping Beans Engine — Cloudflare Worker.
+# Deploy: npm i -g wrangler && wrangler login && wrangler deploy (from engine/)
+name = "jumping-beans-engine"
+main = "index.mjs"
+compatibility_date = "2025-01-01"
+
+[observability]
+enabled = true
