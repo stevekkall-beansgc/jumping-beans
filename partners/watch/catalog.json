@@ -1,0 +1,20 @@
+[
+  {
+    "sku": "watch-a",
+    "name": "Featured Item",
+    "category": "general",
+    "listPrice": 20,
+    "dealPrice": 14.5,
+    "imageUrl": "/img/watch-a.svg",
+    "expiresAt": "2026-08-28T23:59:00-04:00"
+  },
+  {
+    "sku": "watch-b",
+    "name": "Second Item",
+    "category": "general",
+    "listPrice": 12,
+    "dealPrice": 8,
+    "imageUrl": "/img/watch-b.svg",
+    "expiresAt": "2026-09-02T23:59:00-04:00"
+  }
+]

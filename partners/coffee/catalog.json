@@ -1,0 +1,38 @@
+[
+  {
+    "sku": "single-origin-250",
+    "name": "Single Origin 250g — Colombia",
+    "category": "beans",
+    "listPrice": 16.5,
+    "dealPrice": 12.75,
+    "imageUrl": "/img/single-origin-250.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "cold-brew-4",
+    "name": "Cold Brew Concentrate (4-pack)",
+    "category": "ready-to-drink",
+    "listPrice": 18,
+    "dealPrice": 13.5,
+    "imageUrl": "/img/cold-brew-4.svg",
+    "expiresAt": "2026-08-27T23:59:00-04:00"
+  },
+  {
+    "sku": "espresso-1kg",
+    "name": "Espresso Blend 1kg",
+    "category": "beans",
+    "listPrice": 24,
+    "dealPrice": 19,
+    "imageUrl": "/img/espresso-1kg.svg",
+    "expiresAt": "2026-08-30T23:59:00-04:00"
+  },
+  {
+    "sku": "pour-over-kit",
+    "name": "Pour Over Starter Kit",
+    "category": "gear",
+    "listPrice": 29,
+    "dealPrice": 22,
+    "imageUrl": "/img/pour-over-kit.svg",
+    "expiresAt": "2026-09-01T23:59:00-04:00"
+  }
+]

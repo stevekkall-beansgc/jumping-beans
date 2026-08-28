@@ -1,0 +1,25 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "cross-origin"
+        },
+        {
+          "key": "Origin-Trial",
+          "value": "ApZ+H3jqPGKjT0YNAZBQwJDCqB00qIo+zoVgAYLS+vZ7JjsUy+2cloSHF36nHKVOFD7zSgUxcRCDOYrvQ1CKLg8AAABxeyJvcmlnaW4iOiJodHRwczovL2p1bXBpbmctYmVhbnMtd2F0Y2gudmVyY2VsLmFwcDo0NDMiLCJmZWF0dXJlIjoiV2ViTUNQIiwiZXhwaXJ5IjoxNzk0ODczNjAwLCJpc1N1YmRvbWFpbiI6dHJ1ZX0="
+        }
+      ]
+    }
+  ]
+}

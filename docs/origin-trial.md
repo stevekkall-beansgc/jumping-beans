@@ -20,13 +20,17 @@ token, because **iframes do not inherit origin-trial access from their parent**
 5. Accept terms → Register. Token is generated immediately.
 6. Paste each token into its unit's config (below).
 
-## Tokens land in
-| Unit | Origin | Config to update |
+## Tokens land in (registration COMPLETE 08-27 — all four wired)
+| Unit | Origin | Token located at |
 |---|---|---|
-| engine | `https://<engine>.workers.dev` | `shared/config.js` `/ ORIGINS.engine` + Worker `Origin-Trial` header |
-| petsupply | `https://<petsupply>.netlify.app` | `partners/petsupply/_headers` |
-| coffee | `https://<coffee>.vercel.app` | `partners/coffee/vercel.json` headers |
-| watch | `https://<watch>.vercel.app` | `partners/watch/vercel.json` headers + `/merchant` |
+| engine | `https://your-engine.workers.dev` | `engine/index.mjs` Worker `Origin-Trial` header |
+| petsupply | `https://jumping-beans-petsupply.netlify.app` | `partners/petsupply/_headers` |
+| coffee | `https://jumping-beans-coffee.vercel.app` | `partners/coffee/vercel.json` headers |
+| watch | `https://jumping-beans-watch.vercel.app` | `partners/watch/vercel.json` headers + `/merchant` |
+
+Each token decodes to the origin shown (verified: payload `origin` = the unit's
+origin). Engine/coffee/watch deployed URLs are the registered placeholders — if a
+unit is deployed to a different URL, its token must be re-issued for the real origin.
 
 The `Origin-Trial` header value (or `<meta http-equiv="origin-trial" …>`)
 carries the token. Local dev on `localhost` uses the flag

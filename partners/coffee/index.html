@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Origin-Trial" content="AmOLegitCVp8eN/d/0rMijRWN8RrD/cCSNEP7dVSp0nzY++4REOVvG7Fg11gQlJ/3zMeyZM3r4CQvyp8I9rBJwsAAAByeyJvcmlnaW4iOiJodHRwczovL2p1bXBpbmctYmVhbnMtY29mZmVlLnZlcmNlbC5hcHA6NDQzIiwiZmVhdHVyZSI6IldlYk1DUCIsImV4cGlyeSI6MTc5NDg3MzYwMCwiaXNTdWJkb21haW4iOnRydWV9">
+  <title>Coffee Co — Jumping Beans</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: #faf9f6; color: #222; }
+    header { background: #222; color: #fff; padding: 18px 24px; }
+    header h1 { margin: 0; font-size: 1.2rem; }
+    main { max-width: 880px; margin: 0 auto; padding: 24px; }
+    #banner { font-weight: 600; margin-bottom: 18px; color: #444; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
+    .card { background: #fff; border: 1px solid #e5e2dc; border-radius: 12px; padding: 14px; }
+    .card .thumb { width: 64px; height: 64px; border-radius: 10px; background:#eef1ec;
+      object-fit: cover; margin-bottom: 10px; display:block; }
+    .card .cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: #8a887f; }
+    .card h3 { font-size: 1rem; margin: 4px 0 8px; }
+    .price { display: flex; gap: 8px; align-items: baseline; }
+    .list { text-decoration: line-through; color: #999; font-size: 0.85rem; }
+    .deal { font-weight: 700; color: #0a7d33; }
+    .save { background: #e7f5ec; color: #0a7d33; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; }
+    .expiry { margin-top: 8px; font-size: 0.82rem; color: #b45309; }
+  </style>
+</head>
+<body>
+  <header><h1>Coffee Co</h1></header>
+  <main>
+    <p id="banner">Today's specials</p>
+    <div class="grid" id="grid"></div>
+  </main>
+  <script type="module" src="./tool.js"></script>
+  <script type="module" src="./storefront.js"></script>
+</body>
+</html>
