@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Jumping Beans — your deal engine</title>
+  <style>
+    :root {
+      --ink: #1c1f1a; --muted: #6c6f66; --line: #e6e2d8;
+      --cream: #faf8f3; --bean: #7a4a2b; --leaf: #2f6b3f;
+      --accent: #c96f2e;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+           margin: 0; background: var(--cream); color: var(--ink); }
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+             padding: 16px 26px; background: #241a12; color: #f5efe4; }
+    header .logo { font-weight: 800; font-size: 1.25rem; letter-spacing: .01em; }
+    header .logo span { color: var(--accent); }
+    header .sub { color: #b7a892; font-size: .8rem; }
+    .rail { margin-left: auto; display: flex; align-items: center; gap: 10px;
+            font-size: .82rem; background: rgba(255,255,255,.07);
+            padding: 6px 12px; border-radius: 999px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #888; }
+    .dot[data-on="1"] { background: #53d769; box-shadow: 0 0 0 3px rgba(83,215,105,.15); }
+
+    main { max-width: 980px; margin: 0 auto; padding: 22px 26px 60px; }
+    .controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+    label { font-size: .8rem; color: var(--muted); }
+    select { font: inherit; padding: 8px 12px; border: 1px solid var(--line);
+             border-radius: 10px; background: #fff; }
+    .modebadge { font-size: .72rem; color: var(--muted); margin-left: auto;
+                 background: #fff; border: 1px solid var(--line); padding: 5px 10px; border-radius: 999px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px; }
+    .card { background: #fff; border: 1px solid var(--line); border-radius: 16px;
+            padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .chip { font-size: .74rem; font-weight: 700; background: #f3ead9; color: var(--bean);
+            padding: 3px 9px; border-radius: 999px; }
+    .origin { font-size: .68rem; color: var(--muted); font-family: ui-monospace, monospace; }
+    .thumb-row { display: flex; gap: 12px; align-items: center; }
+    .thumb { width: 54px; height: 54px; border-radius: 12px; object-fit: cover;
+             background: #f1eee7; display: flex; align-items: center; justify-content: center;
+             font-size: 26px; }
+    .desc h3 { margin: 0 0 2px; font-size: .98rem; }
+    .desc .cat { font-size: .74rem; color: var(--muted); text-transform: capitalize; }
+    .price { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+    .list { text-decoration: line-through; color: #b0aca1; font-size: .85rem; }
+    .deal { font-weight: 800; color: var(--leaf); font-size: 1.1rem; }
+    .save { background: #e6f3e9; color: var(--leaf); font-size: .74rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 999px; }
+    .expiry { margin-top: 9px; font-size: .78rem; color: #b45309; }
+    .empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line);
+             border-radius: 16px; background: #fff; }
+
+    section.preview { margin-top: 26px; }
+    .preview h2 { font-size: .95rem; color: var(--ink); display:flex; align-items:center; gap:10px; }
+    .tabs { display: inline-flex; background: #eee9de; border-radius: 999px; padding: 3px; }
+    .tabs button { font: inherit; font-size: .78rem; border: 0; background: transparent;
+                   padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--muted); }
+    .tabs button[data-on="1"] { background: #fff; color: var(--ink); font-weight: 700;
+                                box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+    .box { margin-top: 12px; background: #fff; border: 1px solid var(--line); border-radius: 16px;
+           padding: 18px; min-height: 120px; }
+    .box .muted { color: var(--muted); font-size: .78rem; }
+    .email-head { font-weight: 700; margin-bottom: 12px; }
+    .email-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0;
+                 border-bottom: 1px solid var(--line); }
+    .cta { margin-top: 6px; background: var(--bean); color: #fff; border: 0; font: inherit;
+           font-size: .74rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+    .notif { padding: 9px 12px; border-left: 3px solid var(--accent); background: #fbf7ef;
+             margin-bottom: 8px; border-radius: 8px; font-size: .85rem; }
+
+    footer { color: var(--muted); font-size: .74rem; text-align: center; padding: 26px; }
+    #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+             background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 999px;
+             font-size: .84rem; opacity: 0; transition: opacity .25s; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+    .partner-frame { position: fixed; width: 1px; height: 1px; left: -9999px; opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Jumping <span>Beans</span></div>
+    <div class="sub">your deal engine — discover offers across shops</div>
+    <div class="rail">
+      <span class="dot" id="status-dot" data-on="0"></span>
+      <span id="status">Connecting partners…</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls">
+      <div>
+        <label for="persona">Shopping as</label>
+        <select id="persona"></select>
+      </div>
+      <span class="modebadge" id="mode">Agent tools: …</span>
+    </div>
+
+    <div class="grid" id="feed"></div>
+
+    <section class="preview">
+      <h2>
+        Channel preview
+        <span class="tabs" id="tabs">
+          <button data-channel="email" data-on="1">Email</button>
+          <button data-channel="sms">SMS</button>
+          <button data-channel="app">App</button>
+        </span>
+        <span class="modebadge" id="preview-title">EMAIL</span>
+        <span class="modebadge" id="last-run"></span>
+      </h2>
+      <div class="box" id="preview"></div>
+    </section>
+  </main>
+
+  <footer>Jumping Beans — a small open convention on top of WebMCP. Offers served cross-origin from partner shops.</footer>
+  <div id="toast"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
