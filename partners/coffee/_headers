@@ -1,0 +1,5 @@
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: cross-origin
+  Origin-Trial: AtLIWKMEYrVNftP1hRxbJeOLD0Arr+8JHwV+SJEbOaTZMSMUUZo24Pu6NDMa35IJ7A3BFZmlNJRKJePDeCVKdA8AAABneyJvcmlnaW4iOiJodHRwczovL2NvZmZlZS1hbWsucGFnZXMuZGV2OjQ0MyIsImZlYXR1cmUiOiJXZWJNQ1AiLCJleHBpcnkiOjE3OTQ4NzM2MDAsImlzU3ViZG9tYWluIjp0cnVlfQ==

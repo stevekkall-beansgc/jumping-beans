@@ -1,55 +1,46 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Petsupply — Dog &amp; Cat Deals</title>
-<!-- Origin-trial token for this origin (paste once issued):
-<meta http-equiv="origin-trial" content="TOKEN_GOES_HERE">
--->
-<style>
-  :root { color-scheme: light; }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: #fafaf7; color: #1f2a24; line-height: 1.5;
-  }
-  header.top {
-    background: #2f6b4f; color: #fff; padding: 18px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  header.top .brand { font-weight: 800; font-size: 20px; letter-spacing: .2px; }
-  header.top .tag { font-size: 13px; opacity: .9; }
-  main { max-width: 960px; margin: 0 auto; padding: 24px; }
-  .banner { border-radius: 12px; padding: 16px 20px;
-    background: #eaf4ec; margin-bottom: 22px; }
-  .banner b { color: #2f6b4f; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 16px; }
-  .card { background: #fff; border: 1px solid #e6e3da; border-radius: 12px; padding: 16px; }
-  .card .thumb { width: 64px; height: 64px; border-radius: 10px; background:#eef1ec;
-    object-fit: cover; margin-bottom: 10px; display:block; }
-  .card h3 { margin: 0 0 4px; font-size: 16px; }
-  .card .cat { color: #7a847c; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
-  .card .price { margin-top: 8px; }
-  .card .deal { color: #2f6b4f; font-weight: 800; font-size: 18px; }
-  .card .list { color: #9aa39c; text-decoration: line-through; font-size: 14px; margin-right: 8px; }
-  .card .expiry { font-size: 12px; color: #c2542c; margin-top: 6px; }
-  .card .save { background:#eaf4ec; color:#2f6b4f; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:700; }
-  footer { text-align:center; color:#9aa39c; font-size:12px; padding: 24px; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Petsupply — current dog and cat offers</title>
+  <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./storefront.css">
 </head>
-<body>
-<header class="top">
-  <div class="brand">🐕 Petsupply</div>
-  <div class="tag">Dog &amp; cat deals, direct from the shop</div>
-</header>
-<main>
-  <div class="banner">Today's dog-food specials are live — <b>Kibble 12kg and Hearty Treats</b> drop to their lowest prices at midnight. Deals are verified by Petsupply.</div>
-  <div class="grid" id="grid"><p>Loading catalog…</p></div>
-</main>
-<footer>Petsupply · Deals expire daily · Prices in USD</footer>
+<body data-product-theme="evergreen" data-partner-name="Petsupply">
+  <a class="skip-link" href="#main">Skip to current offers</a>
 
-<script type="module" src="./tool.js"></script>
-<script type="module" src="./storefront.js"></script>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <a class="brand" href="./">Petsupply</a>
+        <p class="tagline">Dog and cat products from the current catalog snapshot</p>
+      </div>
+      <span class="partner-status">Opted-in WebMCP partner</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-intro" aria-labelledby="offers-title">
+      <p class="eyebrow">Partner storefront</p>
+      <h1 id="offers-title">Current offers from Petsupply</h1>
+      <p>This page works as a regular storefront. When Jumping Beans opens it with scoped display rules, those rules change presentation only.</p>
+    </section>
+
+    <aside class="provenance-banner" id="banner" aria-label="Catalog provenance">
+      <strong>Opted-in partner, public-feed inventory</strong>
+      <span>Petsupply exposes structured offers through WebMCP. The underlying catalog records came from a public Shopify feed and are not independently verified by Jumping Beans.</span>
+    </aside>
+
+    <ul class="grid" id="grid" aria-live="polite" aria-busy="true">
+      <li class="loading-status">Loading the catalog…</li>
+    </ul>
+  </main>
+
+  <footer class="site-footer">Prices are in USD. Check the merchant page for the current price, availability, terms, and shipping.</footer>
+
+  <script type="module" src="./tool.js"></script>
+  <script type="module" src="./storefront.js"></script>
 </body>
 </html>

@@ -22,6 +22,10 @@ Product repository for the Jumping Beans affiliate and partner experiences.
 - Cloudflare/Vercel deployment checks are read-only unless explicitly
   approved. Never print, commit, or copy credentials.
 
+## Test commands
+
+- Unit gate: `node scripts/check-product.mjs`
+
 ## Hub and release
 
 Actionable work enters the gated Agency Hub and is performed in an isolated

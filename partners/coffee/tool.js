@@ -1,18 +1,44 @@
 // Jumping Beans partner: Coffee Co (coffee). Imperative WebMCP tool.
-// Build constant, per unit: the engine origin this shop exposes its tool to.
-const CONCIERGE_ORIGIN = "http://localhost:8082"; // prod: https://jumping-beans-coffee.vercel.app
+// Self-contained deployment contract: localhost/loopback partners expose only
+// to the matching local engine; deployed partners expose only to production.
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const RUNTIME_MODE = LOCAL_HOSTS.has(location.hostname) ? "local" : "production";
+const ENGINE_ORIGINS = Object.freeze({
+  local: `${location.protocol}//${location.hostname}:8082`,
+  production: "https://jumping-beans-engine.steve-k-kall.workers.dev",
+});
+const CONCIERGE_ORIGIN = ENGINE_ORIGINS[RUNTIME_MODE];
 const PARTNER_NAME = "Coffee Co";
 const PARTNER_ID = "coffee";
 const TOOL_NAME = "get_matching_deals";
 
 const catalog = await fetch("/catalog.json").then((r) => r.json());
+const TESTIMONIALS = {
+  LGLIGT10: {
+    type: "testimonial",
+    text: "A bright, easy everyday roast with a smooth finish.",
+    source: "Coffee Co customer story",
+  },
+};
+
+function enrich(deal) {
+  const savedPct = Math.round((1 - deal.dealPrice / deal.listPrice) * 100);
+  return {
+    ...deal,
+    collateral: [
+      { type: "image", url: deal.imageUrl, label: "Merchant product image" },
+      { type: "price-proof", text: `${savedPct}% below list price`, source: PARTNER_NAME },
+      ...(TESTIMONIALS[deal.sku] ? [TESTIMONIALS[deal.sku]] : []),
+    ],
+  };
+}
 
 await document.modelContext.registerTool(
   {
     name: TOOL_NAME,
     title: "Get matching deals",
     description:
-      "Return current deals from Coffee Co in the given categories, optionally under a max price. Deals are live and verified by the shop.",
+      "Return Coffee Co catalog offers in the given categories, optionally under a max price. The opted-in shop supplies records from a public feed; Jumping Beans has not independently verified them.",
     inputSchema: {
       type: "object",
       properties: {
@@ -31,7 +57,17 @@ await document.modelContext.registerTool(
               (maxPrice == null || d.dealPrice <= maxPrice) &&
               (!signal || !signal.aborted)
           )
-          .map((d) => ({ ...d, partnerId: PARTNER_ID, partnerName: PARTNER_NAME })),
+          .map((d) => ({
+            ...enrich(d),
+            partnerId: PARTNER_ID,
+            partnerName: PARTNER_NAME,
+            provenance: {
+              actor: PARTNER_NAME,
+              source: d.source || "partner catalog",
+              verification: "partner-provided; not independently verified by Jumping Beans",
+              expiresAt: d.expiresAt,
+            },
+          })),
       };
     },
   },

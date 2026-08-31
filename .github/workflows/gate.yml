@@ -1,0 +1,10 @@
+name: gate
+
+on: [pull_request, push]
+
+jobs:
+  compliance:
+    uses: stevekkall-beansgc/gate-kit/.github/workflows/compliance.yml@v0.4.4
+    with:
+      repo: jumping-beans
+      full: false

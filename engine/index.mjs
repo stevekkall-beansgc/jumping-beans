@@ -4,7 +4,7 @@
 import assets from "./static.js"; // generated: { "index.html": "...", ... }
 
 const TRIAL =
-  "Ascygt4b5yEkD+QNPGIKxZcPw1XSlZc89jsqQynpM2rK4aaiRnnABVokA84+byAu668NW7f60E30dEUJqIarswUAAABqeyJvcmlnaW4iOiJodHRwczovL3lvdXItZW5naW5lLndvcmtlcnMuZGV2OjQ0MyIsImZlYXR1cmUiOiJXZWJNQ1AiLCJleHBpcnkiOjE3OTQ4NzM2MDAsImlzU3ViZG9tYWluIjp0cnVlfQ==";
+  "Agi8UYnlGG38Bx/n9WLYXzqTEW2xnHv6SMR0ANCNg8i/SS15D+xcmLNqkoVtqrfQM2JHkr7DC0mTY2ZJpj+MkQgAAACAeyJvcmlnaW4iOiJodHRwczovL2p1bXBpbmctYmVhbnMtZW5naW5lLnN0ZXZlLWsta2FsbC53b3JrZXJzLmRldjo0NDMiLCJmZWF0dXJlIjoiV2ViTUNQIiwiZXhwaXJ5IjoxNzk0ODczNjAwLCJpc1N1YmRvbWFpbiI6dHJ1ZX0=";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",

@@ -3,36 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="dark light">
   <meta http-equiv="Origin-Trial" content="ApZ+H3jqPGKjT0YNAZBQwJDCqB00qIo+zoVgAYLS+vZ7JjsUy+2cloSHF36nHKVOFD7zSgUxcRCDOYrvQ1CKLg8AAABxeyJvcmlnaW4iOiJodHRwczovL2p1bXBpbmctYmVhbnMtd2F0Y2gudmVyY2VsLmFwcDo0NDMiLCJmZWF0dXJlIjoiV2ViTUNQIiwiZXhwaXJ5IjoxNzk0ODczNjAwLCJpc1N1YmRvbWFpbiI6dHJ1ZX0=">
-  <title>Watch Co — Jumping Beans</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; background: #faf9f6; color: #222; }
-    header { background: #222; color: #fff; padding: 18px 24px; }
-    header h1 { margin: 0; font-size: 1.2rem; }
-    main { max-width: 880px; margin: 0 auto; padding: 24px; }
-    #banner { font-weight: 600; margin-bottom: 18px; color: #444; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
-    .card { background: #fff; border: 1px solid #e5e2dc; border-radius: 12px; padding: 14px; }
-    .card .thumb { width: 64px; height: 64px; border-radius: 10px; background:#eef1ec;
-      object-fit: cover; margin-bottom: 10px; display:block; }
-    .card .cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: #8a887f; }
-    .card h3 { font-size: 1rem; margin: 4px 0 8px; }
-    .price { display: flex; gap: 8px; align-items: baseline; }
-    .list { text-decoration: line-through; color: #999; font-size: 0.85rem; }
-    .deal { font-weight: 700; color: #0a7d33; }
-    .save { background: #e7f5ec; color: #0a7d33; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; }
-    .expiry { margin-top: 8px; font-size: 0.82rem; color: #b45309; }
-  </style>
+  <title>Watch Co — current watch offers</title>
+  <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./storefront.css">
 </head>
-<body>
-  <header><h1>Watch Co</h1></header>
-  <main>
-    <p id="banner">Today's specials</p>
-    <div class="grid" id="grid"></div>
+<body data-product-theme="cobalt" data-partner-name="Watch Co">
+  <a class="skip-link" href="#main">Skip to current offers</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <a class="brand" href="./">Watch Co</a>
+        <p class="tagline">Watches from the current catalog snapshot</p>
+      </div>
+      <span class="partner-status">Opted-in WebMCP partner</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-intro" aria-labelledby="offers-title">
+      <p class="eyebrow">Partner storefront</p>
+      <h1 id="offers-title">Current offers from Watch Co</h1>
+      <p>This page works as a regular storefront. When Jumping Beans opens it with scoped display rules, those rules change presentation only.</p>
+    </section>
+
+    <aside class="provenance-banner" id="banner" aria-label="Catalog provenance">
+      <strong>Opted-in partner, public-feed inventory</strong>
+      <span>Watch Co exposes structured offers through WebMCP. The underlying catalog records came from a public Shopify feed and are not independently verified by Jumping Beans.</span>
+    </aside>
+
+    <ul class="grid" id="grid" aria-live="polite" aria-busy="true">
+      <li class="loading-status">Loading the catalog…</li>
+    </ul>
+
+    <form
+      class="interest-form"
+      id="interest"
+      toolname="register_interest"
+      tooldescription="Record the shopper's non-binding interest in a watch at a target price. The opted-in shop uses the aggregate as a demand signal."
+      toolautosubmit
+      aria-labelledby="interest-title"
+      aria-describedby="interest-hint interest-retention"
+    >
+      <h2 id="interest-title">Share a target price</h2>
+      <p class="form-hint" id="interest-hint">This is not an order, reservation, or notification signup. It records one non-binding target-price demand signal for the shop.</p>
+      <p class="form-hint" id="interest-retention">Scope: Watch Co demand research. Retention: up to 30 days in deployed KV, or up to 30 days in this browser for the local fallback. Outcome: the aggregate merchant view can change; no notification or purchase is created.</p>
+
+      <div class="form-row">
+        <div class="field">
+          <label for="interest-product">Product</label>
+          <select id="interest-product" name="product" required toolparamdescription="The watch the shopper is considering">
+            <option value="NIV-77007Q45">Nivada Grenchen Autochron Reverse Panda - Bracelet</option>
+            <option value="NIV-77006Q45">Nivada Grenchen Autochron Panda - Bracelet</option>
+            <option value="NIV-77005Q45">Nivada Grenchen Autochron Blue - Bracelet</option>
+            <option value="NIV-77004Q45">Nivada Grenchen Autochron Orange - Bracelet</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="interest-price">Target price in USD</label>
+          <p class="field-hint" id="price-hint">Enter the price you would consider paying.</p>
+          <input
+            id="interest-price"
+            type="number"
+            name="pricePoint"
+            min="1"
+            step="1"
+            inputmode="decimal"
+            required
+            aria-describedby="price-hint"
+            toolparamdescription="The non-binding target price in US dollars"
+          >
+        </div>
+      </div>
+
+      <label class="consent-check" for="interest-confirmed">
+        <input
+          id="interest-confirmed"
+          name="confirmed"
+          type="checkbox"
+          value="true"
+          required
+          toolparamdescription="Must be true only after the shopper explicitly confirms the exact product, target price, 30-day retention, and non-notification outcome"
+        >
+        <span>I confirm this exact product and target price may be retained for up to 30 days as a demand signal. I understand no notification or purchase will be created.</span>
+      </label>
+
+      <div class="form-actions">
+        <button class="button-primary" id="interest-submit" type="submit">Record target price</button>
+      </div>
+      <p class="form-message" id="interest-msg" role="status" aria-live="polite" hidden></p>
+    </form>
+
+    <a class="merchant-link" href="./merchant/">View aggregate shopper demand</a>
   </main>
+
+  <footer class="site-footer">Prices are in USD. Check the merchant page for the current price, availability, terms, and shipping.</footer>
+
   <script type="module" src="./tool.js"></script>
   <script type="module" src="./storefront.js"></script>
+  <script type="module" src="./interest.js"></script>
 </body>
 </html>

@@ -1,8 +1,24 @@
 # Deploy — Cloudflare
 
-All four units consolidate on Cloudflare (your choice). You'll need
-`wrangler` + a CF login on **your** machine (this repo's machine has no CF auth).
-One-time: `npm i -g wrangler && wrangler login`.
+All four units deploy through the repository's GitHub Actions workflow:
+`.github/workflows/deploy-cloudflare.yml`. It runs automatically when a
+versioned GitHub release is published, or manually when a maintainer dispatches
+it with the exact confirmation `DEPLOY`. Production credentials stay in the
+GitHub `production` environment and never enter the repository.
+
+Required environment secrets:
+
+- `CLOUDFLARE_API_TOKEN` — an account-scoped token with Workers and Pages edit
+  access.
+- `CLOUDFLARE_ACCOUNT_ID` — the Cloudflare account ID.
+
+For a manual deployment of `main`:
+
+```bash
+gh workflow run deploy-cloudflare.yml \
+  --repo stevekkall-beansgc/jumping-beans \
+  --ref main -f confirm=DEPLOY
+```
 
 ## Tokens: re-issue for the real origins first
 The current origin-trial tokens are pinned to the OLD Netlify/Vercel origins and
@@ -14,33 +30,41 @@ unit's header config — the token lives next to each unit:
 - engine → `engine/index.mjs` (`TRIAL` const)
 - petsupply/coffee/watch → `partners/<id>/_headers`
 
-> Register the *actual* directory name you deploy. Defaults:
-> - engine → `<name>.<account>.workers.dev`
-> - partner → `<id>.<account>.pages.dev`
-> You may use custom domains instead if you have them — just re-register that
-> origin and update `engine/config.js` `ORIGINS` + each partner `exposedTo`.
+> Register the *actual* directory name you deploy. Actual deployed origins
+> (2026-08-28):
+> - engine → `https://jumping-beans-engine.steve-k-kall.workers.dev`
+> - petsupply → `https://petsupply.pages.dev`
+> - coffee → `https://coffee-amk.pages.dev`   (bare `coffee.pages.dev` was taken → CF appends a suffix)
+> - watch → `https://watch-ce8.pages.dev`     (bare `watch.pages.dev` was taken → CF appends a suffix)
+>
+> If you use custom domains instead, just re-register that origin and update
+> `engine/config.js` `ORIGINS` + each partner `exposedTo`/`CONCIERGE_ORIGIN`.
 
-## Deploy
+## Workflow deployment
 
-Engine (Worker) — from `engine/`:
+The workflow performs this read-only preflight from the release checkout:
+
 ```bash
-cd engine
-node bundle-static.mjs          # regenerate static.js from app.js/config.js/index.html
-npx wrangler deploy
+node scripts/check-product.mjs
 ```
 
-Partners (Pages) — from repo root:
-```bash
-npx wrangler pages deploy partners/petsupply --project-name petsupply
-npx wrangler pages deploy partners/coffee   --project-name coffee
-npx wrangler pages deploy partners/watch    --project-name watch
-```
+If it reports stale generated UI or bundle output, run the named refresh
+command and repeat the preflight before any deploy.
 
-## After deploy
+`node scripts/check-product.mjs`, `node scripts/sync-static-ui.mjs --check`,
+and `node engine/bundle-static.mjs --check` must all pass. It then runs the
+pinned Wrangler CLI from `engine/` and from each partner directory. Running
+Watch from inside its directory is required so Cloudflare includes its Pages
+Functions.
+
+> Watch's interest store persists to Cloudflare KV (namespace bound as
+> `WATCH_INTEREST` in `partners/watch/wrangler.toml`), so the storefront POST →
+> `/merchant` GET loop survives across Worker isolates.
+
+## After deployment
 1. Confirm headers on each live URL:
    `curl -sI https://<origin>/ | grep -iE "cross-origin|origin-trial"`
    Expect COOP `same-origin`, COEP `require-corp`, CORP `cross-origin`,
    and an `Origin-Trial` header.
-2. Tell me the 4 real URLs. I flip `engine/config.js` `ORIGINS` (and each
-   partner's `CONCIERGE_ORIGIN`/`exposedTo`) from localhost → prod, then re-verify
-   cross-origin discovery over HTTPS.
+2. Verify the deployed URLs remain the configured production origins in
+   `engine/config.js` and each partner's `CONCIERGE_ORIGIN`/`exposedTo`.

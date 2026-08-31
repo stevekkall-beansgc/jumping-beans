@@ -10,7 +10,23 @@
     "imageUrl": { "type": "string" },
     "partnerId": { "type": "string" },
     "partnerName": { "type": "string" },
-    "expiresAt": { "type": "string", "format": "date-time" }
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "collateral": {
+      "type": "array",
+      "description": "Merchant-provided presentation options for the offer.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["image", "video", "testimonial", "price-proof"] },
+          "url": { "type": "string" },
+          "text": { "type": "string" },
+          "label": { "type": "string" },
+          "source": { "type": "string" },
+          "duration": { "type": "number" }
+        },
+        "required": ["type"]
+      }
+    }
   },
   "required": ["sku", "name", "category", "listPrice", "dealPrice", "partnerId"]
 }

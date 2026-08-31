@@ -13,7 +13,7 @@ token, because **iframes do not inherit origin-trial access from their parent**
 
 ## Register each origin (4×)
 1. Open the registration link, verify you're signed in to a Google account.
-2. Web origin — enter the origin **without a trailing slash**, e.g. `https://jumping-beans-petsupply.netlify.app`
+2. Web origin — enter the origin **without a trailing slash**, e.g. `https://petsupply.pages.dev`
    and check **"Match all subdomains of the origin"** so a single token covers the whole origin.
 3. Leave third-party matching off (first-party use).
 4. Set usage restriction = Standard Limit, expected usage = a small estimate.
@@ -23,14 +23,14 @@ token, because **iframes do not inherit origin-trial access from their parent**
 ## Tokens land in (registration COMPLETE 08-27 — all four wired)
 | Unit | Origin | Token located at |
 |---|---|---|
-| engine | `https://your-engine.workers.dev` | `engine/index.mjs` Worker `Origin-Trial` header |
-| petsupply | `https://jumping-beans-petsupply.netlify.app` | `partners/petsupply/_headers` |
-| coffee | `https://jumping-beans-coffee.vercel.app` | `partners/coffee/vercel.json` headers |
-| watch | `https://jumping-beans-watch.vercel.app` | `partners/watch/vercel.json` headers + `/merchant` |
+| engine | `https://jumping-beans-engine.steve-k-kall.workers.dev` | `engine/index.mjs` Worker `Origin-Trial` header |
+| petsupply | `https://petsupply.pages.dev` | `partners/petsupply/_headers` |
+| coffee | `https://coffee-amk.pages.dev` | `partners/coffee/_headers` |
+| watch | `https://watch-ce8.pages.dev` | `partners/watch/_headers` |
 
 Each token decodes to the origin shown (verified: payload `origin` = the unit's
-origin). Engine/coffee/watch deployed URLs are the registered placeholders — if a
-unit is deployed to a different URL, its token must be re-issued for the real origin.
+origin). If a unit is deployed to a different URL, its token must be re-issued
+for that real origin before the workflow is run.
 
 The `Origin-Trial` header value (or `<meta http-equiv="origin-trial" …>`)
 carries the token. Local dev on `localhost` uses the flag

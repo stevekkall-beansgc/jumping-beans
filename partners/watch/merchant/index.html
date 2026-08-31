@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Watch Co — aggregate demand research</title>
+  <link rel="stylesheet" href="../design-system/tokens.css">
+  <link rel="stylesheet" href="../storefront.css">
+  <link rel="stylesheet" href="./merchant.css">
+</head>
+<body data-product-theme="cobalt" data-partner-name="Watch Co">
+  <a class="skip-link" href="#main">Skip to aggregate demand</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <a class="brand" href="../">Watch Co</a>
+        <p class="tagline">Non-binding target-price research</p>
+      </div>
+      <span class="partner-status">Merchant view</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="page-intro" aria-labelledby="demand-title">
+      <p class="eyebrow">Demand research</p>
+      <h1 id="demand-title">Aggregate shopper target prices</h1>
+      <p>These aggregates come only from shoppers who submitted the storefront form. A submission is not an order, reservation, notification signup, or promise to buy.</p>
+    </section>
+
+    <aside class="provenance-banner" aria-label="Demand data provenance">
+      <strong>Source and retention</strong>
+      <span>Each signal names one eligible catalog SKU and one positive target price. Records expire after at most 30 days in deployed KV or in the local browser fallback. This view refreshes every five seconds.</span>
+    </aside>
+
+    <p class="refresh-status" id="refresh-status" role="status">Loading aggregate demand…</p>
+    <ul class="demand-list" id="demand-rows" aria-busy="true"></ul>
+  </main>
+
+  <footer class="site-footer">Directional demand research only. The catalog remains the source for product names and listed prices.</footer>
+  <script type="module" src="./merchant.js"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+/* Bean Labs design tokens v1.0.0. Canonical values: tokens.json. */
+
+:root {
+  color-scheme: light dark;
+
+  --bl-color-ink-900: #17201b;
+  --bl-color-ink-700: #3f4d44;
+  --bl-color-ink-500: #647269;
+  --bl-color-ink-300: #b9c4bb;
+  --bl-color-ink-100: #e8ece7;
+  --bl-color-paper: #ffffff;
+  --bl-color-canvas: #f6f8f3;
+  --bl-color-green-700: #0e563d;
+  --bl-color-green-600: #176b4d;
+  --bl-color-green-100: #dcefe5;
+  --bl-color-blue-700: #12469d;
+  --bl-color-blue-600: #155eef;
+  --bl-color-blue-100: #e3edff;
+  --bl-color-amber-700: #5c4500;
+  --bl-color-amber-100: #fff0bd;
+  --bl-color-red-700: #8a1c13;
+  --bl-color-red-600: #b42318;
+  --bl-color-red-100: #fee4e2;
+
+  --bl-color-page: var(--bl-color-canvas);
+  --bl-color-surface: var(--bl-color-paper);
+  --bl-color-surface-subtle: #eef2ec;
+  --bl-color-text: var(--bl-color-ink-900);
+  --bl-color-text-muted: #536158;
+  --bl-color-text-inverse: var(--bl-color-paper);
+  --bl-color-border: #c5cec6;
+  --bl-color-border-strong: #718077;
+  --bl-color-link: #145f45;
+  --bl-color-link-visited: #68408c;
+  --bl-color-focus: #005fcc;
+
+  --bl-theme-accent: var(--bl-color-green-600);
+  --bl-theme-accent-strong: var(--bl-color-green-700);
+  --bl-theme-accent-soft: var(--bl-color-green-100);
+  --bl-theme-accent-contrast: var(--bl-color-paper);
+  --bl-color-action: var(--bl-theme-accent);
+  --bl-color-action-hover: var(--bl-theme-accent-strong);
+  --bl-color-action-text: var(--bl-theme-accent-contrast);
+
+  --bl-color-info: var(--bl-color-blue-700);
+  --bl-color-info-surface: var(--bl-color-blue-100);
+  --bl-color-success: var(--bl-color-green-700);
+  --bl-color-success-surface: var(--bl-color-green-100);
+  --bl-color-warning: var(--bl-color-amber-700);
+  --bl-color-warning-surface: var(--bl-color-amber-100);
+  --bl-color-danger: var(--bl-color-red-700);
+  --bl-color-danger-surface: var(--bl-color-red-100);
+
+  --bl-font-family-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bl-font-family-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --bl-font-size-xs: 0.75rem;
+  --bl-font-size-sm: 0.875rem;
+  --bl-font-size-md: 1rem;
+  --bl-font-size-lg: 1.125rem;
+  --bl-font-size-xl: 1.5rem;
+  --bl-font-size-2xl: 2rem;
+  --bl-font-weight-regular: 400;
+  --bl-font-weight-medium: 600;
+  --bl-font-weight-bold: 700;
+  --bl-line-tight: 1.2;
+  --bl-line-body: 1.55;
+
+  --bl-space-0: 0;
+  --bl-space-1: 0.25rem;
+  --bl-space-2: 0.5rem;
+  --bl-space-3: 0.75rem;
+  --bl-space-4: 1rem;
+  --bl-space-5: 1.5rem;
+  --bl-space-6: 2rem;
+  --bl-space-7: 3rem;
+  --bl-space-8: 4rem;
+  --bl-radius-none: 0;
+  --bl-radius-sm: 0.25rem;
+  --bl-radius-md: 0.5rem;
+  --bl-radius-lg: 0.75rem;
+  --bl-radius-full: 999px;
+  --bl-border-width: 1px;
+  --bl-focus-width: 3px;
+  --bl-shadow-raised: 0 1px 2px rgb(23 32 27 / 0.08), 0 8px 24px rgb(23 32 27 / 0.08);
+  --bl-size-target-min: 2.75rem;
+  --bl-size-content: 70ch;
+  --bl-size-layout: 72rem;
+  --bl-motion-fast: 120ms;
+  --bl-motion-standard: 200ms;
+  --bl-motion-slow: 320ms;
+  --bl-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  --bl-z-base: 0;
+  --bl-z-overlay: 100;
+  --bl-z-toast: 200;
+}
+
+:where([data-color-scheme="dark"]) {
+  color-scheme: dark;
+  --bl-color-page: #101612;
+  --bl-color-surface: #17201a;
+  --bl-color-surface-subtle: #202b23;
+  --bl-color-text: #f5f7f1;
+  --bl-color-text-muted: #b8c4ba;
+  --bl-color-text-inverse: #17201b;
+  --bl-color-border: #46534a;
+  --bl-color-border-strong: #809087;
+  --bl-color-link: #8ad5b4;
+  --bl-color-link-visited: #d1a8ed;
+  --bl-color-focus: #86b7ff;
+  --bl-color-info: #b8d1ff;
+  --bl-color-info-surface: #173058;
+  --bl-color-success: #9bd8b8;
+  --bl-color-success-surface: #173b2b;
+  --bl-color-warning: #f1d27a;
+  --bl-color-warning-surface: #3e3212;
+  --bl-color-danger: #ffb4ad;
+  --bl-color-danger-surface: #4a211e;
+  --bl-theme-accent: #78c9a5;
+  --bl-theme-accent-strong: #9ddcbe;
+  --bl-theme-accent-soft: #173b2b;
+  --bl-theme-accent-contrast: #102219;
+}
+
+:where([data-color-scheme="light"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-scheme]) {
+    --bl-color-page: #101612;
+    --bl-color-surface: #17201a;
+    --bl-color-surface-subtle: #202b23;
+    --bl-color-text: #f5f7f1;
+    --bl-color-text-muted: #b8c4ba;
+    --bl-color-text-inverse: #17201b;
+    --bl-color-border: #46534a;
+    --bl-color-border-strong: #809087;
+    --bl-color-link: #8ad5b4;
+    --bl-color-link-visited: #d1a8ed;
+    --bl-color-focus: #86b7ff;
+    --bl-color-info: #b8d1ff;
+    --bl-color-info-surface: #173058;
+    --bl-color-success: #9bd8b8;
+    --bl-color-success-surface: #173b2b;
+    --bl-color-warning: #f1d27a;
+    --bl-color-warning-surface: #3e3212;
+    --bl-color-danger: #ffb4ad;
+    --bl-color-danger-surface: #4a211e;
+    --bl-theme-accent: #78c9a5;
+    --bl-theme-accent-strong: #9ddcbe;
+    --bl-theme-accent-soft: #173b2b;
+    --bl-theme-accent-contrast: #102219;
+  }
+}
+
+:where([data-product-theme="evergreen"]) {
+  --bl-theme-accent: #176b4d;
+  --bl-theme-accent-strong: #0e563d;
+  --bl-theme-accent-soft: #dcefe5;
+  --bl-theme-accent-contrast: #ffffff;
+}
+
+:where([data-product-theme="cobalt"]) {
+  --bl-theme-accent: #1457c7;
+  --bl-theme-accent-strong: #0d469f;
+  --bl-theme-accent-soft: #e3edff;
+  --bl-theme-accent-contrast: #ffffff;
+}
+
+:where([data-product-theme="plum"]) {
+  --bl-theme-accent: #70409a;
+  --bl-theme-accent-strong: #59317d;
+  --bl-theme-accent-soft: #f0e6f7;
+  --bl-theme-accent-contrast: #ffffff;
+}
+
+:where([data-product-theme="ember"]) {
+  --bl-theme-accent: #a13b16;
+  --bl-theme-accent-strong: #7f2e12;
+  --bl-theme-accent-soft: #fbe7dd;
+  --bl-theme-accent-contrast: #ffffff;
+}
+
+:where(
+  [data-color-scheme="dark"][data-product-theme="evergreen"],
+  [data-color-scheme="dark"] [data-product-theme="evergreen"]
+) {
+  --bl-theme-accent: #78c9a5;
+  --bl-theme-accent-strong: #9ddcbe;
+  --bl-theme-accent-soft: #173b2b;
+  --bl-theme-accent-contrast: #102219;
+}
+
+:where(
+  [data-color-scheme="dark"][data-product-theme="cobalt"],
+  [data-color-scheme="dark"] [data-product-theme="cobalt"]
+) {
+  --bl-theme-accent: #8cb4ff;
+  --bl-theme-accent-strong: #b8d1ff;
+  --bl-theme-accent-soft: #173058;
+  --bl-theme-accent-contrast: #10203a;
+}
+
+:where(
+  [data-color-scheme="dark"][data-product-theme="plum"],
+  [data-color-scheme="dark"] [data-product-theme="plum"]
+) {
+  --bl-theme-accent: #d1a8ed;
+  --bl-theme-accent-strong: #e5c7f5;
+  --bl-theme-accent-soft: #382343;
+  --bl-theme-accent-contrast: #24132e;
+}
+
+:where(
+  [data-color-scheme="dark"][data-product-theme="ember"],
+  [data-color-scheme="dark"] [data-product-theme="ember"]
+) {
+  --bl-theme-accent: #ffad86;
+  --bl-theme-accent-strong: #ffc8ad;
+  --bl-theme-accent-soft: #47271d;
+  --bl-theme-accent-contrast: #2b160f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-scheme]) :where([data-product-theme="evergreen"]),
+  :root:not([data-color-scheme])[data-product-theme="evergreen"] {
+    --bl-theme-accent: #78c9a5;
+    --bl-theme-accent-strong: #9ddcbe;
+    --bl-theme-accent-soft: #173b2b;
+    --bl-theme-accent-contrast: #102219;
+  }
+
+  :root:not([data-color-scheme]) :where([data-product-theme="cobalt"]),
+  :root:not([data-color-scheme])[data-product-theme="cobalt"] {
+    --bl-theme-accent: #8cb4ff;
+    --bl-theme-accent-strong: #b8d1ff;
+    --bl-theme-accent-soft: #173058;
+    --bl-theme-accent-contrast: #10203a;
+  }
+
+  :root:not([data-color-scheme]) :where([data-product-theme="plum"]),
+  :root:not([data-color-scheme])[data-product-theme="plum"] {
+    --bl-theme-accent: #d1a8ed;
+    --bl-theme-accent-strong: #e5c7f5;
+    --bl-theme-accent-soft: #382343;
+    --bl-theme-accent-contrast: #24132e;
+  }
+
+  :root:not([data-color-scheme]) :where([data-product-theme="ember"]),
+  :root:not([data-color-scheme])[data-product-theme="ember"] {
+    --bl-theme-accent: #ffad86;
+    --bl-theme-accent-strong: #ffc8ad;
+    --bl-theme-accent-soft: #47271d;
+    --bl-theme-accent-contrast: #2b160f;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bl-motion-fast: 0.01ms;
+    --bl-motion-standard: 0.01ms;
+    --bl-motion-slow: 0.01ms;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --bl-color-focus: Highlight;
+    --bl-color-border: CanvasText;
+    --bl-color-border-strong: CanvasText;
+    --bl-color-action: ButtonFace;
+    --bl-color-action-hover: ButtonFace;
+    --bl-color-action-text: ButtonText;
+  }
+}

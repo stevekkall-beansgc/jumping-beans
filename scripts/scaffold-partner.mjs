@@ -4,7 +4,8 @@
 // Generates a complete, deploy-ready partner directory under partners/<id>:
 //   index.html   — self-hosted shop page (graceful non-WebMCP UI)
 //   tool.js      — imperative WebMCP get_matching_deals tool (signal-guarded)
-//   storefront.js— renders catalog cards
+//   storefront.js— generated copy of the shared semantic renderer
+//   storefront.css + design-system/* — generated standard adapters
 //   catalog.json — the SKUs you seed (or generated from CLI)
 //   img/*.svg    — placeholder product images (COEP-safe, self-hosted)
 //   <deploy cfg> — _headers (Netlify) or vercel.json (Vercel) with
@@ -38,7 +39,7 @@ function fail(msg) {
 
 const args = process.argv.slice(2);
 const id = args.find((a) => !a.startsWith("--"));
-if (!id) fail("Usage: node scripts/scaffold-partner.mjs <id> --name \"...\" [--host netlify|vercel] [--origin https://...] [--token <token>]");
+if (!id) fail("Usage: node scripts/scaffold-partner.mjs <id> --name \"...\" [--host netlify|vercel] [--origin https://...] [--local-port 8087] [--token <token>]");
 
 function flag(name, def = undefined) {
   const i = args.indexOf("--" + name);
@@ -48,15 +49,19 @@ function flag(name, def = undefined) {
 const name = flag("name", id.charAt(0).toUpperCase() + id.slice(1));
 const host = flag("host", "netlify"); // netlify (_headers) | vercel (vercel.json)
 const origin = flag("origin", `https://${id}.example.com`);
+const localPort = Number(flag("local-port", "8087"));
 const token = flag("token", "");
 
 if (!["netlify", "vercel"].includes(host))
   fail("--host must be 'netlify' or 'vercel'");
+if (!Number.isInteger(localPort) || localPort < 1024 || localPort > 65535)
+  fail("--local-port must be an integer from 1024 through 65535");
 
 const p = path.join(root, "partners", id);
 const img = path.join(p, "img");
 if (existsSync(p)) fail(`partner '${id}' already exists at partners/${id}`);
 await mkdir(img, { recursive: true });
+await mkdir(path.join(p, "design-system"), { recursive: true });
 
 // ---- catalog seed (default: a couple of demo SKUs expiring today) ----
 const today = new Date();
@@ -116,8 +121,13 @@ const deployCfg =
 
 // ---- tool.js (pattern from petsupply, signal-guarded) ----
 const toolJs = `// Jumping Beans partner: ${name} (${id}). Imperative WebMCP tool.
-// Build constant, per unit: the engine origin this shop exposes its tool to.
-const CONCIERGE_ORIGIN = "http://localhost:8082"; // prod: ${origin}
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const RUNTIME_MODE = LOCAL_HOSTS.has(location.hostname) ? "local" : "production";
+const ENGINE_ORIGINS = Object.freeze({
+  local: \`${location.protocol}//${location.hostname}:8082\`,
+  production: "https://jumping-beans-engine.steve-k-kall.workers.dev",
+});
+const CONCIERGE_ORIGIN = ENGINE_ORIGINS[RUNTIME_MODE];
 const PARTNER_NAME = ${JSON.stringify(name)};
 const PARTNER_ID = ${JSON.stringify(id)};
 const TOOL_NAME = "get_matching_deals";
@@ -129,12 +139,12 @@ await document.modelContext.registerTool(
     name: TOOL_NAME,
     title: "Get matching deals",
     description:
-      "Return current deals from ${name} in the given categories, optionally under a max price. Deals are live and verified by the shop.",
+      "Return ${name} catalog records in the given categories, optionally under a max price. The opted-in shop supplies the records; Jumping Beans has not independently verified them.",
     inputSchema: {
       type: "object",
       properties: {
         categories: { type: "array", items: { type: "string" }, description: "e.g. ['general']" },
-        maxPrice: { type: "number", description: "Optional ceiling on dealPrice" },
+        maxPrice: { type: "number", minimum: 0, description: "Optional ceiling on dealPrice" },
       },
       required: ["categories"],
     },
@@ -148,7 +158,17 @@ await document.modelContext.registerTool(
               (maxPrice == null || d.dealPrice <= maxPrice) &&
               (!signal || !signal.aborted)
           )
-          .map((d) => ({ ...d, partnerId: PARTNER_ID, partnerName: PARTNER_NAME })),
+          .map((d) => ({
+            ...d,
+            partnerId: PARTNER_ID,
+            partnerName: PARTNER_NAME,
+            provenance: {
+              actor: PARTNER_NAME,
+              source: d.source || "partner catalog",
+              verification: "partner-provided; not independently verified by Jumping Beans",
+              expiresAt: d.expiresAt,
+            },
+          })),
       };
     },
   },
@@ -158,40 +178,14 @@ await document.modelContext.registerTool(
 console.log(\`[\${PARTNER_ID}] registered:\`, TOOL_NAME);
 `;
 
-// ---- storefront.js ----
-const storefrontJs = `const GRID = document.getElementById("grid");
-const BANNER = document.getElementById("banner");
-
-const priceDate = (s) => {
-  const d = new Date(s);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  if (d.getTime() === today.getTime()) return "⚡ Expires today";
-  const days = Math.round((d - today) / 864e5);
-  return days === 1 ? "Expires tomorrow" : \`Expires in \${days} days\`;
-};
-
-function card(d) {
-  const pct = Math.round((1 - d.dealPrice / d.listPrice) * 100);
-  return \`
-    <div class="card">
-      <img class="thumb" src="\${d.imageUrl}" alt="\${d.name}" loading="lazy">
-      <div class="cat">\${d.category.replace("-", " ")}</div>
-      <h3>\${d.name}</h3>
-      <div class="price">
-        <span class="list">\$\${d.listPrice.toFixed(2)}</span>
-        <span class="deal">\$\${d.dealPrice.toFixed(2)}</span>
-        <span class="save">\${pct}% off</span>
-      </div>
-      <div class="expiry">\${priceDate(d.expiresAt)}</div>
-    </div>\`;
-}
-
-const catalog = await fetch("/catalog.json").then((r) => r.json());
-BANNER.textContent = \`\${${JSON.stringify(name)}} — today's specials\`;
-GRID.innerHTML = catalog.map(card).join("");
-`;
+// Generated adapter sources are copied so a newly scaffolded deployment starts
+// on the same renderer and token contract as the existing partners.
+const storefrontJs =
+  "// GENERATED from shared/storefront.js. Run node scripts/sync-static-ui.mjs; do not edit.\n" +
+  readFileSync(path.join(root, "shared", "storefront.js"), "utf8");
+const storefrontCss =
+  "/* GENERATED from shared/storefront.css. Run node scripts/sync-static-ui.mjs; do not edit. */\n" +
+  readFileSync(path.join(root, "shared", "storefront.css"), "utf8");
 
 // ---- index.html ----
 const indexHtml = `<!doctype html>
@@ -199,35 +193,35 @@ const indexHtml = `<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="dark light">
   <meta http-equiv="Origin-Trial" content="${token}">
   <title>${name} — Jumping Beans</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; background: #faf9f6; color: #222; }
-    header { background: #222; color: #fff; padding: 18px 24px; }
-    header h1 { margin: 0; font-size: 1.2rem; }
-    main { max-width: 880px; margin: 0 auto; padding: 24px; }
-    #banner { font-weight: 600; margin-bottom: 18px; color: #444; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
-    .card { background: #fff; border: 1px solid #e5e2dc; border-radius: 12px; padding: 14px; }
-    .card .thumb { width: 64px; height: 64px; border-radius: 10px; background:#eef1ec;
-      object-fit: cover; margin-bottom: 10px; display:block; }
-    .card .cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: #8a887f; }
-    .card h3 { font-size: 1rem; margin: 4px 0 8px; }
-    .price { display: flex; gap: 8px; align-items: baseline; }
-    .list { text-decoration: line-through; color: #999; font-size: 0.85rem; }
-    .deal { font-weight: 700; color: #0a7d33; }
-    .save { background: #e7f5ec; color: #0a7d33; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; }
-    .expiry { margin-top: 8px; font-size: 0.82rem; color: #b45309; }
-  </style>
+  <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./storefront.css">
 </head>
-<body>
-  <header><h1>${name}</h1></header>
-  <main>
-    <p id="banner">Today's specials</p>
-    <div class="grid" id="grid"></div>
+<body data-product-theme="cobalt" data-partner-name=${JSON.stringify(name)}>
+  <a class="skip-link" href="#main">Skip to current offers</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div><a class="brand" href="./">${name}</a><p class="tagline">Current catalog snapshot</p></div>
+      <span class="partner-status">Opted-in WebMCP partner</span>
+    </div>
+  </header>
+  <main id="main">
+    <section class="page-intro" aria-labelledby="offers-title">
+      <p class="eyebrow">Partner storefront</p>
+      <h1 id="offers-title">Current offers from ${name}</h1>
+      <p>This regular storefront may adapt presentation when Jumping Beans supplies scoped display rules.</p>
+    </section>
+    <aside class="provenance-banner" id="banner" aria-label="Catalog provenance">
+      <strong>Opted-in partner, partner-provided inventory</strong>
+      <span>${name} exposes structured offers through WebMCP. Jumping Beans has not independently verified the catalog records.</span>
+    </aside>
+    <ul class="grid" id="grid" aria-live="polite" aria-busy="true">
+      <li class="loading-status">Loading the catalog…</li>
+    </ul>
   </main>
+  <footer class="site-footer">Check the merchant destination for current price, availability, terms, and shipping.</footer>
   <script type="module" src="./tool.js"></script>
   <script type="module" src="./storefront.js"></script>
 </body>
@@ -238,6 +232,13 @@ const indexHtml = `<!doctype html>
 await writeFile(path.join(p, "index.html"), indexHtml);
 await writeFile(path.join(p, "tool.js"), toolJs);
 await writeFile(path.join(p, "storefront.js"), storefrontJs);
+await writeFile(path.join(p, "storefront.css"), storefrontCss);
+for (const file of ["tokens.css", "tokens.json", "source.json"]) {
+  await writeFile(
+    path.join(p, "design-system", file),
+    readFileSync(path.join(root, "engine", "design-system", file), "utf8"),
+  );
+}
 await writeFile(path.join(p, "catalog.json"), JSON.stringify(catalog, null, 2) + "\n");
 await writeFile(
   path.join(p, host === "netlify" ? "_headers" : "vercel.json"),
@@ -246,20 +247,28 @@ await writeFile(
 for (const sku of catalog) {
   await writeFile(
     path.join(img, path.basename(sku.imageUrl)),
-    `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="16" fill="#eef1ec"/><text x="64" y="74" font-size="52" text-anchor="middle">🛍️</text></svg>\n`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect x="1" y="1" width="126" height="126" rx="16" fill="none" stroke="currentColor"/><text x="64" y="74" font-size="52" text-anchor="middle">🛍️</text></svg>\n`
   );
 }
 
 // ---- update shared/config.js ORIGINS + PARTNER_ORIGINS ----
 const config = readFileSync(configPath, "utf8");
 
-// 1) ORIGINS: replace the existing `${id}: "…"` line (placeholder) in place,
-//    else insert a fresh line after `export const ORIGINS = {`.
-const origLine = new RegExp(`^(\\s*)(${id}: )(.*?)(,?\\s*//.*)?$`, "m");
-const line = `  ${id}: "${origin}",        // ${name}`;
-let updated = origLine.test(config)
-  ? config.replace(origLine, line)
-  : config.replace(/(export const ORIGINS = \{)/, "$1\n" + line);
+// 1) Add the partner to both explicit runtime sets in the shared reference.
+function upsertOrigin(source, mode, value) {
+  const block = new RegExp(`(${mode}: Object\\.freeze\\(\\{\\n)([\\s\\S]*?)(\\n  \\}\\),)`);
+  const match = block.exec(source);
+  if (!match) fail(`could not find ${mode} origin block in shared/config.js`);
+  const line = `    ${id}: ${JSON.stringify(value)},`;
+  const existing = new RegExp(`^\\s*${id}:.*$`, "m");
+  const body = existing.test(match[2])
+    ? match[2].replace(existing, line)
+    : `${match[2]}\n${line}`;
+  return source.replace(block, `$1${body}$3`);
+}
+
+let updated = upsertOrigin(config, "local", `http://localhost:${localPort}`);
+updated = upsertOrigin(updated, "production", origin);
 
 // 2) PARTNER_ORIGINS: ensure `ORIGINS.${id}` appears exactly once, no dup commas,
 //    no trailing `,` before `]`. Parse the array body and rebuild it cleanly.
@@ -292,6 +301,7 @@ await writeFile(configPath, updated);
 console.log(`
 ✔ Scaffolded partner '${id}' at partners/${id} (host: ${host})
   origin: ${origin}
+  local:  http://localhost:${localPort}
   token:  ${token ? "wired into deploy config" : "EMPTY — see next step"}
   shared/config.js ORIGINS.PARTNER_ORIGINS: updated
 

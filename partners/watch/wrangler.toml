@@ -1,6 +1,11 @@
 # Jumping Beans partner — Cloudflare Pages.
 # _headers in this dir sends COOP/COEP/CORP + Origin-Trial.
-# Deploy: npx wrangler pages deploy partners/watch --project-name watch
+# functions/ holds /api/register-interest + /api/interest-summary (Pages Functions).
+# Deploy: cd partners/watch && npx wrangler pages deploy . --project-name watch
 name = "watch"
 pages_build_output_dir = "."
 compatibility_date = "2025-01-01"
+
+[[kv_namespaces]]
+binding = "WATCH_INTEREST"
+id = "bcdad4c43f814096b6ae7ac4452d916c"
