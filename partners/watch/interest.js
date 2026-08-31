@@ -10,20 +10,18 @@ const confirmation = document.getElementById("interest-confirmed");
 const actionDetail = document.getElementById("interest-action");
 const receiptDetail = document.getElementById("interest-receipt");
 const LOCAL_DEVELOPMENT = new URLSearchParams(location.search).get("watch-local-development") === "1";
-const sessionKey = "watch-write-session-v1";
+let csrfToken = null;
 let pending = null;
 
-function sessionId() {
-  try { const existing = sessionStorage.getItem(sessionKey); if (existing) return existing; const value = globalThis.crypto?.randomUUID?.() || `session_${Date.now()}`; sessionStorage.setItem(sessionKey, value); return value; } catch { return "unavailable-session"; }
-}
 product.replaceChildren(...INTEREST_PRODUCTS.map((item) => { const option = document.createElement("option"); option.value = item.sku; option.textContent = item.name; return option; }));
 function show(text, state = "success") { msg.textContent = text; msg.dataset.state = state; msg.hidden = false; }
-async function request(path, body) { return fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-watch-session": sessionId() }, body: JSON.stringify(body) }); }
+async function request(path, body) { return fetch(path, { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json", ...(csrfToken ? { "x-watch-csrf": csrfToken } : {}) }, body: JSON.stringify(body) }); }
 function showAction() { actionDetail.hidden = false; actionDetail.textContent = `Action ${pending.action.actionId} is staged until ${new Date(pending.expiresAt).toLocaleTimeString()}. Authority: ${pending.authority}. Review the exact product and price, then confirm.`; }
 function showReceipt(receipt, replayed) { receiptDetail.hidden = false; receiptDetail.textContent = `${replayed ? "Original receipt returned" : "Committed"}: ${receipt.status} · ${receipt.authority} · receipt ${receipt.receiptId} · expires ${new Date(receipt.expiresAt).toLocaleDateString()}. No notification, purchase, or reservation was created.`; }
 async function stage(data) {
   const action = await stageAction({ payload: { product: data.product, pricePoint: data.pricePoint }, validSkus: INTEREST_PRODUCT_SKUS });
-  const response = await request("/api/stage-interest", { action }); const body = await response.json().catch(() => ({}));
+  let response = await request("/api/stage-interest", { action }); let body = await response.json().catch(() => ({}));
+  if (response.status === 401 && body.error === "session-initialized" && body.csrfToken) { csrfToken = body.csrfToken; response = await request("/api/stage-interest", { action }); body = await response.json().catch(() => ({})); }
   if (!response.ok) throw new Error(body.error || "The action could not be staged.");
   pending = { action, ...body }; confirmation.checked = false; confirmation.disabled = false; submit.textContent = "Confirm and record target price"; showAction(); show("Action staged. Nothing has been recorded; confirm the exact reviewed action.");
 }

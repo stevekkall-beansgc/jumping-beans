@@ -121,9 +121,9 @@ Then open `http://localhost:8082` in the flagged Chrome. After discovery, the
 engine status should report **3 opted-in sites connected**.
 
 > The `/api/*` endpoints and `/merchant` loop are backed by Cloudflare Pages
-> Functions. Locally (plain `serve.py`) they're not served, so the storefront
-> and merchant fall back to a same-origin `localStorage` demo store to keep the
-> loop demonstrable on localhost. The deployed version uses the real `/api`.
+> Functions and require the D1 `WATCH_DB` binding. Plain `serve.py` does not
+> serve Pages Functions, so Watch writes fail closed locally rather than claiming
+> a browser-local merchant write.
 
 ## Deploy (Cloudflare — all four units)
 
@@ -153,10 +153,9 @@ Publishing a GitHub release triggers the same workflow automatically. Local
 Wrangler deployment is intentionally not the production path.
 
 > Watch ships Cloudflare Pages Functions in `partners/watch/functions/`
-> (routes `/api/register-interest`, `/api/interest-summary`) and persists its
-> interest store to Cloudflare KV (`WATCH_INTEREST` binding in
-> `partners/watch/wrangler.toml`) so the storefront → `/merchant` loop survives
-> across Worker isolates.
+> (stage, commit, and summary routes) backed by the transactional `WATCH_DB`
+> D1 binding. Apply `partners/watch/migrations/0001_write_actions.sql` before
+> deployment; the API deliberately fails closed without it.
 
 ### Before deploying
 
@@ -172,6 +171,10 @@ Wrangler deployment is intentionally not the production path.
    `curl -sI https://<origin>/ | grep -iE "cross-origin|origin-trial"` — expect
    `COOP: same-origin`, `COEP: require-corp`, `CORP: cross-origin`, and an
    `Origin-Trial` header.
+4. **Provision and migrate Watch D1.** Replace the placeholder database ID in
+   `partners/watch/wrangler.toml`, apply `migrations/0001_write_actions.sql`,
+   set `WATCH_PUBLIC_ORIGIN` to the exact deployed HTTPS origin, and run the
+   write concurrency/expiry/request-boundary preflight before releasing Watch.
 
 ## Verify the WebMCP surface
 

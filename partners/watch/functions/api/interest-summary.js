@@ -11,7 +11,14 @@ export async function onRequestGet({ request, env }) {
       headers: { "content-type": "application/json; charset=utf-8" },
     });
   }
-  return new Response(JSON.stringify(await summary(env, product)), {
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+  try {
+    return new Response(JSON.stringify(await summary(env, product)), {
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ ok: false, error: error?.code || "storage-failed" }), {
+      status: 503,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
 }

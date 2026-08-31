@@ -1,12 +1,25 @@
 # Jumping Beans partner — Cloudflare Pages.
 # _headers in this dir sends COOP/COEP/CORP + Origin-Trial.
-# functions/ holds staged and grant-consuming interest APIs. KV is not a write
-# authority; production writes stay fail-closed until the D1/DO repository is bound.
+# functions/ holds staged and grant-consuming interest APIs. D1 is the only
+# production write authority; absence of WATCH_DB fails stage/commit closed.
 # Deploy: cd partners/watch && npx wrangler pages deploy . --project-name watch
 name = "watch"
 pages_build_output_dir = "."
 compatibility_date = "2025-01-01"
 
-# Next server-bound checkpoint: bind a transactional D1 (or serialized Durable
-# Object) repository for pending grants, unique idempotency claims, interests,
-# and receipts. Do not add a KV fallback here.
+[vars]
+# Exact public HTTPS origin accepted by stage and commit. Do not loosen this to
+# a wildcard; local-development mode is a separate explicit test setting.
+WATCH_PUBLIC_ORIGIN = "https://watch-ce8.pages.dev"
+
+[[d1_databases]]
+binding = "WATCH_DB"
+database_name = "watch-write-actions"
+# Set the real database_id only through the approved deployment configuration.
+# Before deployment, apply migrations/0001_write_actions.sql to this database.
+database_id = "REPLACE_WITH_APPROVED_D1_DATABASE_ID"
+
+# Do not add a KV fallback. The injected WATCH_ACTION_REPOSITORY and
+# WATCH_WRITE_MODE=local-development paths are deterministic test seams only.
+# Stage bootstraps an HttpOnly SameSite session cookie; commit requires that
+# cookie plus its server-bound X-Watch-CSRF token.

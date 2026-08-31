@@ -57,9 +57,14 @@ pinned Wrangler CLI from `engine/` and from each partner directory. Running
 Watch from inside its directory is required so Cloudflare includes its Pages
 Functions.
 
-> Watch's interest store persists to Cloudflare KV (namespace bound as
-> `WATCH_INTEREST` in `partners/watch/wrangler.toml`), so the storefront POST →
-> `/merchant` GET loop survives across Worker isolates.
+> Watch's consequential interest store requires the `WATCH_DB` D1 binding in
+> `partners/watch/wrangler.toml`. Before any approved deploy, provision the D1
+> database, replace the placeholder database ID, and apply
+> `partners/watch/migrations/0001_write_actions.sql`. Stage, commit, and
+> summary fail closed without that binding; KV is not a fallback authority.
+> `WATCH_PUBLIC_ORIGIN` must be the exact deployed Watch HTTPS origin. The
+> write APIs issue a Secure, HttpOnly, SameSite session cookie and require its
+> server-bound CSRF token; do not proxy, wildcard, or relax this boundary.
 
 ## After deployment
 1. Confirm headers on each live URL:

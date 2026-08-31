@@ -264,6 +264,7 @@ check(productModule.activeInterestRecords([
 const actionContract = await import(`${pathToFileURL(path.join(root, "partners/watch/action-contract.js")).href}?check=${Date.now()}`);
 const stageApi = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/stage-interest.js")).href}?check=${Date.now()}`);
 const api = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/register-interest.js")).href}?check=${Date.now()}`);
+const summaryApi = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/interest-summary.js")).href}?check=${Date.now()}`);
 const sku = productModule.INTEREST_PRODUCTS[0].sku;
 const action = await actionContract.stageAction({ payload: { product: sku, pricePoint: "100.50" }, validSkus: productModule.INTEREST_PRODUCT_SKUS, now: Date.now() });
 check(action.semanticPayload.targetPriceMinor === 10050 && action.semanticPayloadHash.length === 64, "Watch action normalization or SHA-256 hash is not canonical");
@@ -272,24 +273,95 @@ await Promise.all(["extra", "currency"].map(async (field) => {
   try { actionContract.normalizeInterestPayload({ product: sku, pricePoint: "10.00", [field]: field === "extra" ? true : "EUR" }, { validSkus: productModule.INTEREST_PRODUCT_SKUS }); check(false, "Watch action accepts unknown fields or non-USD currency"); }
   catch { check(true, "Watch action rejects unknown fields and non-USD currency"); }
 }));
-const apiRequest = (path, body, session = "watch-test-session") => new Request(`https://watch.invalid${path}`, { method: "POST", headers: { "content-type": "application/json", "x-watch-session": session }, body: JSON.stringify(body) });
+const apiRequest = (path, body, { origin = "https://watch.invalid", cookie, csrf } = {}) => new Request(`${origin}${path}`, { method: "POST", headers: { "content-type": "application/json", origin, ...(cookie ? { cookie } : {}), ...(csrf ? { "x-watch-csrf": csrf } : {}) }, body: JSON.stringify(body) });
+async function stagedClient(env, action, origin = "https://watch.invalid") {
+  const bootstrap = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }, { origin }), env }); const boot = await bootstrap.json();
+  const cookie = bootstrap.headers.get("set-cookie");
+  const staged = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }, { origin, cookie, csrf: boot.csrfToken }), env });
+  return { bootstrap, boot, cookie, csrf: boot.csrfToken, staged, body: await staged.json(), origin };
+}
 const localWriteEnv = { WATCH_WRITE_MODE: "local-development" };
-check((await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }), env: { WATCH_INTEREST: {} } })).status === 503, "Watch staging treats KV or missing storage as an authoritative repository");
-const stagedResponse = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }), env: localWriteEnv });
-const stagedBody = await stagedResponse.json();
+check((await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }), env: { WATCH_INTEREST: {} } })).status === 403, "Watch staging permits a missing production origin policy");
+const stagedClientResult = await stagedClient(localWriteEnv, action);
+const stagedResponse = stagedClientResult.staged; const stagedBody = stagedClientResult.body;
 check(stagedResponse.status === 201 && stagedBody.confirmationGrant && stagedBody.grantId, "Watch stage does not create a server-owned pending grant");
-check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId }), env: localWriteEnv })).status === 401, "Watch commit accepts a missing confirmation grant");
-check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: "forged" }), env: localWriteEnv })).status === 403, "Watch commit accepts a forged confirmation grant");
-const committedResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv });
+check((await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }, { origin: "https://evil.invalid" }), env: localWriteEnv })).status === 403, "Watch stage accepts a wrong local-development origin");
+const requestOptions = { origin: stagedClientResult.origin, cookie: stagedClientResult.cookie, csrf: stagedClientResult.csrf };
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId }, requestOptions), env: localWriteEnv })).status === 401, "Watch commit accepts a missing confirmation grant");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: "forged" }, requestOptions), env: localWriteEnv })).status === 403, "Watch commit accepts a forged confirmation grant");
+const committedResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv });
 const committedBody = await committedResponse.json();
 check(committedResponse.status === 201 && committedBody.receipt.status === "committed", "Watch commit rejects a staged, payload-bound action");
 check(!JSON.stringify(committedBody.receipt).includes(stagedBody.confirmationGrant) && !JSON.stringify(committedBody.receipt).includes(action.idempotencyKey), "Watch receipt exposes a grant or raw idempotency key");
-const replayResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv });
+const replayResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv });
 const replayBody = await replayResponse.json();
 check(replayResponse.status === 200 && replayBody.replayed && replayBody.receipt.expiresAt === committedBody.receipt.expiresAt, "Watch same-payload replay changes retention or does not return the original receipt");
 const changedAction = { ...action, semanticPayload: { ...action.semanticPayload, targetPriceMinor: 99999 } };
 changedAction.semanticPayloadHash = await actionContract.sha256(actionContract.canonicalJson(changedAction.semanticPayload));
-check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: changedAction, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv })).status === 409, "Watch changed-payload replay does not return idempotency conflict");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: changedAction, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv })).status === 409, "Watch changed-payload replay does not return idempotency conflict");
+
+// This D1-shaped double executes the same prepared-statement/batch contract as
+// the production WATCH_DB path. Its batch copies state first, proving rollback
+// behavior rather than relying on the non-authoritative local seam.
+function d1Double({ failCommit = false } = {}) {
+  const state = { pending: new Map(), actions: new Map(), interests: [], sessions: new Map(), rates: new Map() };
+  let batchQueue = Promise.resolve();
+  const clone = () => ({ pending: new Map([...state.pending].map(([key, value]) => [key, { ...value }])), actions: new Map([...state.actions].map(([key, value]) => [key, { ...value }])), interests: state.interests.map((value) => ({ ...value })), sessions: new Map([...state.sessions].map(([key, value]) => [key, { ...value }])), rates: new Map(state.rates) });
+  const execute = async (item, target = state) => {
+    const { sql, args } = item;
+    if (sql.includes("watch:stage")) { const [grant_id, grant_digest, action_id, idempotency_key_digest, semantic_payload_hash, action_json, session_subject, audience_origin, audience_path, issued_at, expires_at] = args; target.pending.set(grant_id, { grant_id, grant_digest, action_id, idempotency_key_digest, semantic_payload_hash, action_json, session_subject, audience_origin, audience_path, issued_at, expires_at, consumed_at: null }); return { meta: { changes: 1 } }; }
+    if (sql.includes("watch:commit-claim")) { const pending = target.pending.get(args[6]); const valid = pending && !pending.consumed_at && pending.grant_digest === args[7] && pending.action_id === args[8] && pending.idempotency_key_digest === args[9] && pending.semantic_payload_hash === args[10] && pending.session_subject === args[11] && pending.audience_origin === args[12] && pending.audience_path === args[13] && pending.expires_at > args[14]; if (!valid) return { meta: { changes: 0 } }; if (target.actions.has(args[0])) throw new Error("UNIQUE constraint failed"); target.actions.set(args[0], { receipt_json: args[4], semantic_payload_hash: args[2], session_subject: args[3], action_id: args[1] }); return { meta: { changes: 1 } }; }
+    if (sql.includes("watch:commit-consume")) { const pending = target.pending.get(args[1]); if (pending && !pending.consumed_at) { pending.consumed_at = args[0]; return { meta: { changes: 1 } }; } return { meta: { changes: 0 } }; }
+    if (sql.includes("watch:commit-interest")) { if (failCommit) throw new Error("injected interest insert failure"); if (!target.actions.has(args[7])) return { meta: { changes: 0 } }; if (target.interests.some((record) => record.action_id === args[1])) throw new Error("UNIQUE constraint failed"); target.interests.push({ record_id: args[0], action_id: args[1], product: args[2], target_price_minor: args[3], currency: args[4], created_at: args[5], expires_at: args[6] }); return { meta: { changes: 1 } }; }
+    if (sql.includes("watch:session-create")) { const [session_digest, csrf_digest, audience_origin, created_at, expires_at] = args; target.sessions.set(session_digest, { session_digest, csrf_digest, audience_origin, created_at, expires_at }); return { meta: { changes: 1 } }; }
+    if (sql.includes("watch:rate")) { const key = `${args[0]}:${args[1]}`; const count = (target.rates.get(key) || 0) + 1; target.rates.set(key, count); return { count }; }
+    throw new Error(`unexpected D1 statement ${sql}`);
+  };
+  return {
+    state,
+    prepare(sql) { return { bind(...args) { return { sql, args, run: () => execute({ sql, args }), first: async () => { if (sql.includes("watch:pending")) return state.pending.get(args[0]) || null; if (sql.includes("watch:action")) return state.actions.get(args[0]) || null; if (sql.includes("watch:session")) return state.sessions.get(args[0]) || null; if (sql.includes("watch:rate")) return execute({ sql, args }); return null; }, all: async () => ({ results: state.interests.filter((record) => record.product === args[0] && record.expires_at > args[1]) }) }; } }; },
+    async batch(items) { const run = batchQueue.then(async () => { const copy = clone(); const results = []; for (const item of items) results.push(await execute(item, copy)); state.pending = copy.pending; state.actions = copy.actions; state.interests = copy.interests; state.sessions = copy.sessions; state.rates = copy.rates; return results; }); batchQueue = run.catch(() => {}); return run; },
+  };
+}
+const d1 = d1Double(); const d1Env = { WATCH_DB: d1, WATCH_PUBLIC_ORIGIN: "https://watch.invalid" };
+const d1Action = await actionContract.stageAction({ payload: { product: sku, pricePoint: "101.00" }, validSkus: productModule.INTEREST_PRODUCT_SKUS });
+const d1Client = await stagedClient(d1Env, d1Action); const d1Stage = d1Client.staged; const d1StageBody = d1Client.body;
+check(d1Client.bootstrap.status === 401 && /HttpOnly/.test(d1Client.cookie || "") && /SameSite=Strict/.test(d1Client.cookie || "") && /Secure/.test(d1Client.cookie || ""), "Watch production bootstrap does not issue a Secure HttpOnly SameSite session cookie");
+check((await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action: d1Action }, { origin: "https://evil.invalid" }), env: d1Env })).status === 403, "Watch stage accepts a wrong production origin");
+const csrfRefresh = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action: d1Action }, { origin: d1Client.origin, cookie: d1Client.cookie }), env: d1Env });
+check(csrfRefresh.status === 401 && (await csrfRefresh.clone().json()).csrfToken && csrfRefresh.headers.has("set-cookie"), "Watch stage cannot safely refresh a missing CSRF token");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: d1Action, grantId: d1StageBody.grantId, confirmationGrant: d1StageBody.confirmationGrant }, { origin: d1Client.origin }), env: d1Env })).status === 401, "Watch commit accepts a missing session cookie");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: d1Action, grantId: d1StageBody.grantId, confirmationGrant: d1StageBody.confirmationGrant }, { origin: d1Client.origin, cookie: "__Host-watch-session=forged", csrf: d1Client.csrf }), env: d1Env })).status === 403, "Watch commit accepts an invalid session cookie");
+const noContentType = new Request("https://watch.invalid/api/stage-interest", { method: "POST", headers: { origin: "https://watch.invalid" }, body: JSON.stringify({ action: d1Action }) });
+check((await stageApi.onRequestPost({ request: noContentType, env: d1Env })).status === 415, "Watch stage accepts a non-JSON content type");
+const oversized = new Request("https://watch.invalid/api/stage-interest", { method: "POST", headers: { origin: "https://watch.invalid", "content-type": "application/json" }, body: JSON.stringify({ action: "x".repeat(13 * 1024) }) });
+check((await stageApi.onRequestPost({ request: oversized, env: d1Env })).status === 413, "Watch stage accepts an oversized body");
+const d1CommitBody = () => ({ action: d1Action, grantId: d1StageBody.grantId, confirmationGrant: d1StageBody.confirmationGrant });
+const d1Options = { origin: d1Client.origin, cookie: d1Client.cookie, csrf: d1Client.csrf };
+const sameKey = await Promise.all([api.onRequestPost({ request: apiRequest("/api/register-interest", d1CommitBody(), d1Options), env: d1Env }), api.onRequestPost({ request: apiRequest("/api/register-interest", d1CommitBody(), d1Options), env: d1Env })]);
+check(sameKey.map((response) => response.status).sort().join(",") === "200,201" && d1.state.interests.length === 1, "D1 batch permits duplicate same-key concurrent interest records");
+const d1Changed = { ...d1Action, semanticPayload: { ...d1Action.semanticPayload, targetPriceMinor: 99999 } }; d1Changed.semanticPayloadHash = await actionContract.sha256(actionContract.canonicalJson(d1Changed.semanticPayload));
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: d1Changed, grantId: d1StageBody.grantId, confirmationGrant: d1StageBody.confirmationGrant }, d1Options), env: d1Env })).status === 409, "D1 changed-payload replay does not conflict");
+const distinct = await Promise.all(["102.00", "103.00"].map(async (pricePoint) => { const next = await actionContract.stageAction({ payload: { product: sku, pricePoint }, validSkus: productModule.INTEREST_PRODUCT_SKUS }); const staged = await stagedClient(d1Env, next); return api.onRequestPost({ request: apiRequest("/api/register-interest", { action: next, grantId: staged.body.grantId, confirmationGrant: staged.body.confirmationGrant }, { origin: staged.origin, cookie: staged.cookie, csrf: staged.csrf }), env: d1Env }); }));
+check(distinct.every((response) => response.status === 201) && d1.state.interests.length === 3, "D1 batch loses distinct concurrent actions");
+const pendingBeforeRate = d1.state.pending.size;
+for (let index = 0; index < 9; index += 1) { const next = await actionContract.stageAction({ payload: { product: sku, pricePoint: `${110 + index}.00` }, validSkus: productModule.INTEREST_PRODUCT_SKUS }); await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action: next }, d1Options), env: d1Env }); }
+const rateAction = await actionContract.stageAction({ payload: { product: sku, pricePoint: "120.00" }, validSkus: productModule.INTEREST_PRODUCT_SKUS });
+const stageRateResponse = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action: rateAction }, d1Options), env: d1Env });
+check(stageRateResponse.status === 429 && stageRateResponse.headers.has("retry-after") && d1.state.pending.size === pendingBeforeRate + 9, "Watch stage rate limit does not fail before action mutation");
+const failedD1 = d1Double(); const failedEnv = { WATCH_DB: failedD1, WATCH_PUBLIC_ORIGIN: "https://watch.invalid" }; const failedAction = await actionContract.stageAction({ payload: { product: sku, pricePoint: "121.00" }, validSkus: productModule.INTEREST_PRODUCT_SKUS }); const failedClient = await stagedClient(failedEnv, failedAction); const failedOptions = { origin: failedClient.origin, cookie: failedClient.cookie, csrf: failedClient.csrf };
+for (let index = 0; index < 5; index += 1) await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: failedAction, grantId: failedClient.body.grantId, confirmationGrant: `forged_${index}` }, failedOptions), env: failedEnv });
+const failedRate = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: failedAction, grantId: failedClient.body.grantId, confirmationGrant: "forged_last" }, failedOptions), env: failedEnv });
+check(failedRate.status === 429 && failedRate.headers.has("retry-after") && failedD1.state.interests.length === 0, "Watch failed-grant limiter does not reject before merchant mutation");
+const failingD1 = d1Double({ failCommit: true }); const failingEnv = { WATCH_DB: failingD1, WATCH_PUBLIC_ORIGIN: "https://watch.invalid" }; const failingAction = await actionContract.stageAction({ payload: { product: sku, pricePoint: "104.00" }, validSkus: productModule.INTEREST_PRODUCT_SKUS }); const failingClient = await stagedClient(failingEnv, failingAction);
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: failingAction, grantId: failingClient.body.grantId, confirmationGrant: failingClient.body.confirmationGrant }, { origin: failingClient.origin, cookie: failingClient.cookie, csrf: failingClient.csrf }), env: failingEnv })).status === 503 && failingD1.state.interests.length === 0 && !failingD1.state.actions.size, "D1 batch failure does not roll back receipt claim and interest insert");
+const expiryD1 = d1Double(); expiryD1.state.interests.push({ product: sku, target_price_minor: 10000, expires_at: new Date(Date.now() - 1000).toISOString() });
+const expirySummary = await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: { WATCH_DB: expiryD1 } });
+check(expirySummary.status === 200 && (await expirySummary.json()).count === 0, "D1 summary includes expired interest records");
+check((await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: {} })).status === 503, "D1 summary does not fail closed without the binding");
+const migration = await readFile(path.join(root, "partners/watch/migrations/0001_write_actions.sql"), "utf8"); const watchWrangler = await readFile(path.join(root, "partners/watch/wrangler.toml"), "utf8");
+includesAll(migration, ["watch_pending_actions", "watch_action_receipts", "watch_interests", "watch_write_sessions", "watch_rate_limits", "UNIQUE", "target_price_minor"], "Watch D1 migration contract");
+includesAll(watchWrangler, ["[[d1_databases]]", 'binding = "WATCH_DB"', "WATCH_PUBLIC_ORIGIN", "0001_write_actions.sql"], "Watch D1 binding contract");
 
 const merchantHtml = surfaces.get("partners/watch/merchant/index.html");
 includesAll(merchantHtml, [
