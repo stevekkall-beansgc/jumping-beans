@@ -35,17 +35,22 @@ async function write(env, product, records) {
   return "worker-isolate";
 }
 
-export async function addInterest(env, product, pricePoint) {
+export async function addInterest(env, product, pricePoint, requestId = null) {
+  const records = await read(env, product);
+  const existing = requestId && records.find((record) => record.requestId === requestId);
+  if (existing) {
+    return { record: existing, storage: env?.WATCH_INTEREST ? "cloudflare-kv" : "worker-isolate", retentionDays: INTEREST_RETENTION_DAYS, deduplicated: true };
+  }
   const createdAt = new Date();
   const record = {
     product,
     pricePoint,
+    ...(requestId ? { requestId } : {}),
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + INTEREST_RETENTION_MS).toISOString(),
   };
-  const records = [...await read(env, product), record];
-  const storage = await write(env, product, records);
-  return { record, storage, retentionDays: INTEREST_RETENTION_DAYS };
+  const storage = await write(env, product, [...records, record]);
+  return { record, storage, retentionDays: INTEREST_RETENTION_DAYS, deduplicated: false };
 }
 
 export async function summary(env, product) {

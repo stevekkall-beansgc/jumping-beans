@@ -1,8 +1,9 @@
 # Jumping Beans — a user-owned deal engine
 
-**Jumping Beans** is a WebMCP demo: an in-browser concierge that starts with an
-offer from open inventory, lets the shopper control what is remembered, and
-then carries only the chosen presentation context to an opted-in partner.
+**Jumping Beans** is the first live surface of a broader WebMCP capability
+network: an in-browser concierge that starts with an offer from open inventory,
+checks multiple opted-in partners, lets the shopper control what is
+remembered, and carries only the chosen presentation context forward.
 
 It is the entry for *The WebMCP Challenge* (Devpost). Everything runs on free
 tiers and plain static files plus a couple of small serverless functions.
@@ -13,9 +14,11 @@ tiers and plain static files plus a couple of small serverless functions.
    inventory** because no merchant tool connection was required.
 2. The engine opens cross-origin iframes (`allow="tools"`) to three shops and
    calls `getTools({ fromOrigins })` for `get_matching_deals`.
-3. A Site B offer is labeled **opted-in partner** only after a tool responds. If
-   no tool responds, the UI keeps the fallback visibly labeled as an
-   illustrative, unverified preview.
+3. Partner responses are deduplicated by origin, retried across normal browser
+   timing/protocol variance, and resolved through profile and price eligibility
+   before ranking. A Site B offer is labeled **opted-in partner** only after a
+   tool responds. If no tool responds, the UI keeps the fallback visibly
+   labeled as an illustrative, unverified preview.
 4. The shopper chooses presentation rules. The exact useful fact, product
    scope, and browser retention appear before “Save and apply”; “Apply once
    without saving” remains available.
@@ -28,6 +31,12 @@ tiers and plain static files plus a couple of small serverless functions.
    `register_interest` form.
 8. The shop's `/merchant` view polls an aggregate of that interest
    (`/api/interest-summary`): the shop asked, the engine answered.
+
+The engine also exposes a journey receipt to an agent: capability IDs and
+versions, connected origins, user-approved context, eligibility counts,
+decision reasons, and redacted invocation/outcome events. The UI shows the
+same network state in human-readable form. Declarative Watch Co writes are
+staged for page confirmation and confirmed requests carry an idempotency key.
 
 Non-WebMCP browsers still get the normal UI (the deal grid, the form, the
 merchant readout) — the agent surfaces are additive.

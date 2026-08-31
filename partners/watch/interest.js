@@ -15,6 +15,11 @@ const product = document.getElementById("interest-product");
 const msg = document.getElementById("interest-msg");
 const submit = document.getElementById("interest-submit");
 
+function requestId() {
+  return globalThis.crypto?.randomUUID?.()
+    || `watch_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 product.replaceChildren(...INTEREST_PRODUCTS.map((item) => {
   const option = document.createElement("option");
   option.value = item.sku;
@@ -47,9 +52,12 @@ function storeLocal(data) {
     throw new RangeError("Target price must be greater than zero.");
   }
   const createdAt = new Date();
+  const existing = readLocal().find((record) => record.requestId && record.requestId === data.requestId);
+  if (existing) return existing;
   const record = {
     product: data.product,
     pricePoint,
+    requestId: data.requestId || requestId(),
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + INTEREST_RETENTION_MS).toISOString(),
   };
@@ -82,7 +90,7 @@ async function action(data) {
 
     let response;
     try {
-      response = await store({ ...data, pricePoint, confirmed: true });
+      response = await store({ ...data, pricePoint, confirmed: true, requestId: data.requestId || requestId() });
     } catch {
       response = null;
     }
@@ -124,6 +132,22 @@ async function action(data) {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+  if (event.agentInvoked) {
+    // An agent may stage the declarative action, but it cannot turn its own
+    // invocation into a demand signal. The human must review and submit the
+    // now-unchecked confirmation control in this page.
+    const confirmation = form.elements.namedItem("confirmed");
+    if (confirmation) confirmation.checked = false;
+    show("The agent staged this target price. Review it and press Record target price to confirm.", "success");
+    const staged = Promise.resolve({
+      ok: true,
+      staged: true,
+      persisted: false,
+      requiresUserConfirmation: true,
+      outcome: "No demand signal was recorded; a person must submit the reviewed form.",
+    });
+    event.respondWith?.(staged);
+    return;
+  }
   const result = action(data);
-  if (event.agentInvoked) event.respondWith?.(result);
 });

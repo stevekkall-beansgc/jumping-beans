@@ -1,6 +1,7 @@
 # Jumping Beans — next steps
 
-Status: working prototype shipped and design/release foundation codified.
+Status: working prototype shipped; P0 hardening is in progress and the full
+network product remains in scope.
 Last updated: 2026-08-31.
 
 ## Current baseline
@@ -21,7 +22,22 @@ Last updated: 2026-08-31.
 
 ## Next phase, in order
 
-### 1. Make the demo journey unmistakable
+The competition is a validation gate, not the product boundary. The immediate
+job is to harden the network while expanding the offering and making the
+ambitious product legible.
+
+### 1. Harden the network foundation
+
+- Keep multi-origin discovery, partner opt-in, and broad partner categories in
+  the live experience.
+- Record journey IDs, context snapshots, capability versions, invocation
+  outcomes, decision receipts, and explicit no-match/degraded states.
+- Continue compatibility testing for object and serialized WebMCP inputs,
+  delayed iframe readiness, origin duplication, and partial partner failure.
+- Keep consequential writes staged, human-confirmable, server-validated, and
+  idempotent.
+
+### 2. Make the network journey unmistakable
 
 - Tighten the Site A → user preference/memory → Site Y journey so it can be
   completed in one short guided path.
@@ -31,7 +47,7 @@ Last updated: 2026-08-31.
   preference save/apply-once, forget, provenance, and the resulting rendering
   change.
 
-### 2. Strengthen the user-owned memory model
+### 3. Strengthen the user-owned memory model
 
 - Define the smallest durable records for an observed offer, user preference,
   presentation rule, scope, source, timestamp, and retention.
@@ -40,7 +56,7 @@ Last updated: 2026-08-31.
 - Keep passive understanding conservative: explain the evidence, avoid
   sensitive-attribute inference, and default to user control.
 
-### 3. Expand open offer inventory without changing the thesis
+### 4. Expand open offer inventory and partner resolution
 
 - Add more reliable public/open feeds and normalize them into the existing
   offer structure.
@@ -49,7 +65,7 @@ Last updated: 2026-08-31.
 - Treat partner catalogs and WebMCP opt-in as a benefit demonstration: richer
   collateral, fresher facts, and better matching for partners that participate.
 
-### 4. Add product-grade persistence and measurement
+### 5. Add product-grade persistence and measurement
 
 - Move demo-only browser persistence behind a small user-scoped storage layer
   with clear retention and deletion behavior.
@@ -59,7 +75,16 @@ Last updated: 2026-08-31.
 - Measure whether preference-aware presentation improves useful engagement,
   while keeping user controls and provenance visible.
 
-### 5. Keep the operating system healthy
+### 6. Grow the capability network
+
+- Add support and retail intent classes, followed by synthetic travel policy
+  fixtures, using the same resolver and outcome contracts.
+- Add richer multi-offer comparison, merchant-side demand/outcome views, and
+  explicit channel-aware personalization.
+- Extract a hosted registry, durable tenant state, graph views, MCP projection,
+  and UCP semantic mapping only when real integrations justify each boundary.
+
+### 7. Keep the operating system healthy
 
 - Continue all shared UI work through the central Bean Labs design system and
   its generated, hashed adapters.
@@ -70,7 +95,11 @@ Last updated: 2026-08-31.
 
 ## Definition of next-phase done
 
-An evaluator can start with an open-inventory offer on Site A, understand and
-edit what is remembered, carry a selected preference to Site Y, see the same
-offer rendered with that preference applied, inspect why it appeared, and
-forget the preference—using the live Cloudflare demo with repeatable evidence.
+An evaluator can start with an open-inventory offer on Site A, see the
+multi-origin network state, understand and edit what is remembered, carry a
+selected preference to Site Y, see the same offer rendered with that preference
+applied, inspect why it appeared, and forget the preference—using the live
+Cloudflare demo with repeatable evidence. The product is not considered
+competition-ready until cross-origin discovery, two fresh end-to-end runs,
+multiple partner origins, real tool execution, and the P0 security gate are
+all proven.

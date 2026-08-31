@@ -152,7 +152,21 @@ includesAll(engineApp, [
   "persisted: false",
   'state.appliedMode = persist ? "saved" : "once"',
   "Apply once creates no persisted preference or offer note",
+  "createPartnerFrames();",
+  "maxPrice: preferences.maxPrice ?? undefined",
+  "No opted-in offer matches this context",
+  "get_journey_receipt",
 ], "engine WebMCP, provenance, and consent contract");
+const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
+includesAll(p0Source, [
+  "offers.discover",
+  "createJourney",
+  "createContextSnapshot",
+  "resolveOfferDeals",
+  "const categories = new Set(profile?.recurringCategories || [])",
+  "decisionReceipt",
+  "observedOrInferred: \"observed\"",
+], "P0 capability and journey primitives");
 const dealToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_deal_watch"'),
   engineApp.indexOf('name: "get_profile"'),
@@ -217,12 +231,14 @@ const storeSource = await readFile(path.join(root, "partners/watch/functions/api
 includesAll(registerInterestSource, [
   "body.confirmed !== true",
   "pricePoint <= 0",
+  "requestId",
   "No notification or purchase was created",
 ], "Watch API validation and outcome");
 includesAll(storeSource, [
   "expirationTtl: INTEREST_RETENTION_SECONDS",
   "activeInterestRecords",
   "INTEREST_RETENTION_MS",
+  "record.requestId === requestId",
 ], "Watch KV and record expiry contract");
 
 const api = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/register-interest.js")).href}?check=${Date.now()}`);

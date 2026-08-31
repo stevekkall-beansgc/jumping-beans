@@ -858,6 +858,36 @@ h1 {
   pointer-events: none;
 }
 
+.network-summary {
+  margin-top: var(--bl-space-4);
+}
+
+.network-summary > p {
+  margin-bottom: var(--bl-space-3);
+}
+
+.network-list {
+  display: grid;
+  gap: var(--bl-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.network-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--bl-space-3);
+  border-top: var(--bl-border-width) solid var(--bl-color-border);
+  padding-top: var(--bl-space-2);
+}
+
+.network-list span {
+  color: var(--bl-color-text-muted);
+  font-size: var(--bl-font-size-sm);
+  text-align: right;
+}
+
 @media (max-width: 58rem) {
   .layout {
     grid-template-columns: 1fr;

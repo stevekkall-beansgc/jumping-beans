@@ -30,7 +30,11 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: false, error: "pricePoint must be greater than zero" }, 400);
   }
 
-  const stored = await addInterest(env, product, pricePoint);
+  const requestId = String(body.requestId || "").trim();
+  if (requestId && (requestId.length < 8 || requestId.length > 160)) {
+    return json({ ok: false, error: "requestId must be between 8 and 160 characters" }, 400);
+  }
+  const stored = await addInterest(env, product, pricePoint, requestId || null);
   return json({
     ok: true,
     message: `Target price recorded for up to ${stored.retentionDays} days as a non-binding demand signal. No notification or purchase was created.`,

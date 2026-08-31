@@ -9,6 +9,15 @@ import {
   PERSONAS,
   SUPPORTED,
 } from "./config.js";
+import {
+  CAPABILITIES,
+  createContextSnapshot,
+  createEvent,
+  createJourney,
+  decisionReceipt,
+  opaqueId,
+  resolveOfferDeals,
+} from "./p0.js";
 
 const els = {
   status: document.getElementById("status"),
@@ -129,7 +138,19 @@ const state = {
   pendingRemember: false,
   discoveryComplete: false,
   hasSavedPreferences: hasStored(STORAGE.preferences),
+  journey: createJourney({ intentType: "offer_discovery", surface: "web", protocol: "webmcp" }),
+  contextSnapshot: null,
+  events: [],
+  capabilityResolution: null,
+  decisionReceipt: null,
+  connectedOrigins: [],
 };
+
+function recordEvent(type, payload = {}) {
+  const event = createEvent(state.journey, type, payload);
+  state.events = [...state.events, event].slice(-200);
+  return event;
+}
 
 const formatLabels = {
   testimonial: "Testimonials",
@@ -181,7 +202,10 @@ function absoluteTime(value) {
 }
 
 function updateConnections() {
-  const discovered = state.connectedTools.length;
+  const origins = [...new Set(state.connectedTools.map((tool) => tool.origin).filter(Boolean))];
+  state.connectedOrigins = origins;
+  const names = origins.map((origin) => PARTNER_NAMES[origin] || safeOrigin(origin));
+  const discovered = origins.length;
   if (!SUPPORTED) {
     els.status.textContent = "Open inventory ready. WebMCP is unavailable here; Site B is an illustrative preview.";
     els.protocol.textContent = "WebMCP · unavailable in this browser";
@@ -197,19 +221,19 @@ function updateConnections() {
     return;
   }
   els.status.textContent = discovered
-    ? `Open inventory ready. ${discovered} opted-in site${discovered === 1 ? "" : "s"} connected.`
+    ? `Open inventory ready. ${discovered} opted-in site${discovered === 1 ? "" : "s"} connected: ${names.join(", ")}.`
     : "Open inventory ready. No opted-in offer tools responded.";
   els.protocol.textContent = discovered
     ? `WebMCP · ${discovered} opted-in site${discovered === 1 ? "" : "s"}`
     : "WebMCP · no opted-in tools found";
   els.sourceCount.textContent = discovered
-    ? `${discovered} connected`
+    ? `${discovered} connected: ${names.join(", ")}`
     : "0 connected";
   els.statusDot.dataset.on = discovered ? "1" : "0";
 }
 
 function createPartnerFrames() {
-  PARTNER_ORIGINS.forEach((origin, index) => {
+  const waits = PARTNER_ORIGINS.map((origin, index) => {
     const frame = document.createElement("iframe");
     frame.src = `${origin}/`;
     frame.allow = "tools";
@@ -217,50 +241,124 @@ function createPartnerFrames() {
     frame.dataset.origin = origin;
     frame.title = `WebMCP discovery frame for ${PARTNER_NAMES[origin] || `partner ${index + 1}`}`;
     frame.setAttribute("aria-hidden", "true");
+    const wait = new Promise((resolve) => {
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      frame.addEventListener("load", settle, { once: true });
+      frame.addEventListener("error", settle, { once: true });
+      window.setTimeout(settle, 5000);
+    });
     document.body.appendChild(frame);
+    return wait;
   });
+  return Promise.all(waits);
 }
 
-async function executeTool(tool, input) {
-  const raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+async function executeTool(tool, input, { compatibilityRetry = true } = {}) {
+  let raw;
+  try {
+    raw = await document.modelContext.executeTool(tool, input);
+  } catch (error) {
+    if (!compatibilityRetry) throw error;
+    // Some WebMCP implementations still expect serialized arguments. This
+    // retry is limited to partner reads and keeps the product protocol-aware.
+    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+  }
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
 
-async function discoverPartnerDeals() {
+async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return [];
-  try {
-    const tools = await document.modelContext.getTools({ fromOrigins: PARTNER_ORIGINS });
-    const matching = tools.filter((tool) => tool.name === TOOL_NAMES.matchingDeals);
-    state.connectedTools = matching;
-    const results = await Promise.allSettled(
-      matching.map((tool) =>
-        executeTool(tool, {
-          categories: state.profile.recurringCategories,
-          presentation: state.appliedPreferences,
-        }),
-      ),
-    );
-    return results.flatMap((result, index) => {
-      if (result.status !== "fulfilled") return [];
-      const tool = matching[index];
-      const observedAt = new Date().toISOString();
-      return (result.value?.deals || []).map((deal) => ({
-        ...deal,
-        origin: deal.origin || tool.origin,
-        partnerOrigin: tool.origin,
-        partnerName:
-          deal.partnerName || PARTNER_NAMES[tool.origin] || safeOrigin(tool.origin),
-        sourceType: "opted-in partner",
-        sourceLabel: "WebMCP offer tool",
-        sourceDescription: "The partner opted in to return structured offer data and optional presentation collateral.",
-        observedAt,
-        verificationLabel: "Partner-provided through WebMCP; not independently verified by Jumping Beans",
-      }));
+  recordEvent("capability.invocation.started", {
+    capabilityId: "offers.discover",
+    capabilityVersion: "1.0.0",
+    requestedOrigins: [...PARTNER_ORIGINS],
+  });
+  let matching = [];
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const tools = await document.modelContext.getTools({ fromOrigins: PARTNER_ORIGINS });
+      matching = tools
+        .filter((tool) => tool.name === TOOL_NAMES.matchingDeals && tool.origin)
+        .filter((tool, index, all) => all.findIndex((candidate) => candidate.origin === tool.origin) === index);
+      if (matching.length || attempt === 2) break;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+  }
+  state.connectedTools = matching;
+  matching.forEach((tool) => recordEvent("capability.exposed", {
+    capabilityId: "offers.discover",
+    capabilityVersion: "1.0.0",
+    origin: tool.origin,
+    toolName: tool.name,
+  }));
+  if (!matching.length && lastError) {
+    recordEvent("capability.invocation.failed", {
+      capabilityId: "offers.discover",
+      capabilityVersion: "1.0.0",
+      reason: "partner discovery failed after compatibility retries",
     });
-  } catch {
-    state.connectedTools = [];
     return [];
   }
+  const results = await Promise.allSettled(
+    matching.map(async (tool) => {
+      const invocationId = opaqueId("invocation");
+      recordEvent("capability.invocation.started", {
+        invocationId,
+        capabilityId: "offers.discover",
+        capabilityVersion: "1.0.0",
+        origin: tool.origin,
+      });
+      try {
+        const value = await executeTool(tool, {
+          categories: state.profile.recurringCategories,
+          maxPrice: preferences.maxPrice ?? undefined,
+          presentation: preferences,
+        });
+        recordEvent("capability.invocation.succeeded", {
+          invocationId,
+          capabilityId: "offers.discover",
+          capabilityVersion: "1.0.0",
+          origin: tool.origin,
+          returnedOfferCount: Array.isArray(value?.deals) ? value.deals.length : 0,
+        });
+        return { tool, value };
+      } catch (error) {
+        recordEvent("capability.invocation.failed", {
+          invocationId,
+          capabilityId: "offers.discover",
+          capabilityVersion: "1.0.0",
+          origin: tool.origin,
+          reason: "partner tool invocation failed",
+        });
+        throw error;
+      }
+    }),
+  );
+  return results.flatMap((result) => {
+    if (result.status !== "fulfilled") return [];
+    const { tool, value } = result.value;
+    const observedAt = new Date().toISOString();
+    return (value?.deals || []).map((deal) => ({
+      ...deal,
+      origin: deal.origin || tool.origin,
+      partnerOrigin: tool.origin,
+      partnerName:
+        deal.partnerName || PARTNER_NAMES[tool.origin] || safeOrigin(tool.origin),
+      sourceType: "opted-in partner",
+      sourceLabel: "WebMCP offer tool",
+      sourceDescription: "The partner opted in to return structured offer data and optional presentation collateral.",
+      observedAt,
+      verificationLabel: "Partner-provided through WebMCP; not independently verified by Jumping Beans",
+    }));
+  });
 }
 
 function fallbackPartnerOffer() {
@@ -295,11 +393,27 @@ function fallbackPartnerOffer() {
   };
 }
 
-function choosePartnerOffer(deals) {
-  const candidate =
-    deals.find((deal) =>
-      deal.collateral?.some((item) => preferredFormats.includes(item.type)),
-    ) || deals[0];
+function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
+  const resolution = resolveOfferDeals(deals, {
+    profile: state.profile,
+    preferences,
+  });
+  state.capabilityResolution = resolution;
+  state.decisionReceipt = decisionReceipt({
+    journey: state.journey,
+    context: state.contextSnapshot,
+    resolution,
+    connectedOrigins: state.connectedOrigins,
+  });
+  recordEvent("capability.decision", {
+    capabilityId: "offers.discover",
+    capabilityVersion: "1.0.0",
+    eligibleCount: resolution.eligible.length,
+    exposedCount: resolution.exposed.length,
+    connectedOriginCount: state.connectedOrigins.length,
+    reason: resolution.reason,
+  });
+  const candidate = resolution.ranked[0];
   return candidate
     ? { ...candidate, merchant: candidate.partnerName || candidate.vendor || "Opted-in merchant" }
     : null;
@@ -464,10 +578,31 @@ function withPreferenceQuery(destination, preferences) {
   return url.href;
 }
 
+function networkMarkup() {
+  if (!state.discoveryComplete) return "";
+  const exposed = state.capabilityResolution?.exposed || [];
+  const rows = state.connectedOrigins.map((origin) => {
+    const partnerDeals = exposed.filter((deal) => deal.partnerOrigin === origin);
+    const eligible = state.capabilityResolution?.eligible.filter((deal) => deal.partnerOrigin === origin).length || 0;
+    return `<li><strong>${escapeHtml(PARTNER_NAMES[origin] || safeOrigin(origin))}</strong><span>${eligible} eligible · ${partnerDeals.length} exposed</span></li>`;
+  });
+  if (!rows.length) {
+    return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>No opted-in partner capability responded in this browser. The open catalog remains available as the baseline.</p></section>`;
+  }
+  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Jumping Beans checked each opted-in origin independently, then applied the same profile and price rules before ranking.</p><ul class="network-list">${rows.join("")}</ul></section>`;
+}
+
 function renderNextStep() {
+  const activePreferences = state.applied ? state.appliedPreferences : DEFAULT_PREFERENCES;
+  if (state.discoveryComplete && !state.sourceB && state.partnerDeals.length) {
+    renderOfferCard(
+      els.nextStep,
+      `<header class="step-card-head"><div><p class="step-kicker">Site B · no relevant match</p><h3>No opted-in offer matches this context</h3></div><span class="bl-badge source-pill source-optin" data-status="info">Filtered</span></header><p class="offer-copy">The connected partners returned offers, but none met the current profile, category, or price rules. Adjust the draft choices to widen the result set.</p><p class="reason"><strong>Decision receipt</strong><br>${escapeHtml(state.capabilityResolution?.reason || "Eligibility rules")}; ${state.capabilityResolution?.relevant.length || 0} relevant offer${state.capabilityResolution?.relevant.length === 1 ? "" : "s"}.</p>${networkMarkup()}`,
+    );
+    return;
+  }
   const deal = state.sourceB || fallbackPartnerOffer();
   const sourceKind = state.sourceB ? "optin" : "preview";
-  const activePreferences = state.applied ? state.appliedPreferences : DEFAULT_PREFERENCES;
   const destination =
     deal.partnerOrigin || PARTNER_ORIGINS[0] || deal.landing;
   const href = withPreferenceQuery(destination, activePreferences);
@@ -486,7 +621,7 @@ function renderNextStep() {
     </div>`;
   renderOfferCard(
     els.nextStep,
-    offerMarkup(deal, sourceKind, label, activePreferences) + actions,
+    offerMarkup(deal, sourceKind, label, activePreferences) + actions + networkMarkup(),
   );
   document.getElementById("show-source")?.addEventListener("click", () => {
     setAgent(
@@ -625,6 +760,12 @@ function forgetMemory(key) {
     state.watches = [];
     writeStored(STORAGE.watches, state.watches);
   }
+  recordEvent("memory.deleted", {
+    capabilityId: "memory.forget",
+    capabilityVersion: "1.0.0",
+    scope: "Jumping Beans product in this browser",
+    keyType: item?.kind || "unknown",
+  });
   renderJourney();
   showToast("Saved note forgotten");
 }
@@ -647,6 +788,12 @@ function forgetAllMemory() {
   state.appliedMode = null;
   state.hasSavedPreferences = false;
   Object.values(STORAGE).forEach(removeStored);
+  recordEvent("memory.deleted", {
+    capabilityId: "memory.forget",
+    capabilityVersion: "1.0.0",
+    scope: "Jumping Beans product in this browser",
+    all: true,
+  });
   setAgent("I forgot the saved display rules, offer notes, and deal watch from this browser.");
   renderJourney();
   showToast("All saved offer memory forgotten");
@@ -691,6 +838,18 @@ function applyPreferences({ persist }) {
     ...state.preferences,
     formats: [...state.preferences.formats],
   };
+  state.contextSnapshot = createContextSnapshot({
+    profile: state.profile,
+    preferences: state.appliedPreferences,
+    applied: true,
+  });
+  state.sourceB = choosePartnerOffer(state.partnerDeals, state.appliedPreferences);
+  recordEvent("user.intervention", {
+    capabilityId: "preferences.apply",
+    capabilityVersion: "1.0.0",
+    mode: state.appliedMode,
+    persisted: Boolean(persist),
+  });
   if (persist) {
     const preferencesSaved = writeStored(STORAGE.preferences, state.appliedPreferences);
     state.hasSavedPreferences = preferencesSaved;
@@ -717,6 +876,11 @@ function applyPreferences({ persist }) {
     setAgent("Applied once to Site B without saving a display preference or offer note.");
     showToast("Display rules applied once without saving");
   }
+  recordEvent("journey.outcome", {
+    outcomeType: "preference_applied",
+    status: "user_confirmed",
+    mode: state.appliedMode,
+  });
   renderJourney();
 }
 
@@ -755,6 +919,12 @@ function prepareDealWatch(targetPrice = Math.max(1, state.sourceA.dealPrice - 5)
     target,
     stagedAt: new Date().toISOString(),
   };
+  recordEvent("capability.invocation.succeeded", {
+    capabilityId: "deal_watch.stage",
+    capabilityVersion: "1.0.0",
+    outcomeType: "watch_staged",
+    persisted: false,
+  });
   setAgent(`I staged a watch for ${state.sourceA.name} below ${money(target)}. Review the exact terms and confirm in the page before anything is saved.`);
   renderJourney();
   els.confirmWatch.focus();
@@ -784,6 +954,13 @@ function persistPendingWatch() {
     removeStored(STORAGE.watches);
     writeStored(STORAGE.memory, state.memory);
   }
+  recordEvent("journey.outcome", {
+    capabilityId: "deal_watch.stage",
+    capabilityVersion: "1.0.0",
+    outcomeType: saved && memorySaved ? "watch_saved" : "watch_save_failed",
+    persisted: Boolean(saved && memorySaved),
+    scope: "Jumping Beans product in this browser",
+  });
   setAgent(
     saved && memorySaved
       ? `Confirmed and saved in this browser: surface ${watch.name} below ${money(watch.target)}. No notification, order, payment, or message was created.`
@@ -922,6 +1099,17 @@ function registerEngineTools() {
         formats,
         maxPrice: maxPrice ?? state.preferences.maxPrice,
       };
+      state.contextSnapshot = createContextSnapshot({
+        profile: state.profile,
+        preferences: state.preferences,
+        applied: false,
+      });
+      recordEvent("capability.invocation.succeeded", {
+        capabilityId: "preferences.stage",
+        capabilityVersion: "1.0.0",
+        outcomeType: "preference_staged",
+        persisted: false,
+      });
       renderJourney();
       setAgent("The agent staged new display rules. Review the exact fact before saving or applying once.");
       return {
@@ -986,10 +1174,32 @@ function registerEngineTools() {
       applied: state.applied ? state.appliedPreferences : null,
     }),
   });
+  register({
+    name: "get_journey_receipt",
+    description: "Return the observed offer-discovery journey, current user-approved context snapshot, capability versions, decision receipt, and recent event trail.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true },
+    execute: async () => ({
+      journey: state.journey,
+      contextSnapshot: state.contextSnapshot,
+      capabilities: CAPABILITIES,
+      decisionReceipt: state.decisionReceipt,
+      events: state.events.slice(-50),
+    }),
+  });
 }
 
 async function init() {
-  createPartnerFrames();
+  state.contextSnapshot = createContextSnapshot({
+    profile: state.profile,
+    preferences: state.preferences,
+    applied: state.applied,
+  });
+  recordEvent("journey.started", {
+    intentType: state.journey.intentType,
+    contextSnapshotId: state.contextSnapshot.contextSnapshotId,
+  });
+  await createPartnerFrames();
   renderJourney();
   registerEngineTools();
   updateConnections();
