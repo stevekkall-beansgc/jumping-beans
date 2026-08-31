@@ -141,7 +141,7 @@ includesAll(engineHtml, [
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
-  'frame.allow = "tools"',
+  'frame.allow = "tools; cross-origin-isolated"',
   "getTools({ fromOrigins: PARTNER_ORIGINS })",
   "executeTool(tool, JSON.stringify(input))",
   'sourceKind === "open"',
@@ -160,6 +160,11 @@ includesAll(engineApp, [
   "No opted-in offer matches this context",
   "get_journey_receipt",
 ], "engine WebMCP, provenance, and consent contract");
+const engineWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
+includesAll(engineWorker, [
+  '"Permissions-Policy": base.PERMISSIONS',
+  'PERMISSIONS: `tools=(${permissionsPolicy})`',
+], "engine WebMCP response policy");
 const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
 includesAll(p0Source, [
   "offers.discover",

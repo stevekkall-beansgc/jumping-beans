@@ -71,6 +71,7 @@ Functions.
 1. Confirm headers on each live URL:
    `curl -sI https://<origin>/ | grep -iE "cross-origin|origin-trial"`
    Expect COOP `same-origin`, COEP `require-corp`, CORP `cross-origin`,
-   and an `Origin-Trial` header.
+   `Permissions-Policy: tools=(self <the three partner origins>)`, and an
+   `Origin-Trial` header.
 2. Verify the deployed URLs remain the configured production origins in
    `engine/config.js` and each partner's `CONCIERGE_ORIGIN`/`exposedTo`.

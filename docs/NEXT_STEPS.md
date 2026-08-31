@@ -47,11 +47,14 @@ ambitious product legible.
   deterministic gate covers authorization denial, malformed/timeout/failed
   partial results, anonymous context projection, and multi-offer ordering.
 
-Still required before P0 acceptance: externally verifiable grants or a server
-execution gateway (the current grants are browser-local), payload-bound write
-confirmation/idempotency conflict hardening, cross-partner canonical product
-identity/freshness policy, and two fresh headed-Chrome cross-origin runs with
-exported receipts. No deployment was performed for this slice.
+Still required for the broader competition gate: externally verifiable grants
+or a server execution gateway (the current grants are browser-local),
+cross-partner canonical product identity/freshness policy, a Chrome runtime
+that exposes the `tools` permission to cross-origin frames, and a fresh 3/3
+embedded run with exported receipts. The engine now delegates both `tools` and
+`cross-origin-isolated` to every partner frame and sends the required top-level
+`Permissions-Policy` allowlist. The fix is staged locally; production still
+needs an approved deploy and fresh 3/3 evidence.
 
 ## 2026-08-31 P0 Watch write-contract slice completed locally
 

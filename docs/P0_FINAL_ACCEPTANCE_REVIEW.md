@@ -1,22 +1,24 @@
 # P0 final acceptance review
 
 Date: 2026-08-31  
-Scope: Final four-item checkpoint after the D1-compatible authority and
-request-boundary changes. Acceptance review only: no production code was
-modified, no resources were provisioned, and nothing was deployed.
+Scope: Final four-item checkpoint after the D1 authority, request-boundary,
+and headed-WebMCP changes. No production deployment was performed.
 
 ## Verdict: STOP / NO-GO
 
-The local deterministic gate and modeled D1/request-boundary suite are green.
+The local deterministic gate, real local Pages+D1 integration, and modeled
+request-boundary suite are green.
 The Watch UI correctly stages before confirmation, and the boundary rejects
 invalid origins, sessions, CSRF, malformed/oversized requests, and rate-limit
 overages before merchant mutation.
 
-P0 is not accepted because the D1 database is not provisioned or migrated, so
-the authority/concurrency results are only D1-compatible test-double evidence;
-production remains the older deployed implementation. WebMCP discovery is also
-not executable in the current browser runtime. No production-boundary or
-headed-WebMCP pass is claimed.
+P0 hardening is accepted locally, but the production/network acceptance gate
+remains open. The approved D1 is provisioned and the local Pages+D1 path proves
+atomic replay/concurrency behavior. The current headed Chrome can execute the
+engine and each partner directly, but its cross-origin iframe policy surface
+does not expose the `tools` permission, so a 3/3 embedded-network pass cannot
+be claimed from this browser build. Production remains the older deployed
+implementation.
 
 ## Requirement-by-requirement result
 
@@ -41,7 +43,7 @@ headed-WebMCP pass is claimed.
 | Receipt redaction | PASS | Returned receipt contained no raw confirmation grant, raw idempotency key, or session value |
 | Local stage/commit persistence | PASS only within one process | Separate stage then commit API calls succeeded through the shared local-development seam; no cross-isolate/restart durability proven |
 | Fresh local Watch staging UI | PASS | Engine opened exact product/price, scope, retention, and non-outcomes before confirmation; no commit was clicked |
-| WebMCP registration/discovery | NOT PROVEN | Partner registration log appeared, but `document.modelContext` was undefined on the engine/direct Watch page and the runtime rejected `webmcp_list_tools` as unsupported |
+| WebMCP registration/discovery | PARTIAL / EMBEDDED NETWORK OPEN | Fresh headed Chrome executed the engine tools and all three partner `get_matching_deals` tools directly. The engine receipt was captured with anonymous context and explicit origin outcomes. Cross-origin iframe discovery remained unavailable because Chrome reported no effective `tools` permission-policy feature for the child frames; this is not a 3/3 network acceptance pass. |
 | Production updated behavior | NOT PROVEN / FAIL for checkpoint | Production still showed the old “Record target price” page with no action/receipt elements |
 | Production untouched | PASS | No deployment or cloud mutation was performed; repository changes are the pre-existing checkpoint plus this report |
 
@@ -113,6 +115,28 @@ Observed “Confirm this deal watch” with:
 - retention: Until you use Forget;
 - non-outcomes: no notification, order, payment, or message;
 - no saved-memory note before confirmation.
+
+Fresh headed-Chrome WebMCP run on 2026-08-31 (before the top-level policy fix):
+
+- Engine `document.modelContext.getTools()` exposed six tools, including
+  `set_display_preferences`, `set_deal_watch`, and `get_journey_receipt`.
+- `set_display_preferences` returned a staged, non-persisted preference with
+  `requiresUserConfirmation: true`, request-only context disclosure, and an
+  explicit no-order/no-message outcome.
+- `set_deal_watch` returned a staged, non-persisted `$49.00` product-scoped
+  action requiring the page confirmation control.
+- `get_journey_receipt` returned a fresh journey ID, context snapshot, event
+  trail, and redacted decision receipt. The receipt recorded all three local
+  partner origins and their failed embedded invocation outcomes.
+- Direct top-level partner runs executed successfully in headed Chrome:
+  Petsupply returned three matching offers, Coffee Co returned matching coffee
+  offers, and Watch Co returned matching watch offers. Each page reported
+  `crossOriginIsolated: true` and exposed `get_matching_deals`.
+- The engine delegated both `tools` and `cross-origin-isolated` on every
+  partner iframe. The frame tree confirmed the child documents became isolated,
+  but the engine response omitted the top-level `Permissions-Policy` allowlist.
+  Chrome therefore inherited the default `tools=(self)` policy and the child
+  pages had no `document.modelContext`.
 
 WebMCP was not executable through the current in-app browser. Direct page
 inspection returned `typeof document.modelContext === "undefined"`, and the
@@ -189,8 +213,8 @@ sed -n '1,160p' partners/watch/migrations/0001_write_actions.sql
    including privacy-preserving network/deployment ceilings.
 3. Complete production HTTPS cookie/origin/CSRF verification without claiming
    that the header/session model authenticates an anonymous user.
-4. Obtain a browser/runtime that can execute WebMCP discovery and capture a
-   fresh journey through partner tools and receipt evidence.
+4. Publish the engine's explicit `Permissions-Policy: tools=(self <partner origins>)`
+   fix, then capture a fresh 3/3 journey through partner tools and receipt evidence.
 5. Link the Watch action receipt into the engine journey receipt, then rerun the
    full final matrix before any deployment decision.
 

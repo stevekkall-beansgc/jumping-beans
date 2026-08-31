@@ -1,6 +1,6 @@
 # Jumping Beans — Session Handoff
 
-State as of 2026-08-28. WebMCP Challenge (bet C1), deadline **Sep 3 2026 15:00 PT**, $0 budget.
+State as of 2026-08-31. WebMCP Challenge (bet C1), deadline **Sep 3 2026 15:00 PT**, $0 budget.
 Authoritative design docs live in `~/beans/labs/beanlabs/ventures/05-concierge-webmcp/`
 (SESSION-BRIEF.md = start here; SPEC.md; RESEARCH.md). This repo is the public submission.
 
@@ -16,15 +16,22 @@ Authoritative design docs live in `~/beans/labs/beanlabs/ventures/05-concierge-w
 - `scripts/scaffold-partner.mjs` — generates a full partner unit from a seed catalog.
 - `docs/` — `origin-trial.md`, `CLOUDFLARE_DEPLOY.md`.
 
-## Verified working (Chrome 151, headed, flag `--enable-features=WebMCP,WebMCPTesting`)
-- Engine cross-origin E2E: embeds 3 partner iframes (`allow="tools"`), `getTools({fromOrigins})`
-  discovers all 3 `get_matching_deals` tools, `build_feed('alex-budget-parent')` aggregates +
-  renders ranked feed. Last probe: `3/3 partners online`, `feedCards=4`, `build_feed` n:4+top3, 0 EXC.
+## Current headed-Chrome evidence
+- The engine and each partner execute their native WebMCP tools directly in Chrome 151.
+- The engine delegates `allow="tools; cross-origin-isolated"` to all partner frames
+  and now sends a top-level `Permissions-Policy` allowlist for the three partner
+  origins. The fix is staged locally; production must be deployed before claiming
+  the embedded 3/3 network pass.
+- The pre-fix headed run exposed no effective `tools` permission-policy feature to
+  the cross-origin child frames, so their `document.modelContext` was unavailable.
+  Do not claim the historical 3/3 iframe result until a fresh production run
+  passes.
 - Local fleet currently serving: engine **8082**, petsupply **8084**, coffee **8085**, watch **8086**
   (each via `spikes/a-cross-origin/serve.py <port> <dir>`; sends COOP/COEP/CORP; no token on localhost).
 
 ## Key gotchas (do not re-derive)
-1. `executeTool(tool, jsonString)` — 2nd arg is a **JSON string**, resolves to a STRING. `JSON.parse` it.
+1. Chrome 151's live producer API accepted object inputs in this run; the engine
+   keeps a serialized-input retry for older WebMCP implementations.
 2. CORP `cross-origin` header required on EVERY unit, or cross-origin partner iframe fails under COEP.
 3. WebMCP is **headed-Chrome only** (headless → `modelContext` undefined); enable via the flag.
 4. Tool `execute()` gets **no 2nd `{signal}` arg** — guard: `execute: async (input, {signal}={})=>…` + `(!signal||!signal.aborted)`.

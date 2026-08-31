@@ -14,6 +14,15 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         # CORP lets a COEP:require-corp parent embed our cross-origin assets/iframes.
         self.send_header("Cross-Origin-Resource-Policy", "cross-origin")
+        # The embedder must grant the WebMCP `tools` feature at the top level;
+        # iframe allow="tools" alone cannot expand an inherited policy.
+        if PORT == 8082:
+            self.send_header(
+                "Permissions-Policy",
+                'tools=(self "http://127.0.0.1:8084" "http://127.0.0.1:8085" '
+                '"http://127.0.0.1:8086" "http://localhost:8084" '
+                '"http://localhost:8085" "http://localhost:8086")',
+            )
         super().end_headers()
 
 socketserver.ThreadingTCPServer.allow_reuse_address = True

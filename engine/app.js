@@ -244,7 +244,9 @@ function createPartnerFrames() {
   const waits = PARTNER_ORIGINS.map((origin, index) => {
     const frame = document.createElement("iframe");
     frame.src = `${origin}/`;
-    frame.allow = "tools";
+    // WebMCP is origin-isolated. Delegate both the tool capability and the
+    // cross-origin-isolated capability to each partner document.
+    frame.allow = "tools; cross-origin-isolated";
     frame.className = "partner-frame";
     frame.dataset.origin = origin;
     frame.title = `WebMCP discovery frame for ${PARTNER_NAMES[origin] || `partner ${index + 1}`}`;

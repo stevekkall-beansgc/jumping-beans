@@ -14,7 +14,22 @@ const MIME = {
   ".css": "text/css; charset=utf-8",
 };
 
-const base = { COOP: "same-origin", COEP: "require-corp", CORP: "cross-origin", TRIAL };
+// Cross-origin WebMCP needs two explicit grants: the iframe's `allow`
+// attribute and the embedder's top-level Permissions Policy. Keep this list
+// exact so the engine can inspect only the three opted-in partner origins.
+const permissionsPolicy = [
+  "self",
+  '"https://petsupply.pages.dev"',
+  '"https://coffee-amk.pages.dev"',
+  '"https://watch-ce8.pages.dev"',
+].join(" ");
+const base = {
+  COOP: "same-origin",
+  COEP: "require-corp",
+  CORP: "cross-origin",
+  TRIAL,
+  PERMISSIONS: `tools=(${permissionsPolicy})`,
+};
 
 export default {
   async fetch(request, env) {
@@ -34,6 +49,7 @@ export default {
         "Cross-Origin-Opener-Policy": base.COOP,
         "Cross-Origin-Embedder-Policy": base.COEP,
         "Cross-Origin-Resource-Policy": base.CORP,
+        "Permissions-Policy": base.PERMISSIONS,
         "Origin-Trial": base.TRIAL,
       },
     });
