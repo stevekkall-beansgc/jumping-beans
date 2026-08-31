@@ -243,13 +243,15 @@ function updateConnections() {
 function createPartnerFrames() {
   const waits = PARTNER_ORIGINS.map((origin, index) => {
     const frame = document.createElement("iframe");
-    frame.src = `${origin}/`;
     // WebMCP is origin-isolated. Delegate both the tool capability and the
     // cross-origin-isolated capability to each partner document.
     // Name the target origin explicitly as well as delegating the feature.
     // This avoids relying on the browser to expand the `src` shorthand while
     // the frame is being created dynamically.
     frame.allow = `tools ${origin}; cross-origin-isolated ${origin}`;
+    // Set the policy before navigation so the initial document receives the
+    // delegation; some Chromium builds snapshot iframe policy at navigation.
+    frame.src = `${origin}/`;
     frame.className = "partner-frame";
     frame.dataset.origin = origin;
     frame.title = `WebMCP discovery frame for ${PARTNER_NAMES[origin] || `partner ${index + 1}`}`;
