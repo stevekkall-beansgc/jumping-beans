@@ -242,7 +242,9 @@ includesAll(watchHtml, [
   'name="confirmed"',
   'value="true"',
   "up to 30 days",
-  "no notification or purchase is created",
+  "server-owned pending action",
+  'id="interest-action"',
+  'id="interest-receipt"',
 ], "watch form, confirmation, and retention contract");
 
 const watchCatalog = JSON.parse(await readFile(path.join(root, "partners/watch/catalog.json"), "utf8"));
@@ -259,41 +261,35 @@ check(productModule.activeInterestRecords([
   { product: productModule.INTEREST_PRODUCTS[0].sku, pricePoint: 10, expiresAt: new Date(Date.now() - 1000).toISOString() },
 ]).length === 0, "Expired local interest records remain active");
 
-const registerInterestSource = await readFile(path.join(root, "partners/watch/functions/api/register-interest.js"), "utf8");
-const storeSource = await readFile(path.join(root, "partners/watch/functions/api/_store.js"), "utf8");
-includesAll(registerInterestSource, [
-  "body.confirmed !== true",
-  "pricePoint <= 0",
-  "requestId",
-  "No notification or purchase was created",
-], "Watch API validation and outcome");
-includesAll(storeSource, [
-  "expirationTtl: INTEREST_RETENTION_SECONDS",
-  "activeInterestRecords",
-  "INTEREST_RETENTION_MS",
-  "record.requestId === requestId",
-], "Watch KV and record expiry contract");
-
+const actionContract = await import(`${pathToFileURL(path.join(root, "partners/watch/action-contract.js")).href}?check=${Date.now()}`);
+const stageApi = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/stage-interest.js")).href}?check=${Date.now()}`);
 const api = await import(`${pathToFileURL(path.join(root, "partners/watch/functions/api/register-interest.js")).href}?check=${Date.now()}`);
-const calls = [];
-const env = { WATCH_INTEREST: {
-  get: async () => [],
-  put: async (...args) => calls.push(args),
-} };
-const apiRequest = (body) => new Request("https://watch.invalid/api/register-interest", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify(body),
-});
 const sku = productModule.INTEREST_PRODUCTS[0].sku;
-check((await api.onRequestPost({ request: apiRequest({ product: sku, pricePoint: 100 }), env })).status === 400,
-  "Watch API accepts a write without explicit confirmation");
-check((await api.onRequestPost({ request: apiRequest({ product: sku, pricePoint: -1, confirmed: true }), env })).status === 400,
-  "Watch API accepts a negative target price");
-const validResponse = await api.onRequestPost({ request: apiRequest({ product: sku, pricePoint: 100, confirmed: true }), env });
-const validBody = await validResponse.json();
-check(validResponse.status === 200 && validBody.recorded.pricePoint === 100, "Watch API rejects a valid confirmed target price");
-check(calls[0]?.[2]?.expirationTtl === productModule.INTEREST_RETENTION_SECONDS, "Watch KV write lacks the promised TTL");
+const action = await actionContract.stageAction({ payload: { product: sku, pricePoint: "100.50" }, validSkus: productModule.INTEREST_PRODUCT_SKUS, now: Date.now() });
+check(action.semanticPayload.targetPriceMinor === 10050 && action.semanticPayloadHash.length === 64, "Watch action normalization or SHA-256 hash is not canonical");
+check(actionContract.minorUnits("10.999") === null, "Watch action accepts non-canonical minor units");
+await Promise.all(["extra", "currency"].map(async (field) => {
+  try { actionContract.normalizeInterestPayload({ product: sku, pricePoint: "10.00", [field]: field === "extra" ? true : "EUR" }, { validSkus: productModule.INTEREST_PRODUCT_SKUS }); check(false, "Watch action accepts unknown fields or non-USD currency"); }
+  catch { check(true, "Watch action rejects unknown fields and non-USD currency"); }
+}));
+const apiRequest = (path, body, session = "watch-test-session") => new Request(`https://watch.invalid${path}`, { method: "POST", headers: { "content-type": "application/json", "x-watch-session": session }, body: JSON.stringify(body) });
+const localWriteEnv = { WATCH_WRITE_MODE: "local-development" };
+check((await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }), env: { WATCH_INTEREST: {} } })).status === 503, "Watch staging treats KV or missing storage as an authoritative repository");
+const stagedResponse = await stageApi.onRequestPost({ request: apiRequest("/api/stage-interest", { action }), env: localWriteEnv });
+const stagedBody = await stagedResponse.json();
+check(stagedResponse.status === 201 && stagedBody.confirmationGrant && stagedBody.grantId, "Watch stage does not create a server-owned pending grant");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId }), env: localWriteEnv })).status === 401, "Watch commit accepts a missing confirmation grant");
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: "forged" }), env: localWriteEnv })).status === 403, "Watch commit accepts a forged confirmation grant");
+const committedResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv });
+const committedBody = await committedResponse.json();
+check(committedResponse.status === 201 && committedBody.receipt.status === "committed", "Watch commit rejects a staged, payload-bound action");
+check(!JSON.stringify(committedBody.receipt).includes(stagedBody.confirmationGrant) && !JSON.stringify(committedBody.receipt).includes(action.idempotencyKey), "Watch receipt exposes a grant or raw idempotency key");
+const replayResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv });
+const replayBody = await replayResponse.json();
+check(replayResponse.status === 200 && replayBody.replayed && replayBody.receipt.expiresAt === committedBody.receipt.expiresAt, "Watch same-payload replay changes retention or does not return the original receipt");
+const changedAction = { ...action, semanticPayload: { ...action.semanticPayload, targetPriceMinor: 99999 } };
+changedAction.semanticPayloadHash = await actionContract.sha256(actionContract.canonicalJson(changedAction.semanticPayload));
+check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: changedAction, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }), env: localWriteEnv })).status === 409, "Watch changed-payload replay does not return idempotency conflict");
 
 const merchantHtml = surfaces.get("partners/watch/merchant/index.html");
 includesAll(merchantHtml, [

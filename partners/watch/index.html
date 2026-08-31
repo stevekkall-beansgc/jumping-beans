@@ -50,7 +50,7 @@
     >
       <h2 id="interest-title">Share a target price</h2>
       <p class="form-hint" id="interest-hint">This is not an order, reservation, or notification signup. It records one non-binding target-price demand signal for the shop.</p>
-      <p class="form-hint" id="interest-retention">Scope: Watch Co demand research. Retention: up to 30 days in deployed KV, or up to 30 days in this browser for the local fallback. Outcome: the aggregate merchant view can change; no notification or purchase is created.</p>
+      <p class="form-hint" id="interest-retention">Scope: Watch Co demand research. A server-owned pending action binds the exact product and price before confirmation. Retention: up to 30 days after commit. Outcome: the aggregate merchant view can change; no notification, purchase, or reservation is created.</p>
 
       <div class="form-row">
         <div class="field">
@@ -87,14 +87,17 @@
           type="checkbox"
           value="true"
           required
+          disabled
           toolparamdescription="Must be true only after the shopper explicitly confirms the exact product, target price, 30-day retention, and non-notification outcome"
         >
         <span>I confirm this exact product and target price may be retained for up to 30 days as a demand signal. I understand no notification or purchase will be created.</span>
       </label>
 
       <div class="bl-actions form-actions">
-        <button class="bl-button" id="interest-submit" type="submit">Record target price</button>
+        <button class="bl-button" id="interest-submit" type="submit">Stage target price</button>
       </div>
+      <p class="form-hint" id="interest-action" aria-live="polite" hidden></p>
+      <p class="form-hint" id="interest-receipt" aria-live="polite" hidden></p>
       <p class="form-message" id="interest-msg" role="status" aria-live="polite" hidden></p>
     </form>
 

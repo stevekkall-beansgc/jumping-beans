@@ -195,6 +195,8 @@ asset/rights review are complete.
 | P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_ACCEPTANCE_REVIEW.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
 | P0.5 | Main-session integration and release decision | Main Codex session | In progress; local checkpoint only, no deployment |
+| P0.6 | Consequential-write contract and local server seam | GPT-5.6-Terra | Complete locally; gate green at 340 assertions |
+| P0.7 | Write-boundary adversarial acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_WRITE_ACCEPTANCE_REVIEW.md` |
 
 ## 9. Execution notes
 
@@ -209,8 +211,13 @@ The corrected OpenAI loop ran serially in the shared product directory:
 GPT-5.6-Sol produced the architecture review, GPT-5.6-Terra implemented the
 resolver hardening and multi-offer slice, and GPT-5.6-Luna produced the
 acceptance report. The generated bundle was refreshed and the 336-assertion
-product gate passed. Future parallel implementation tasks must use actual
-isolated product worktrees or run serially through the main session.
+product gate passed. The next write-hardening loop added the canonical action
+contract, server-owned pending-action seam, payload-bound replay semantics,
+and redacted action receipts; the gate passed at 340 assertions. Luna found
+same-key concurrent duplication in the non-atomic local seam, so the product
+remains STOP/NO-GO until D1 or Durable Object authority is bound. Future
+parallel implementation tasks must use actual isolated product worktrees or
+run serially through the main session.
 
 ## 10. Release principles
 

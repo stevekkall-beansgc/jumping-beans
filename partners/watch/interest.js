@@ -1,153 +1,50 @@
-// Watch Co — declarative register_interest form handling (SPEC §4b).
-// Human and agent-invoked submissions share validation, outcome language, and
-// the same 30-day local fallback contract.
-import {
-  INTEREST_PRODUCTS,
-  INTEREST_PRODUCT_SKUS,
-  INTEREST_RETENTION_DAYS,
-  INTEREST_RETENTION_MS,
-  LOCAL_INTEREST_KEY,
-  activeInterestRecords,
-} from "./interest-products.js";
+// Watch Co demand signal: stage first, then commit the exact server-bound action.
+import { INTEREST_PRODUCTS, INTEREST_PRODUCT_SKUS, INTEREST_RETENTION_DAYS } from "./interest-products.js";
+import { stageAction } from "./action-contract.js";
 
 const form = document.getElementById("interest");
 const product = document.getElementById("interest-product");
 const msg = document.getElementById("interest-msg");
 const submit = document.getElementById("interest-submit");
+const confirmation = document.getElementById("interest-confirmed");
+const actionDetail = document.getElementById("interest-action");
+const receiptDetail = document.getElementById("interest-receipt");
+const LOCAL_DEVELOPMENT = new URLSearchParams(location.search).get("watch-local-development") === "1";
+const sessionKey = "watch-write-session-v1";
+let pending = null;
 
-function requestId() {
-  return globalThis.crypto?.randomUUID?.()
-    || `watch_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+function sessionId() {
+  try { const existing = sessionStorage.getItem(sessionKey); if (existing) return existing; const value = globalThis.crypto?.randomUUID?.() || `session_${Date.now()}`; sessionStorage.setItem(sessionKey, value); return value; } catch { return "unavailable-session"; }
 }
-
-product.replaceChildren(...INTEREST_PRODUCTS.map((item) => {
-  const option = document.createElement("option");
-  option.value = item.sku;
-  option.textContent = item.name;
-  return option;
-}));
-
-async function store(data) {
-  return fetch("/api/register-interest", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(data),
-  });
+product.replaceChildren(...INTEREST_PRODUCTS.map((item) => { const option = document.createElement("option"); option.value = item.sku; option.textContent = item.name; return option; }));
+function show(text, state = "success") { msg.textContent = text; msg.dataset.state = state; msg.hidden = false; }
+async function request(path, body) { return fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-watch-session": sessionId() }, body: JSON.stringify(body) }); }
+function showAction() { actionDetail.hidden = false; actionDetail.textContent = `Action ${pending.action.actionId} is staged until ${new Date(pending.expiresAt).toLocaleTimeString()}. Authority: ${pending.authority}. Review the exact product and price, then confirm.`; }
+function showReceipt(receipt, replayed) { receiptDetail.hidden = false; receiptDetail.textContent = `${replayed ? "Original receipt returned" : "Committed"}: ${receipt.status} · ${receipt.authority} · receipt ${receipt.receiptId} · expires ${new Date(receipt.expiresAt).toLocaleDateString()}. No notification, purchase, or reservation was created.`; }
+async function stage(data) {
+  const action = await stageAction({ payload: { product: data.product, pricePoint: data.pricePoint }, validSkus: INTEREST_PRODUCT_SKUS });
+  const response = await request("/api/stage-interest", { action }); const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || "The action could not be staged.");
+  pending = { action, ...body }; confirmation.checked = false; confirmation.disabled = false; submit.textContent = "Confirm and record target price"; showAction(); show("Action staged. Nothing has been recorded; confirm the exact reviewed action.");
 }
-
-function readLocal() {
+async function commit() {
+  const response = await request("/api/register-interest", { action: pending.action, grantId: pending.grantId, confirmationGrant: pending.confirmationGrant }); const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || `The demand store rejected this request (${response.status}).`);
+  showReceipt(body.receipt, body.replayed); show(body.message); pending = null; confirmation.disabled = true; submit.textContent = "Stage another target price";
+}
+form.addEventListener("submit", async (event) => {
+  event.preventDefault(); submit.disabled = true; submit.setAttribute("aria-busy", "true");
   try {
-    return activeInterestRecords(JSON.parse(localStorage.getItem(LOCAL_INTEREST_KEY) || "[]"));
-  } catch {
-    return [];
-  }
-}
-
-function storeLocal(data) {
-  const pricePoint = Number(data.pricePoint);
-  if (!INTEREST_PRODUCT_SKUS.has(data.product)) {
-    throw new RangeError("Choose a product from the current Watch Co catalog.");
-  }
-  if (!Number.isFinite(pricePoint) || pricePoint <= 0) {
-    throw new RangeError("Target price must be greater than zero.");
-  }
-  const createdAt = new Date();
-  const existing = readLocal().find((record) => record.requestId && record.requestId === data.requestId);
-  if (existing) return existing;
-  const record = {
-    product: data.product,
-    pricePoint,
-    requestId: data.requestId || requestId(),
-    createdAt: createdAt.toISOString(),
-    expiresAt: new Date(createdAt.getTime() + INTEREST_RETENTION_MS).toISOString(),
-  };
-  localStorage.setItem(LOCAL_INTEREST_KEY, JSON.stringify([...readLocal(), record]));
-  return record;
-}
-
-function show(text, state = "success") {
-  if (!msg) return;
-  msg.textContent = text;
-  msg.dataset.state = state;
-  msg.hidden = false;
-}
-
-async function action(data) {
-  submit.disabled = true;
-  submit.setAttribute("aria-busy", "true");
-  show("Recording the target price…");
-  try {
-    const pricePoint = Number(data.pricePoint);
-    if (data.confirmed !== "true") {
-      throw new Error("Explicit confirmation is required before a demand signal can be recorded.");
-    }
-    if (!INTEREST_PRODUCT_SKUS.has(data.product)) {
-      throw new RangeError("Choose a product from the current Watch Co catalog.");
-    }
-    if (!Number.isFinite(pricePoint) || pricePoint <= 0) {
-      throw new RangeError("Target price must be greater than zero.");
-    }
-
-    let response;
-    try {
-      response = await store({ ...data, pricePoint, confirmed: true, requestId: data.requestId || requestId() });
-    } catch {
-      response = null;
-    }
-
-    if (response?.ok) {
-      const body = await response.json();
-      show(body.message || `Target price recorded for up to ${INTEREST_RETENTION_DAYS} days. No notification or purchase was created.`);
-      return { ok: true, ...body };
-    }
-
-    // serve.py deliberately returns 404/501 for API routes. Only those local
-    // development responses may use browser storage; server validation errors
-    // remain errors and are never disguised as successful local writes.
-    if (!response || response.status === 404 || response.status === 501) {
-      const recorded = storeLocal({ ...data, pricePoint });
-      const message = `Target price recorded in this browser for up to ${INTEREST_RETENTION_DAYS} days. It is a non-binding demand signal; no notification or purchase was created.`;
-      show(message);
-      return {
-        ok: true,
-        recorded,
-        localFallback: true,
-        retentionDays: INTEREST_RETENTION_DAYS,
-        message,
-      };
-    }
-
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `The demand store rejected this request (${response.status}).`);
+    const data = Object.fromEntries(new FormData(form).entries());
+    if (event.agentInvoked) { await stage({ ...data, pricePoint: form.elements.pricePoint.value }); show("The agent staged the action only. A person must review and confirm it in this page."); return; }
+    if (!pending) { await stage(data); return; }
+    if (!confirmation.checked) throw new Error("Explicit confirmation is required for this exact staged action.");
+    await commit();
   } catch (error) {
+    // A local substitute is never reported as a merchant write. It is available
+    // only by an explicit local-development URL switch for fixture work.
     const message = error instanceof Error ? error.message : "The target price was not recorded.";
-    show(`${message} No demand signal, notification, or purchase was created.`, "error");
-    return { ok: false, error: message, persisted: false };
-  } finally {
-    submit.disabled = false;
-    submit.removeAttribute("aria-busy");
-  }
-}
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
-  if (event.agentInvoked) {
-    // An agent may stage the declarative action, but it cannot turn its own
-    // invocation into a demand signal. The human must review and submit the
-    // now-unchecked confirmation control in this page.
-    const confirmation = form.elements.namedItem("confirmed");
-    if (confirmation) confirmation.checked = false;
-    show("The agent staged this target price. Review it and press Record target price to confirm.", "success");
-    const staged = Promise.resolve({
-      ok: true,
-      staged: true,
-      persisted: false,
-      requiresUserConfirmation: true,
-      outcome: "No demand signal was recorded; a person must submit the reviewed form.",
-    });
-    event.respondWith?.(staged);
-    return;
-  }
-  const result = action(data);
+    if (LOCAL_DEVELOPMENT && /storage-unavailable|Failed to fetch/.test(message)) show(`Local development mode: server write unavailable. No merchant demand signal was recorded.`, "error");
+    else show(`${message} No demand signal, notification, purchase, or reservation was created.`, "error");
+  } finally { submit.disabled = false; submit.removeAttribute("aria-busy"); }
 });

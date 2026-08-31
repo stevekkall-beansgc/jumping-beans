@@ -1,11 +1,12 @@
 # Jumping Beans partner — Cloudflare Pages.
 # _headers in this dir sends COOP/COEP/CORP + Origin-Trial.
-# functions/ holds /api/register-interest + /api/interest-summary (Pages Functions).
+# functions/ holds staged and grant-consuming interest APIs. KV is not a write
+# authority; production writes stay fail-closed until the D1/DO repository is bound.
 # Deploy: cd partners/watch && npx wrangler pages deploy . --project-name watch
 name = "watch"
 pages_build_output_dir = "."
 compatibility_date = "2025-01-01"
 
-[[kv_namespaces]]
-binding = "WATCH_INTEREST"
-id = "bcdad4c43f814096b6ae7ac4452d916c"
+# Next server-bound checkpoint: bind a transactional D1 (or serialized Durable
+# Object) repository for pending grants, unique idempotency claims, interests,
+# and receipts. Do not add a KV fallback here.

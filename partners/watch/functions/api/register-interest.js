@@ -1,45 +1,21 @@
-// CF Pages Function: POST /api/register-interest (SPEC §4b/4c).
-import { addInterest } from "./_store.js";
+// Grant-consuming commit endpoint. Stage first at /api/stage-interest.
+import { commitInterest } from "./_store.js";
 import { INTEREST_PRODUCT_SKUS } from "../../interest-products.js";
+import { validateStagedAction, verifyActionHash } from "../../action-contract.js";
 
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
-}
-
+function json(body, status = 200) { return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } }); }
+function session(request) { return request.headers.get("x-watch-session") || ""; }
 export async function onRequestPost({ request, env }) {
-  let body;
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: "request body must be JSON" }, 400); }
+  if (!body || typeof body !== "object" || Object.keys(body).some((key) => !["action", "grantId", "confirmationGrant"].includes(key))) return json({ ok: false, error: "invalid commit envelope" }, 400);
+  const check = validateStagedAction(body.action, { validSkus: INTEREST_PRODUCT_SKUS });
+  if (!check.ok || !await verifyActionHash(body.action)) return json({ ok: false, error: check.code || "semantic-payload-mismatch" }, 400);
+  if (typeof body.grantId !== "string" || typeof body.confirmationGrant !== "string" || !session(request)) return json({ ok: false, error: "confirmation grant and session are required" }, 401);
   try {
-    body = await request.json();
-  } catch {
-    return json({ ok: false, error: "request body must be JSON" }, 400);
-  }
-  if (body.confirmed !== true) {
-    return json({ ok: false, error: "explicit confirmation is required" }, 400);
-  }
-  const product = String(body.product || "").trim();
-  if (!product) return json({ ok: false, error: "product is required" }, 400);
-  if (!INTEREST_PRODUCT_SKUS.has(product)) {
-    return json({ ok: false, error: "product must be an eligible SKU from the current Watch Co catalog" }, 400);
-  }
-
-  const pricePoint = Number(body.pricePoint);
-  if (!Number.isFinite(pricePoint) || pricePoint <= 0) {
-    return json({ ok: false, error: "pricePoint must be greater than zero" }, 400);
-  }
-
-  const requestId = String(body.requestId || "").trim();
-  if (requestId && (requestId.length < 8 || requestId.length > 160)) {
-    return json({ ok: false, error: "requestId must be between 8 and 160 characters" }, 400);
-  }
-  const stored = await addInterest(env, product, pricePoint, requestId || null);
-  return json({
-    ok: true,
-    message: `Target price recorded for up to ${stored.retentionDays} days as a non-binding demand signal. No notification or purchase was created.`,
-    recorded: stored.record,
-    storage: stored.storage,
-    retentionDays: stored.retentionDays,
-  });
+    const result = await commitInterest(env, { action: body.action, grantId: body.grantId, confirmationGrant: body.confirmationGrant, sessionId: session(request), audienceOrigin: new URL(request.url).origin });
+    if (result.kind === "conflict") return json({ ok: false, error: "idempotency-conflict" }, 409);
+    if (result.kind === "rejected") return json({ ok: false, error: result.code }, result.status);
+    const replayed = result.kind === "replay";
+    return json({ ok: true, message: replayed ? "The original target-price receipt was returned; retention was not extended." : "Target price recorded as a non-binding demand signal. No notification, purchase, or reservation was created.", receipt: result.receipt, replayed }, replayed ? 200 : 201);
+  } catch (error) { return json({ ok: false, error: error?.code || "storage-failed" }, 503); }
 }

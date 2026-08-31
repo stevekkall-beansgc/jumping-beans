@@ -53,6 +53,26 @@ confirmation/idempotency conflict hardening, cross-partner canonical product
 identity/freshness policy, and two fresh headed-Chrome cross-origin runs with
 exported receipts. No deployment was performed for this slice.
 
+## 2026-08-31 P0 Watch write-contract slice completed locally
+
+- Watch interest writes now use a versioned canonical action with minor-unit
+  normalization, SHA-256 semantic payload hash, stable action/idempotency IDs,
+  self-attested lineage, and a short-lived server-owned pending grant.
+- The commit endpoint binds grant, session, audience, action ID, idempotency
+  key, and payload hash. Forged or changed actions are rejected; same-payload
+  replay returns the original redacted receipt without extending retention;
+  changed-payload replay returns `409 idempotency-conflict`.
+- The former KV read/modify/write path is no longer a merchant write authority.
+  The only in-memory repository is an explicit `local-development` test seam;
+  missing production storage fails closed. The Watch page distinguishes staged
+  from committed action state and displays receipt authority and terminal state.
+
+The next required server-bound step is an approved D1 or Durable Object
+migration, using `partners/watch/migrations/0001_write_actions.sql` as the
+schema contract. It must transactionally consume grants, claim idempotency,
+insert interest, and persist receipts; the current local seam is not atomic and
+must never be presented as durable production authority.
+
 ### 1. Harden the network foundation
 
 - Keep multi-origin discovery, partner opt-in, and broad partner categories in
