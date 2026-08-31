@@ -17,7 +17,7 @@ binding = "WATCH_DB"
 database_name = "watch-write-actions"
 # Set the real database_id only through the approved deployment configuration.
 # Before deployment, apply migrations/0001_write_actions.sql to this database.
-database_id = "REPLACE_WITH_APPROVED_D1_DATABASE_ID"
+database_id = "d81b9098-03d9-4655-9032-b464109e9020"
 
 # Do not add a KV fallback. The injected WATCH_ACTION_REPOSITORY and
 # WATCH_WRITE_MODE=local-development paths are deterministic test seams only.

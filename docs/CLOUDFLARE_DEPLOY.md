@@ -57,10 +57,11 @@ pinned Wrangler CLI from `engine/` and from each partner directory. Running
 Watch from inside its directory is required so Cloudflare includes its Pages
 Functions.
 
-> Watch's consequential interest store requires the `WATCH_DB` D1 binding in
-> `partners/watch/wrangler.toml`. Before any approved deploy, provision the D1
-> database, replace the placeholder database ID, and apply
-> `partners/watch/migrations/0001_write_actions.sql`. Stage, commit, and
+> Watch's consequential interest store requires the provisioned `WATCH_DB` D1
+> binding in `partners/watch/wrangler.toml`. The approved
+> `watch-write-actions` database is already migrated with
+> `partners/watch/migrations/0001_write_actions.sql`. Before any approved
+> deploy, verify the binding and migration state. Stage, commit, and
 > summary fail closed without that binding; KV is not a fallback authority.
 > `WATCH_PUBLIC_ORIGIN` must be the exact deployed Watch HTTPS origin. The
 > write APIs issue a Secure, HttpOnly, SameSite session cookie and require its

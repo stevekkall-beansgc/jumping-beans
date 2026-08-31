@@ -67,14 +67,15 @@ exported receipts. No deployment was performed for this slice.
   missing production storage fails closed. The Watch page distinguishes staged
   from committed action state and displays receipt authority and terminal state.
 
-The next required server-bound step is an approved D1 migration, using
-`partners/watch/migrations/0001_write_actions.sql`. The implemented `WATCH_DB`
-repository batch claims the unique idempotency key, consumes the matching
-pending grant, inserts one interest, and persists one redacted receipt. The
-injected/local repository remains a test seam only. Before deployment, an
-operator must provision the approved D1 database, replace the placeholder D1
-ID in `partners/watch/wrangler.toml`, apply the migration, and run the D1
-concurrency/expiry matrix against that local binding; no KV fallback is valid.
+The approved D1 database `watch-write-actions` is provisioned and bound as
+`WATCH_DB` in `partners/watch/wrangler.toml`; migration
+`partners/watch/migrations/0001_write_actions.sql` has been applied remotely.
+The implemented repository batch claims the unique idempotency key, consumes
+the matching pending grant, inserts one interest, and persists one redacted
+receipt. A real local Pages Functions run against SQLite D1 proved stage,
+commit, replay, changed-payload conflict, same-key concurrency, and summary
+behavior. The injected/local repository remains a test seam only; no KV
+fallback is valid.
 
 ## 2026-08-31 P0 Watch request-boundary slice completed locally
 
@@ -87,9 +88,9 @@ concurrency/expiry matrix against that local binding; no KV fallback is valid.
   failed-grant limits; `429` replies include `Retry-After` and occur before
   action/interest mutation.
 
-Still required: a provisioned local/approved D1 run of this boundary, durable
+Still required: a deployed HTTPS run against the approved D1, durable
 rate-limit policy for privacy-preserving network and deployment-wide buckets,
-real HTTPS cookie behavior, and fresh headed-browser/WebMCP evidence.
+real production cookie behavior, and fresh headed-browser/WebMCP evidence.
 
 ### 1. Harden the network foundation
 

@@ -195,7 +195,7 @@ asset/rights review are complete.
 | P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_ACCEPTANCE_REVIEW.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
 | P0.5 | Main-session integration and release decision | Main Codex session | In progress; local checkpoint only, no deployment |
-| P0.6 | Consequential-write contract, D1 repository, and request boundary | GPT-5.6-Terra | Complete locally with D1-compatible concurrency/rate-limit double; gate green at 368 assertions |
+| P0.6 | Consequential-write contract, D1 repository, and request boundary | GPT-5.6-Terra | Code complete; approved D1 provisioned/migrated; local Pages+D1 HTTP matrix green |
 | P0.7 | Write-boundary adversarial acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_WRITE_ACCEPTANCE_REVIEW.md` |
 
 ## 9. Execution notes
@@ -216,11 +216,14 @@ contract, server-owned pending-action seam, payload-bound replay semantics,
 and redacted action receipts; the gate passed at 340 assertions. Luna found
 same-key concurrent duplication in the non-atomic local seam. The next
 checkpoint added the `WATCH_DB` D1 batch authority and a D1-compatible
-concurrency double (354 assertions); migration provisioning and local Wrangler
-D1 evidence remain required before changing the STOP/NO-GO decision. The
+concurrency double (354 assertions). The approved `watch-write-actions` D1 was
+then provisioned, migrated remotely, and exercised through local Pages
+Functions against SQLite D1: session bootstrap, stage, commit, replay,
+changed-payload conflict, same-key concurrency, and summary all passed. The
 request-boundary checkpoint added exact origin policy, cookie/CSRF session
-binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters (368
-assertions); real D1/HTTPS evidence remains required. Future
+binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters (369
+assertions in the current configuration). Real deployed HTTPS and WebMCP
+evidence remain required. Future
 parallel implementation tasks must use actual isolated product worktrees or
 run serially through the main session.
 

@@ -194,3 +194,15 @@ sed -n '1,160p' partners/watch/migrations/0001_write_actions.sql
 5. Link the Watch action receipt into the engine journey receipt, then rerun the
    full final matrix before any deployment decision.
 
+## Post-review D1 provisioning addendum
+
+After this review was written, the approved `watch-write-actions` D1 database
+was provisioned as `d81b9098-03d9-4655-9032-b464109e9020` and migration
+`0001_write_actions.sql` was applied remotely. A local Wrangler Pages Functions
+run using the checked-in D1 binding and SQLite D1 then passed the real HTTP
+stage/commit path: session bootstrap (`401` plus cookie/CSRF), stage (`201`),
+commit (`201`), same-payload replay (`200`), changed-payload conflict (`409`),
+same-key concurrency (one `201` and one `200` replay), and summary (`200`, one
+record per committed action). This upgrades the storage evidence from a test
+double to a local Pages+D1 integration result, but it is not production HTTPS
+evidence. No application deployment was performed.

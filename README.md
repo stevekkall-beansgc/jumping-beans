@@ -171,8 +171,9 @@ Wrangler deployment is intentionally not the production path.
    `curl -sI https://<origin>/ | grep -iE "cross-origin|origin-trial"` — expect
    `COOP: same-origin`, `COEP: require-corp`, `CORP: cross-origin`, and an
    `Origin-Trial` header.
-4. **Provision and migrate Watch D1.** Replace the placeholder database ID in
-   `partners/watch/wrangler.toml`, apply `migrations/0001_write_actions.sql`,
+4. **Verify Watch D1 before deployment.** The approved
+   `watch-write-actions` database is bound in `partners/watch/wrangler.toml`
+   and migrated with `migrations/0001_write_actions.sql`. Confirm the binding,
    set `WATCH_PUBLIC_ORIGIN` to the exact deployed HTTPS origin, and run the
    write concurrency/expiry/request-boundary preflight before releasing Watch.
 
