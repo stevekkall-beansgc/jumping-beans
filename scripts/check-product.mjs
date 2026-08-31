@@ -141,7 +141,7 @@ includesAll(engineHtml, [
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
-  'frame.allow = "tools; cross-origin-isolated"',
+  "frame.allow = `tools ${origin}; cross-origin-isolated ${origin}`",
   "getTools({ fromOrigins: PARTNER_ORIGINS })",
   "executeTool(tool, JSON.stringify(input))",
   'sourceKind === "open"',
