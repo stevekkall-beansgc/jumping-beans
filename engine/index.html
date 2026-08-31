@@ -6,26 +6,27 @@
   <meta name="color-scheme" content="dark light">
   <title>Jumping Beans — your offer memory</title>
   <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./design-system/primitives.css">
   <link rel="stylesheet" href="./app.css">
 </head>
-<body data-product-theme="evergreen">
-  <a class="skip-link" href="#main">Skip to the offer journey</a>
+<body class="bl-page" data-product-theme="evergreen">
+  <a class="bl-skip-link" href="#main">Skip to the offer journey</a>
 
-  <header class="site-header">
-    <div class="topbar">
+  <header class="bl-header">
+    <div class="bl-shell bl-header__inner engine-header">
       <div>
-        <a class="wordmark" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
-        <p class="product-note">User-controlled offer memory</p>
+        <a class="bl-brand" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
+        <p class="bl-muted product-note">User-controlled offer memory</p>
       </div>
-      <p class="connection-status" role="status" aria-live="polite">
+      <p class="bl-muted connection-status" role="status" aria-live="polite">
         <span class="status-dot" id="status-dot" data-on="0" aria-hidden="true"></span>
         <span id="status">Open inventory ready. Checking opted-in partner sites.</span>
       </p>
     </div>
   </header>
 
-  <main class="shell" id="main">
-    <section class="intro" aria-labelledby="page-title">
+  <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
+    <section class="bl-stack bl-measure intro" data-space="compact" aria-labelledby="page-title">
       <p class="eyebrow">Agent-led offer journey</p>
       <h1 id="page-title">Let the next offer remember what you chose.</h1>
       <p class="lede">Concierge starts with an open catalog offer, lets you choose what matters, then carries only those display rules to an opted-in partner.</p>
@@ -42,16 +43,16 @@
     </section>
 
     <div class="layout">
-      <section class="journey" id="journey" aria-labelledby="journey-title">
+      <section class="bl-card journey" id="journey" aria-labelledby="journey-title">
         <header class="journey-head">
           <div>
             <p class="section-label">A → your preference → B</p>
             <h2 id="journey-title">One offer, carried forward with your permission</h2>
           </div>
-          <span class="protocol-badge" id="protocol-badge">WebMCP · checking partner sites</span>
+          <span class="bl-badge protocol-badge" data-status="info" id="protocol-badge">WebMCP · checking partner sites</span>
         </header>
 
-        <section class="agent" aria-labelledby="agent-title">
+        <section class="bl-callout bl-stack agent" data-space="compact" data-tone="info" aria-labelledby="agent-title">
           <div class="agent-avatar" aria-hidden="true">JB</div>
           <div>
             <h3 id="agent-title">Concierge</h3>
@@ -62,18 +63,18 @@
         <ol class="journey-line">
           <li class="step">
             <span class="step-number" aria-hidden="true">1</span>
-            <article class="step-card" id="memory-step" aria-label="Site A offer from open inventory"></article>
+            <article class="bl-card step-card" id="memory-step" aria-label="Site A offer from open inventory"></article>
           </li>
 
           <li class="step">
             <span class="step-number" aria-hidden="true">2</span>
-            <article class="step-card preference-card" aria-labelledby="preference-title">
+            <article class="bl-card step-card preference-card" aria-labelledby="preference-title">
               <header class="step-card-head">
                 <div>
                   <p class="step-kicker">Your choice</p>
                   <h3 id="preference-title">Choose how Site B should present the offer</h3>
                 </div>
-                <span class="source-pill source-user">User-controlled</span>
+                <span class="bl-badge source-pill source-user" data-status="success">User-controlled</span>
               </header>
 
               <fieldset class="preference-fieldset" id="preference-controls">
@@ -87,8 +88,8 @@
                 </div>
               </fieldset>
 
-              <section class="memory-preview" aria-labelledby="memory-preview-title">
-                <h4 id="memory-preview-title">Before saving</h4>
+              <section class="bl-callout bl-stack memory-preview" data-space="compact" data-tone="info" aria-labelledby="memory-preview-title">
+                <h4 class="bl-callout__title" id="memory-preview-title">Before saving</h4>
                 <p id="memory-preview-text">Useful fact: show price proof first.</p>
                 <dl>
                   <div><dt>Scope</dt><dd>Jumping Beans product, in this browser</dd></div>
@@ -97,37 +98,37 @@
                 </dl>
               </section>
 
-              <div class="step-actions">
-                <button class="button-primary" id="apply-preferences" type="button">Save and apply to Site B</button>
-                <button class="button-secondary" id="apply-once" type="button">Apply once without saving</button>
-                <button class="button-quiet" id="reset-preferences" type="button">Reset choices</button>
+              <div class="bl-actions step-actions">
+                <button class="bl-button" id="apply-preferences" type="button">Save and apply to Site B</button>
+                <button class="bl-button" data-variant="secondary" id="apply-once" type="button">Apply once without saving</button>
+                <button class="bl-button" data-variant="quiet" id="reset-preferences" type="button">Reset choices</button>
               </div>
             </article>
           </li>
 
           <li class="step">
             <span class="step-number" aria-hidden="true">3</span>
-            <article class="step-card" id="next-step" aria-label="Site B offer from an opted-in partner"></article>
+            <article class="bl-card step-card" id="next-step" aria-label="Site B offer from an opted-in partner"></article>
           </li>
         </ol>
 
-        <section class="deal-watch" aria-labelledby="watch-title">
+        <section class="bl-callout deal-watch" aria-labelledby="watch-title">
           <div class="watch-copy">
             <h3 id="watch-title">Want a price change remembered?</h3>
             <p id="watch-detail">Prepare one product-scoped deal point, then review it before anything is saved.</p>
           </div>
-          <button class="button-secondary" id="watch-button" type="button">Prepare deal watch</button>
-          <section class="watch-confirmation" id="watch-confirmation" aria-labelledby="watch-confirmation-title" hidden>
-            <h4 id="watch-confirmation-title">Before saving</h4>
+          <button class="bl-button" data-variant="secondary" id="watch-button" type="button">Prepare deal watch</button>
+          <section class="bl-callout bl-stack watch-confirmation" data-space="compact" data-tone="info" id="watch-confirmation" aria-labelledby="watch-confirmation-title" hidden>
+            <h4 class="bl-callout__title" id="watch-confirmation-title">Before saving</h4>
             <p id="watch-fact"></p>
             <dl>
               <div><dt>Scope</dt><dd>Jumping Beans product, in this browser</dd></div>
               <div><dt>Retention</dt><dd>Until you use Forget</dd></div>
               <div><dt>Outcome</dt><dd>Save a local watch and matching offer note; no notification, order, payment, or message is created</dd></div>
             </dl>
-            <div class="watch-actions">
-              <button class="button-primary" id="confirm-watch" type="button">Confirm and save deal watch</button>
-              <button class="button-quiet" id="cancel-watch" type="button">Not now</button>
+            <div class="bl-actions watch-actions">
+              <button class="bl-button" id="confirm-watch" type="button">Confirm and save deal watch</button>
+              <button class="bl-button" data-variant="quiet" id="cancel-watch" type="button">Not now</button>
             </div>
           </section>
         </section>
@@ -137,18 +138,18 @@
           <p id="prompt-hint">Concierge will update the choices above. Review them before saving or applying once.</p>
           <div class="compose-row">
             <input id="prompt" name="preferencePrompt" type="text" aria-describedby="prompt-hint" autocomplete="off">
-            <button class="button-secondary" id="send-prompt" type="submit">Update choices</button>
+            <button class="bl-button" data-variant="secondary" id="send-prompt" type="submit">Update choices</button>
           </div>
         </form>
 
         <div class="starter-row" aria-label="Example preference prompts">
-          <button class="starter" type="button" data-prompt="Show me proof, not pressure">Show me proof, not pressure</button>
-          <button class="starter" type="button" data-prompt="Only show me offers under $30">Only show me offers under $30</button>
-          <button class="starter" type="button" data-prompt="Remember this offer">Remember this offer</button>
+          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Show me proof, not pressure">Show me proof, not pressure</button>
+          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Only show me offers under $30">Only show me offers under $30</button>
+          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Remember this offer">Remember this offer</button>
         </div>
       </section>
 
-      <aside class="memory-panel" aria-labelledby="memory-title">
+      <aside class="bl-card memory-panel" aria-labelledby="memory-title">
         <header>
           <p class="section-label">Browser storage</p>
           <h2 id="memory-title">Your offer memory</h2>
@@ -158,7 +159,7 @@
         <section class="memory-section" aria-labelledby="rules-title">
           <h3 id="rules-title">Current draft rules</h3>
           <div id="rules"></div>
-          <button class="text-button" id="edit-preferences" type="button">Edit display rules</button>
+          <button class="bl-button text-button" data-variant="quiet" id="edit-preferences" type="button">Edit display rules</button>
         </section>
 
         <section class="memory-section" aria-labelledby="sources-title">
@@ -172,13 +173,13 @@
         <section class="memory-section" aria-labelledby="saved-title">
           <h3 id="saved-title">Saved notes</h3>
           <ul class="memory-list" id="memory-list"></ul>
-          <button class="text-button" id="forget-all" type="button" hidden>Forget all saved notes</button>
+          <button class="bl-button text-button" data-variant="danger" id="forget-all" type="button" hidden>Forget all saved notes</button>
         </section>
       </aside>
     </div>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div class="bl-callout toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

@@ -374,9 +374,10 @@ function provenanceMarkup(deal, sourceKind) {
     ? `<a href="${escapeHtml(destination.href)}" target="_blank" rel="noopener noreferrer">Merchant product page</a>`
     : escapeHtml(source);
   return `
-    <details class="provenance">
-      <summary>Source and verification</summary>
-      <dl>
+    <details class="bl-disclosure provenance">
+      <summary class="bl-disclosure__summary">Source and verification</summary>
+      <div class="bl-disclosure__body">
+      <dl class="bl-provenance__facts">
         <div><dt>What</dt><dd>${escapeHtml(deal.name)} offer record</dd></div>
         <div><dt>Who</dt><dd>${escapeHtml(who)}</dd></div>
         <div><dt>Source</dt><dd>${sourceLink}<br>${escapeHtml(source)}</dd></div>
@@ -384,6 +385,7 @@ function provenanceMarkup(deal, sourceKind) {
         <div><dt>Verification</dt><dd>${escapeHtml(deal.verificationLabel || "Unverified")}</dd></div>
         <div><dt>Evidence</dt><dd>${escapeHtml(evidence)}</dd></div>
       </dl>
+      </div>
     </details>`;
 }
 
@@ -420,7 +422,7 @@ function offerMarkup(deal, sourceKind, label, preferences) {
   return `
     <header class="step-card-head">
       <div><p class="step-kicker">${escapeHtml(label)}</p><h3>${escapeHtml(deal.name)}</h3></div>
-      <span class="source-pill ${sourceClass}">${sourceLabel}</span>
+      <span class="bl-badge source-pill ${sourceClass}" data-status="${sourceKind === "preview" ? "info" : sourceKind === "open" ? "neutral" : "success"}">${sourceLabel}</span>
     </header>
     <div class="offer">
       <div class="offer-art">${offerImage(deal)}</div>
@@ -433,7 +435,7 @@ function offerMarkup(deal, sourceKind, label, preferences) {
           <span>${percent(deal)}% below list</span>
         </div>
         <p class="reason"><strong>Why it appeared</strong><br>${reason}</p>
-        <div class="collateral">
+        <div class="bl-callout collateral" data-tone="info">
           <div class="collateral-label">${escapeHtml(formatLabels[collateral.type] || "Offer evidence")}</div>
           <div>${collateralText}</div>
           <small>Source: ${escapeHtml(collateral.source || "No source supplied")}</small>
@@ -478,9 +480,9 @@ function renderNextStep() {
       : "Site B · illustrative preview ready";
   const openLabel = state.sourceB ? "Open opted-in Site B" : "Open illustrative Site B";
   const actions = `
-    <div class="step-actions">
-      ${href ? `<a class="button-primary" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
-      <button class="button-secondary" id="show-source" type="button">Explain partner opt-in</button>
+    <div class="bl-actions step-actions">
+      ${href ? `<a class="bl-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
+      <button class="bl-button" data-variant="secondary" id="show-source" type="button">Explain partner opt-in</button>
     </div>`;
   renderOfferCard(
     els.nextStep,
@@ -577,6 +579,8 @@ function renderMemory() {
         ? `Saved ${absoluteTime(item.observedAt)}`
         : "Saved time unavailable";
       forget.type = "button";
+      forget.className = "bl-button";
+      forget.dataset.variant = "danger";
       forget.dataset.memoryKey = item.key || "";
       forget.textContent = `Forget ${title.textContent}`;
       row.append(title, detail, time, forget);

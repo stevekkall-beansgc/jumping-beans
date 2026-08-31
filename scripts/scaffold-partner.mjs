@@ -197,31 +197,32 @@ const indexHtml = `<!doctype html>
   <meta http-equiv="Origin-Trial" content="${token}">
   <title>${name} — Jumping Beans</title>
   <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./design-system/primitives.css">
   <link rel="stylesheet" href="./storefront.css">
 </head>
-<body data-product-theme="cobalt" data-partner-name=${JSON.stringify(name)}>
-  <a class="skip-link" href="#main">Skip to current offers</a>
-  <header class="site-header">
-    <div class="header-inner">
-      <div><a class="brand" href="./">${name}</a><p class="tagline">Current catalog snapshot</p></div>
-      <span class="partner-status">Opted-in WebMCP partner</span>
+<body class="bl-page" data-product-theme="cobalt" data-partner-name=${JSON.stringify(name)}>
+  <a class="bl-skip-link" href="#main">Skip to current offers</a>
+  <header class="bl-header">
+    <div class="bl-shell bl-header__inner">
+      <div><a class="bl-brand" href="./">${name}</a><p class="bl-muted tagline">Current catalog snapshot</p></div>
+      <span class="bl-badge" data-status="success">Opted-in WebMCP partner</span>
     </div>
   </header>
-  <main id="main">
-    <section class="page-intro" aria-labelledby="offers-title">
+  <main class="bl-shell bl-main bl-stack" id="main" tabindex="-1">
+    <section class="bl-stack bl-measure page-intro" data-space="compact" aria-labelledby="offers-title">
       <p class="eyebrow">Partner storefront</p>
       <h1 id="offers-title">Current offers from ${name}</h1>
       <p>This regular storefront may adapt presentation when Jumping Beans supplies scoped display rules.</p>
     </section>
-    <aside class="provenance-banner" id="banner" aria-label="Catalog provenance">
-      <strong>Opted-in partner, partner-provided inventory</strong>
+    <aside class="bl-provenance bl-stack bl-measure provenance-banner" data-space="compact" id="banner" aria-label="Catalog provenance">
+      <strong class="bl-provenance__title">Opted-in partner, partner-provided inventory</strong>
       <span>${name} exposes structured offers through WebMCP. Jumping Beans has not independently verified the catalog records.</span>
     </aside>
-    <ul class="grid" id="grid" aria-live="polite" aria-busy="true">
-      <li class="loading-status">Loading the catalog…</li>
+    <ul class="bl-grid offer-grid" id="grid" aria-live="polite" aria-busy="true">
+      <li class="bl-callout offer-grid__state">Loading the catalog…</li>
     </ul>
   </main>
-  <footer class="site-footer">Check the merchant destination for current price, availability, terms, and shipping.</footer>
+  <footer class="bl-shell site-footer">Check the merchant destination for current price, availability, terms, and shipping.</footer>
   <script type="module" src="./tool.js"></script>
   <script type="module" src="./storefront.js"></script>
 </body>

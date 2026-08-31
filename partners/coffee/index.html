@@ -7,39 +7,40 @@
   <meta http-equiv="Origin-Trial" content="AtLIWKMEYrVNftP1hRxbJeOLD0Arr+8JHwV+SJEbOaTZMSMUUZo24Pu6NDMa35IJ7A3BFZmlNJRKJePDeCVKdA8AAABneyJvcmlnaW4iOiJodHRwczovL2NvZmZlZS1hbWsucGFnZXMuZGV2OjQ0MyIsImZlYXR1cmUiOiJXZWJNQ1AiLCJleHBpcnkiOjE3OTQ4NzM2MDAsImlzU3ViZG9tYWluIjp0cnVlfQ==">
   <title>Coffee Co — current coffee offers</title>
   <link rel="stylesheet" href="./design-system/tokens.css">
+  <link rel="stylesheet" href="./design-system/primitives.css">
   <link rel="stylesheet" href="./storefront.css">
 </head>
-<body data-product-theme="ember" data-partner-name="Coffee Co">
-  <a class="skip-link" href="#main">Skip to current offers</a>
+<body class="bl-page" data-product-theme="ember" data-partner-name="Coffee Co">
+  <a class="bl-skip-link" href="#main">Skip to current offers</a>
 
-  <header class="site-header">
-    <div class="header-inner">
+  <header class="bl-header">
+    <div class="bl-shell bl-header__inner">
       <div>
-        <a class="brand" href="./">Coffee Co</a>
-        <p class="tagline">Coffee and accessories from the current catalog snapshot</p>
+        <a class="bl-brand" href="./">Coffee Co</a>
+        <p class="bl-muted tagline">Coffee and accessories from the current catalog snapshot</p>
       </div>
-      <span class="partner-status">Opted-in WebMCP partner</span>
+      <span class="bl-badge" data-status="success">Opted-in WebMCP partner</span>
     </div>
   </header>
 
-  <main id="main">
-    <section class="page-intro" aria-labelledby="offers-title">
+  <main class="bl-shell bl-main bl-stack" id="main" tabindex="-1">
+    <section class="bl-stack bl-measure page-intro" data-space="compact" aria-labelledby="offers-title">
       <p class="eyebrow">Partner storefront</p>
       <h1 id="offers-title">Current offers from Coffee Co</h1>
       <p>This page works as a regular storefront. When Jumping Beans opens it with scoped display rules, those rules change presentation only.</p>
     </section>
 
-    <aside class="provenance-banner" id="banner" aria-label="Catalog provenance">
-      <strong>Opted-in partner, public-feed inventory</strong>
+    <aside class="bl-provenance bl-stack bl-measure provenance-banner" data-space="compact" id="banner" aria-label="Catalog provenance">
+      <strong class="bl-provenance__title">Opted-in partner, public-feed inventory</strong>
       <span>Coffee Co exposes structured offers through WebMCP. The underlying catalog records came from a public Shopify feed and are not independently verified by Jumping Beans.</span>
     </aside>
 
-    <ul class="grid" id="grid" aria-live="polite" aria-busy="true">
-      <li class="loading-status">Loading the catalog…</li>
+    <ul class="bl-grid offer-grid" id="grid" aria-live="polite" aria-busy="true">
+      <li class="bl-callout offer-grid__state">Loading the catalog…</li>
     </ul>
   </main>
 
-  <footer class="site-footer">Prices are in USD. Check the merchant page for the current price, availability, terms, and shipping.</footer>
+  <footer class="bl-shell site-footer">Prices are in USD. Check the merchant page for the current price, availability, terms, and shipping.</footer>
 
   <script type="module" src="./tool.js"></script>
   <script type="module" src="./storefront.js"></script>

@@ -34,9 +34,10 @@ if (!sourceDirInput || !sourceRef) {
 const centralDir = path.isAbsolute(sourceDirInput)
   ? sourceDirInput
   : path.resolve(root, sourceDirInput);
-const [tokenCss, tokenJsonText, storefrontCss, storefrontJs] = await Promise.all([
+const [tokenCss, tokenJsonText, primitivesCss, storefrontCss, storefrontJs] = await Promise.all([
   readFile(path.join(centralDir, "tokens.css"), "utf8"),
   readFile(path.join(centralDir, "tokens.json"), "utf8"),
+  readFile(path.join(centralDir, "primitives.css"), "utf8"),
   readFile(path.join(root, "shared", "storefront.css"), "utf8"),
   readFile(path.join(root, "shared", "storefront.js"), "utf8"),
 ]);
@@ -58,10 +59,15 @@ if (missingTokenNames.length) {
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const jsonHash = sha256(tokenJsonText);
 const cssHash = sha256(tokenCss);
+const primitivesHash = sha256(primitivesCss);
 const sourcePath = sourceDirInput.replaceAll(path.sep, "/");
 const tokenHeader =
   `/* GENERATED from ${sourcePath}/tokens.css; ref=${sourceRef}; version=${version}; ` +
   `tokens.json sha256=${jsonHash}; tokens.css sha256=${cssHash}. ` +
+  "Run node scripts/sync-static-ui.mjs; do not edit. */\n";
+const primitivesHeader =
+  `/* GENERATED from ${sourcePath}/primitives.css; ref=${sourceRef}; version=${version}; ` +
+  `primitives.css sha256=${primitivesHash}. ` +
   "Run node scripts/sync-static-ui.mjs; do not edit. */\n";
 const sourceManifest = `${JSON.stringify({
   schemaVersion: 1,
@@ -73,6 +79,7 @@ const sourceManifest = `${JSON.stringify({
   artifacts: {
     "tokens.json": { sha256: jsonHash },
     "tokens.css": { sha256: cssHash },
+    "primitives.css": { sha256: primitivesHash },
   },
   generatedBy: "node scripts/sync-static-ui.mjs",
 }, null, 2)}\n`;
@@ -91,6 +98,7 @@ for (const deployRoot of deployRoots) {
   const designRoot = path.join(root, deployRoot, "design-system");
   outputs.set(path.join(designRoot, "tokens.css"), tokenHeader + tokenCss);
   outputs.set(path.join(designRoot, "tokens.json"), tokenJsonText);
+  outputs.set(path.join(designRoot, "primitives.css"), primitivesHeader + primitivesCss);
   outputs.set(path.join(designRoot, "source.json"), sourceManifest);
 }
 for (const partner of partnerNames) {
@@ -116,5 +124,8 @@ for (const [outputPath, expected] of outputs) {
 
 if (stale) process.exitCode = 1;
 else if (checkOnly) {
-  console.log(`generated UI assets are current (${sourceRef}; JSON ${jsonHash.slice(0, 12)}; CSS ${cssHash.slice(0, 12)})`);
+  console.log(
+    `generated UI assets are current (${sourceRef}; JSON ${jsonHash.slice(0, 12)}; ` +
+    `tokens ${cssHash.slice(0, 12)}; primitives ${primitivesHash.slice(0, 12)})`,
+  );
 }

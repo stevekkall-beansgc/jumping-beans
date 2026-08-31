@@ -59,8 +59,9 @@ function checkHtml(html, file) {
     '<html lang="en">',
     '<meta name="viewport"',
     "design-system/tokens.css",
+    "design-system/primitives.css",
     "data-product-theme=",
-    'class="skip-link"',
+    'class="bl-skip-link"',
     "<main",
     "<h1",
   ], file);
@@ -271,28 +272,32 @@ includesAll(JSON.stringify(sourceConfig), ["sourceDir", "sourceRef"], "design-sy
 const centralDir = path.resolve(root, sourceConfig.sourceDir);
 const canonicalJson = await readFile(path.join(centralDir, "tokens.json"), "utf8");
 const canonicalCss = await readFile(path.join(centralDir, "tokens.css"), "utf8");
+const canonicalPrimitives = await readFile(path.join(centralDir, "primitives.css"), "utf8");
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 for (const deployRoot of ["engine", "partners/petsupply", "partners/coffee", "partners/watch"]) {
   const designRoot = path.join(root, deployRoot, "design-system");
-  const [json, css, manifestText] = await Promise.all([
+  const [json, css, primitives, manifestText] = await Promise.all([
     readFile(path.join(designRoot, "tokens.json"), "utf8"),
     readFile(path.join(designRoot, "tokens.css"), "utf8"),
+    readFile(path.join(designRoot, "primitives.css"), "utf8"),
     readFile(path.join(designRoot, "source.json"), "utf8"),
   ]);
   const manifest = JSON.parse(manifestText);
   check(json === canonicalJson, `${deployRoot} does not carry the exact canonical tokens.json`);
   check(css.includes(canonicalCss), `${deployRoot} generated tokens.css omits canonical CSS`);
+  check(primitives.includes(canonicalPrimitives), `${deployRoot} generated primitives.css omits canonical CSS`);
   check(manifest.source.ref === sourceConfig.sourceRef, `${deployRoot} token manifest ref differs from source config`);
   check(manifest.artifacts["tokens.json"].sha256 === sha256(canonicalJson), `${deployRoot} JSON hash is not traceable`);
   check(manifest.artifacts["tokens.css"].sha256 === sha256(canonicalCss), `${deployRoot} CSS hash is not traceable`);
+  check(manifest.artifacts["primitives.css"].sha256 === sha256(canonicalPrimitives), `${deployRoot} primitives hash is not traceable`);
 }
 const syncSource = await readFile(path.join(root, "scripts/sync-static-ui.mjs"), "utf8");
-includesAll(syncSource, ["--source-dir", "--source-ref", "tokens.json", "source.json"], "token sync reproducibility inputs");
+includesAll(syncSource, ["--source-dir", "--source-ref", "tokens.json", "primitives.css", "source.json"], "token sync reproducibility inputs");
 
 const scaffoldSource = await readFile(path.join(root, "scripts/scaffold-partner.mjs"), "utf8");
 check(!/(?:#[0-9a-f]{3,8}|rgba?\()/i.test(scaffoldSource), "Partner scaffold reintroduces raw authored colors");
 check(!/live and verified|verified by the shop/i.test(scaffoldSource), "Partner scaffold reintroduces unsupported verification claims");
-includesAll(scaffoldSource, ["design-system/tokens.css", "not independently verified by Jumping Beans"], "partner scaffold standard output");
+includesAll(scaffoldSource, ["design-system/tokens.css", "design-system/primitives.css", "class=\"bl-skip-link\"", "not independently verified by Jumping Beans"], "partner scaffold standard output");
 
 const prohibited = [engineApp, scaffoldSource, await readFile(path.join(root, "shared/storefront.js"), "utf8")];
 for (const partner of ["petsupply", "coffee", "watch"]) {
@@ -304,7 +309,7 @@ check(prohibited.every((text) => !/live and verified|verified by the shop/i.test
 const staticModule = await import(`${pathToFileURL(path.join(root, "engine/static.js")).href}?check=${Date.now()}`);
 for (const route of [
   "/", "/index.html", "/app.js", "/config.js", "/app.css",
-  "/design-system/tokens.css", "/design-system/tokens.json", "/design-system/source.json",
+  "/design-system/tokens.css", "/design-system/tokens.json", "/design-system/source.json", "/design-system/primitives.css",
 ]) {
   check(route in staticModule.default, `engine/static.js is missing ${route}`);
 }

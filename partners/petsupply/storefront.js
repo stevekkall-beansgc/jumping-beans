@@ -50,9 +50,11 @@ function expiryLabel(value) {
 }
 
 function provenanceDetails(deal, destination) {
-  const details = element("details", "provenance");
-  details.append(element("summary", "", "Source and verification"));
+  const details = element("details", "bl-disclosure provenance");
+  details.append(element("summary", "bl-disclosure__summary", "Source and verification"));
+  const body = element("div", "bl-disclosure__body");
   const list = document.createElement("dl");
+  list.className = "bl-provenance__facts";
   const rows = [
     ["What", `Catalog offer ${deal.sku || "without a supplied SKU"}`],
     ["Who", `${partnerName} surfaced this record; ${deal.vendor || "the catalog vendor"} supplied the product listing`],
@@ -66,22 +68,24 @@ function provenanceDetails(deal, destination) {
     row.append(element("dt", "", term), element("dd", "", description));
     list.append(row);
   }
-  details.append(list);
+  body.append(list);
+  details.append(body);
   return details;
 }
 
 function productCard(deal, index) {
   const item = document.createElement("li");
-  const article = element("article", "card");
+  const article = element("article", "bl-card offer-card");
   const headingId = `offer-${index}`;
   article.setAttribute("aria-labelledby", headingId);
 
-  const image = element("img", "thumb");
+  const image = element("img", "offer-card__media");
   image.src = deal.imageUrl || "";
   image.alt = "";
   image.loading = "lazy";
   image.crossOrigin = "anonymous";
 
+  const body = element("div", "bl-card__body offer-card__body");
   const category = String(deal.category || "Offer").replaceAll("-", " ");
   const heading = element("h2", "", deal.name || "Unnamed offer");
   heading.id = headingId;
@@ -91,7 +95,7 @@ function productCard(deal, index) {
     ? Math.max(0, Math.round((1 - dealPrice / listPrice) * 100))
     : 0;
 
-  const price = element("p", "price");
+  const price = element("p", "offer-card__price");
   if (listPrice > dealPrice && dealPrice >= 0) {
     const listed = element("span", "list-price", money.format(listPrice));
     listed.setAttribute("aria-label", `Listed price ${money.format(listPrice)}`);
@@ -107,19 +111,25 @@ function productCard(deal, index) {
   if (deal.expiresAt) time.dateTime = deal.expiresAt;
   expiry.append(time);
 
-  article.append(image, element("p", "category", category), heading, price, expiry);
+  body.append(element("p", "bl-card__eyebrow category", category), heading, price, expiry);
   if (adaptiveLabel) {
-    article.append(element("p", "adaptation-note", `Adapted using this browser’s selected display rules: ${adaptiveLabel}.`));
+    const adaptation = element("p", "bl-callout adaptation-note", `Adapted using this browser’s selected display rules: ${adaptiveLabel}.`);
+    adaptation.dataset.tone = "info";
+    body.append(adaptation);
   }
 
   const destination = safeHttpUrl(deal.landing);
+  const footer = element("div", "bl-card__footer bl-actions");
   if (destination) {
-    const link = element("a", "product-link", `View offer at ${deal.vendor || destination.hostname}`);
+    const link = element("a", "bl-button product-link", `View offer at ${deal.vendor || destination.hostname}`);
     link.href = destination.href;
     link.target = "_top";
     link.rel = "noopener noreferrer";
-    article.append(link);
+    link.dataset.variant = "secondary";
+    footer.append(link);
   }
+  article.append(image, body);
+  if (footer.childElementCount) article.append(footer);
   article.append(provenanceDetails(deal, destination));
   item.append(article);
   return item;
@@ -140,13 +150,17 @@ async function renderCatalog() {
     if (!response.ok) throw new Error(`Catalog request returned ${response.status}`);
     const catalog = await response.json();
     if (!Array.isArray(catalog) || !catalog.length) {
-      grid.replaceChildren(element("li", "empty-status", "No catalog offers are available right now."));
+      grid.replaceChildren(element("li", "bl-callout offer-grid__state", "No catalog offers are available right now."));
       return;
     }
     grid.replaceChildren(...catalog.map(productCard));
   } catch {
     grid.replaceChildren(
-      element("li", "error-status", "The catalog did not load. No order or payment was attempted. Refresh the page to try again."),
+      (() => {
+        const error = element("li", "bl-callout offer-grid__state", "The catalog did not load. No order or payment was attempted. Refresh the page to try again.");
+        error.dataset.tone = "danger";
+        return error;
+      })(),
     );
   } finally {
     grid.setAttribute("aria-busy", "false");

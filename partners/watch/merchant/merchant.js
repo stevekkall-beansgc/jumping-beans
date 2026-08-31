@@ -52,7 +52,7 @@ async function getSummary(product, localRecords) {
 }
 
 function renderCard(product, summary) {
-  const item = element("li", "demand-card");
+  const item = element("li", "bl-card demand-card");
   const heading = element("h2", "", product.name);
   const count = element("p", "demand-count");
   count.append(
@@ -86,7 +86,9 @@ async function refresh() {
     rows.replaceChildren(...INTEREST_PRODUCTS.map((product, index) => renderCard(product, summaries[index])));
     status.textContent = `Showing active signals retained for at most ${INTEREST_RETENTION_DAYS} days. Refreshes every five seconds.`;
   } catch {
-    rows.replaceChildren(element("li", "demand-empty", "Aggregate demand could not be loaded. No records were changed."));
+    const empty = element("li", "bl-callout demand-empty", "Aggregate demand could not be loaded. No records were changed.");
+    empty.dataset.tone = "danger";
+    rows.replaceChildren(empty);
     status.textContent = "Aggregate demand is temporarily unavailable.";
   } finally {
     rows.setAttribute("aria-busy", "false");

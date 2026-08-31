@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "source": {
     "path": "vendor/beanlabs-design-system",
-    "ref": "beanlabs@c0f3dc8",
+    "ref": "beanlabs@db815c6",
     "version": "1.0.0"
   },
   "artifacts": {
@@ -11,6 +11,9 @@
     },
     "tokens.css": {
       "sha256": "38a13b1055cac4290c6e4c22eed086f6f81244a776e72c87f5400c35ce403dc6"
+    },
+    "primitives.css": {
+      "sha256": "1b23a102d3b802f5b143b5021487a5063ff90515daa31568945c8a4bda0b1fd6"
     }
   },
   "generatedBy": "node scripts/sync-static-ui.mjs"

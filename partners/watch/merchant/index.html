@@ -6,39 +6,40 @@
   <meta name="color-scheme" content="dark light">
   <title>Watch Co — aggregate demand research</title>
   <link rel="stylesheet" href="../design-system/tokens.css">
+  <link rel="stylesheet" href="../design-system/primitives.css">
   <link rel="stylesheet" href="../storefront.css">
   <link rel="stylesheet" href="./merchant.css">
 </head>
-<body data-product-theme="cobalt" data-partner-name="Watch Co">
-  <a class="skip-link" href="#main">Skip to aggregate demand</a>
+<body class="bl-page" data-product-theme="cobalt" data-partner-name="Watch Co">
+  <a class="bl-skip-link" href="#main">Skip to aggregate demand</a>
 
-  <header class="site-header">
-    <div class="header-inner">
+  <header class="bl-header">
+    <div class="bl-shell bl-header__inner">
       <div>
-        <a class="brand" href="../">Watch Co</a>
-        <p class="tagline">Non-binding target-price research</p>
+        <a class="bl-brand" href="../">Watch Co</a>
+        <p class="bl-muted tagline">Non-binding target-price research</p>
       </div>
-      <span class="partner-status">Merchant view</span>
+      <span class="bl-badge" data-status="info">Merchant view</span>
     </div>
   </header>
 
-  <main id="main">
-    <section class="page-intro" aria-labelledby="demand-title">
+  <main class="bl-shell bl-main bl-stack" id="main" tabindex="-1">
+    <section class="bl-stack bl-measure page-intro" data-space="compact" aria-labelledby="demand-title">
       <p class="eyebrow">Demand research</p>
       <h1 id="demand-title">Aggregate shopper target prices</h1>
       <p>These aggregates come only from shoppers who submitted the storefront form. A submission is not an order, reservation, notification signup, or promise to buy.</p>
     </section>
 
-    <aside class="provenance-banner" aria-label="Demand data provenance">
-      <strong>Source and retention</strong>
+    <aside class="bl-provenance bl-stack bl-measure provenance-banner" data-space="compact" aria-label="Demand data provenance">
+      <strong class="bl-provenance__title">Source and retention</strong>
       <span>Each signal names one eligible catalog SKU and one positive target price. Records expire after at most 30 days in deployed KV or in the local browser fallback. This view refreshes every five seconds.</span>
     </aside>
 
-    <p class="refresh-status" id="refresh-status" role="status">Loading aggregate demand…</p>
-    <ul class="demand-list" id="demand-rows" aria-busy="true"></ul>
+    <p class="bl-muted refresh-status" id="refresh-status" role="status">Loading aggregate demand…</p>
+    <ul class="bl-grid demand-list" id="demand-rows" aria-busy="true"></ul>
   </main>
 
-  <footer class="site-footer">Directional demand research only. The catalog remains the source for product names and listed prices.</footer>
+  <footer class="bl-shell site-footer">Directional demand research only. The catalog remains the source for product names and listed prices.</footer>
   <script type="module" src="./merchant.js"></script>
 </body>
 </html>

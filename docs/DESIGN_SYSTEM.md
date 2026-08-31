@@ -1,14 +1,16 @@
 # Bean Labs design-system adapter
 
-Jumping Beans follows the Bean Labs design-system release `beanlabs@c0f3dc8`.
+Jumping Beans follows the Bean Labs design-system release `beanlabs@db815c6`.
 This repo carries a reviewed snapshot in `vendor/beanlabs-design-system` so a
 standalone checkout and CI run do not depend on a sibling workspace. The source
 files products must read before a material refresh are `README.md`,
-`CONTRACT.md`, `COMPONENTS.md`, `PATTERNS.md`, `tokens.json`, and `tokens.css`.
+`CONTRACT.md`, `COMPONENTS.md`, `PATTERNS.md`, `COMPOSITIONS.md`,
+`tokens.json`, `tokens.css`, and `primitives.css`.
 
-`tokens.json` is the canonical token data. `tokens.css` is its zero-build CSS
-distribution. Product code preserves the `--bl-*` semantic names and must not
-reinterpret them.
+`tokens.json` is the canonical token data. `tokens.css` is its zero-build token
+distribution and `primitives.css` is the zero-build component distribution.
+Product code preserves the `--bl-*` semantic names and composes the `bl-*`
+primitives rather than reimplementing their generic treatments.
 
 ## Why this repo has generated copies
 
@@ -19,10 +21,10 @@ cross-origin-isolation dependency.
 
 `scripts/sync-static-ui.mjs` is the adapter. It:
 
-1. reads the central `tokens.json` and `tokens.css`;
+1. reads the central `tokens.json`, `tokens.css`, and `primitives.css`;
 2. verifies that every canonical JSON token name is present in the CSS
    distribution;
-3. writes a versioned, hashed, generated token copy into each deploy root;
+3. writes versioned, hashed, generated design-system copies into each deploy root;
 4. copies the repo-owned shared storefront CSS and renderer into each partner
    deploy root; and
 5. supports a read-only `--check` mode that fails when any generated asset is
@@ -33,8 +35,9 @@ copies. Product CSS uses only the preserved `--bl-*` semantic token names.
 
 Generated deployment assets are:
 
-- `engine/design-system/tokens.css`;
+- `engine/design-system/tokens.css` and `primitives.css`;
 - `partners/<id>/design-system/tokens.css`;
+- `partners/<id>/design-system/primitives.css`;
 - `partners/<id>/storefront.css`; and
 - `partners/<id>/storefront.js`.
 
@@ -58,7 +61,8 @@ node scripts/check-product.mjs
 The checked-in snapshot is the default source. To refresh it from a Bean Labs
 checkout, set `BEANLABS_DESIGN_SYSTEM_DIR` to the central design-system
 directory, update `sourceRef` to the reviewed central commit, copy the central
-`tokens.json` and `tokens.css` into `vendor/beanlabs-design-system`, then run
+`tokens.json`, `tokens.css`, and `primitives.css` into
+`vendor/beanlabs-design-system`, then run
 the refresh command. The committed generated assets keep standalone static
 deployments self-contained and carry the source ref and hashes.
 
