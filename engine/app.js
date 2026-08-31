@@ -11,11 +11,16 @@ import {
 } from "./config.js";
 import {
   CAPABILITIES,
+  createInvocationGrant,
   createContextSnapshot,
   createEvent,
   createJourney,
   decisionReceipt,
+  invokeCapability,
+  isCompatibilityInputError,
   opaqueId,
+  projectPartnerContext,
+  resolvePartnerTools,
   resolveOfferDeals,
 } from "./p0.js";
 
@@ -42,6 +47,7 @@ const els = {
   confirmWatch: document.getElementById("confirm-watch"),
   cancelWatch: document.getElementById("cancel-watch"),
   prompt: document.getElementById("prompt"),
+  demoContext: document.getElementById("demo-context"),
   toast: document.getElementById("toast"),
 };
 
@@ -144,6 +150,8 @@ const state = {
   capabilityResolution: null,
   decisionReceipt: null,
   connectedOrigins: [],
+  originOutcomes: {},
+  demoContextGranted: false,
 };
 
 function recordEvent(type, payload = {}) {
@@ -263,7 +271,7 @@ async function executeTool(tool, input, { compatibilityRetry = true } = {}) {
   try {
     raw = await document.modelContext.executeTool(tool, input);
   } catch (error) {
-    if (!compatibilityRetry) throw error;
+    if (!compatibilityRetry || !isCompatibilityInputError(error)) throw error;
     // Some WebMCP implementations still expect serialized arguments. This
     // retry is limited to partner reads and keeps the product protocol-aware.
     raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
@@ -271,8 +279,17 @@ async function executeTool(tool, input, { compatibilityRetry = true } = {}) {
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
 
+function discoverGrant() {
+  return createInvocationGrant({
+    capabilityId: "offers.discover",
+    audienceOrigin: location.origin,
+    scopes: ["offers:read"],
+    purpose: "resolve opted-in offer records",
+  });
+}
+
 async function discoverPartnerDeals(preferences = state.appliedPreferences) {
-  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return [];
+  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {} };
   recordEvent("capability.invocation.started", {
     capabilityId: "offers.discover",
     capabilityVersion: "1.0.0",
@@ -305,60 +322,28 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
       capabilityVersion: "1.0.0",
       reason: "partner discovery failed after compatibility retries",
     });
-    return [];
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: "partner discovery failed" }])) };
   }
-  const results = await Promise.allSettled(
-    matching.map(async (tool) => {
-      const invocationId = opaqueId("invocation");
-      recordEvent("capability.invocation.started", {
-        invocationId,
-        capabilityId: "offers.discover",
-        capabilityVersion: "1.0.0",
-        origin: tool.origin,
-      });
-      try {
-        const value = await executeTool(tool, {
-          categories: state.profile.recurringCategories,
-          maxPrice: preferences.maxPrice ?? undefined,
-          presentation: preferences,
-        });
-        recordEvent("capability.invocation.succeeded", {
-          invocationId,
-          capabilityId: "offers.discover",
-          capabilityVersion: "1.0.0",
-          origin: tool.origin,
-          returnedOfferCount: Array.isArray(value?.deals) ? value.deals.length : 0,
-        });
-        return { tool, value };
-      } catch (error) {
-        recordEvent("capability.invocation.failed", {
-          invocationId,
-          capabilityId: "offers.discover",
-          capabilityVersion: "1.0.0",
-          origin: tool.origin,
-          reason: "partner tool invocation failed",
-        });
-        throw error;
-      }
+  const grant = discoverGrant();
+  const invocation = await invokeCapability({
+    capabilityId: "offers.discover", grant, callerOrigin: location.origin, expectedOrigin: location.origin,
+    purpose: "resolve opted-in offer records", input: matching, validateInput: Array.isArray,
+    validateOutput: (value) => value && Array.isArray(value.deals) && value.originOutcomes,
+    handler: async () => resolvePartnerTools({
+      tools: matching, allowedOrigins: PARTNER_ORIGINS,
+      inputForOrigin: (origin) => {
+        const projection = projectPartnerContext(state.contextSnapshot, origin);
+        return { categories: projection.fields.categories, maxPrice: projection.fields.maxPrice };
+      },
+      execute: (tool, input) => executeTool(tool, input),
     }),
-  );
-  return results.flatMap((result) => {
-    if (result.status !== "fulfilled") return [];
-    const { tool, value } = result.value;
-    const observedAt = new Date().toISOString();
-    return (value?.deals || []).map((deal) => ({
-      ...deal,
-      origin: deal.origin || tool.origin,
-      partnerOrigin: tool.origin,
-      partnerName:
-        deal.partnerName || PARTNER_NAMES[tool.origin] || safeOrigin(tool.origin),
-      sourceType: "opted-in partner",
-      sourceLabel: "WebMCP offer tool",
-      sourceDescription: "The partner opted in to return structured offer data and optional presentation collateral.",
-      observedAt,
-      verificationLabel: "Partner-provided through WebMCP; not independently verified by Jumping Beans",
-    }));
   });
+  if (!invocation.ok) {
+    recordEvent("capability.invocation.denied", { capabilityId: "offers.discover", reason: invocation.authorization?.code || invocation.code });
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: invocation.authorization?.code || invocation.code }])) };
+  }
+  Object.entries(invocation.value.originOutcomes).forEach(([origin, outcome]) => recordEvent(`capability.invocation.${outcome.status}`, { capabilityId: "offers.discover", capabilityVersion: "1.0.0", origin, ...outcome }));
+  return invocation.value;
 }
 
 function fallbackPartnerOffer() {
@@ -395,7 +380,7 @@ function fallbackPartnerOffer() {
 
 function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
   const resolution = resolveOfferDeals(deals, {
-    profile: state.profile,
+    profile: state.demoContextGranted ? state.profile : null,
     preferences,
   });
   state.capabilityResolution = resolution;
@@ -404,6 +389,7 @@ function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
     context: state.contextSnapshot,
     resolution,
     connectedOrigins: state.connectedOrigins,
+    originOutcomes: state.originOutcomes,
   });
   recordEvent("capability.decision", {
     capabilityId: "offers.discover",
@@ -413,10 +399,8 @@ function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
     connectedOriginCount: state.connectedOrigins.length,
     reason: resolution.reason,
   });
-  const candidate = resolution.ranked[0];
-  return candidate
-    ? { ...candidate, merchant: candidate.partnerName || candidate.vendor || "Opted-in merchant" }
-    : null;
+  const candidate = resolution.exposed[0];
+  return candidate ? { ...candidate, merchant: candidate.partnerName || candidate.vendor || "Opted-in merchant" } : null;
 }
 
 function selectedCollateral(deal, preferences) {
@@ -581,15 +565,22 @@ function withPreferenceQuery(destination, preferences) {
 function networkMarkup() {
   if (!state.discoveryComplete) return "";
   const exposed = state.capabilityResolution?.exposed || [];
-  const rows = state.connectedOrigins.map((origin) => {
+  const origins = [...new Set([...PARTNER_ORIGINS, ...Object.keys(state.originOutcomes)])];
+  const rows = origins.map((origin) => {
     const partnerDeals = exposed.filter((deal) => deal.partnerOrigin === origin);
     const eligible = state.capabilityResolution?.eligible.filter((deal) => deal.partnerOrigin === origin).length || 0;
-    return `<li><strong>${escapeHtml(PARTNER_NAMES[origin] || safeOrigin(origin))}</strong><span>${eligible} eligible · ${partnerDeals.length} exposed</span></li>`;
+    const outcome = state.originOutcomes[origin] || { status: "failed", reason: "not discovered" };
+    return `<li><strong>${escapeHtml(PARTNER_NAMES[origin] || safeOrigin(origin))}</strong><span>${escapeHtml(outcome.status)} · ${eligible} eligible · ${partnerDeals.length} exposed</span></li>`;
   });
   if (!rows.length) {
     return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>No opted-in partner capability responded in this browser. The open catalog remains available as the baseline.</p></section>`;
   }
-  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Jumping Beans checked each opted-in origin independently, then applied the same profile and price rules before ranking.</p><ul class="network-list">${rows.join("")}</ul></section>`;
+  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul></section>`;
+}
+
+function comparisonMarkup(deals, preferences) {
+  if (!deals.length) return "";
+  return `<section class="offer-comparison" aria-label="Eligible partner offer comparison"><h4>Compare eligible partner offers</h4><ol>${deals.map((deal) => `<li><strong>#${deal.resolution.rank} · ${escapeHtml(deal.name)}</strong><span>${escapeHtml(deal.partnerName || deal.merchant || "Partner")} · ${money(deal.dealPrice)} · ${escapeHtml(deal.provenance?.sourceLabel || "WebMCP offer tool")}</span><small>${escapeHtml(deal.resolution.relevance)}. ${escapeHtml(deal.provenance?.verification || "Unverified")}</small></li>`).join("")}</ol></section>`;
 }
 
 function renderNextStep() {
@@ -619,9 +610,12 @@ function renderNextStep() {
       ${href ? `<a class="bl-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
       <button class="bl-button" data-variant="secondary" id="show-source" type="button">Explain partner opt-in</button>
     </div>`;
+  const comparison = state.sourceB ? comparisonMarkup(state.capabilityResolution?.exposed || [], activePreferences) : "";
+  const withheld = state.capabilityResolution?.withheld || [];
+  const withholding = withheld.length ? `<p class="reason"><strong>Withheld offers</strong><br>${withheld.length} offer${withheld.length === 1 ? " was" : "s were"} withheld: ${escapeHtml(withheld.map((item) => item.reason).join("; "))}</p>` : "";
   renderOfferCard(
     els.nextStep,
-    offerMarkup(deal, sourceKind, label, activePreferences) + actions + networkMarkup(),
+    offerMarkup(deal, sourceKind, label, activePreferences) + comparison + withholding + actions + networkMarkup(),
   );
   document.getElementById("show-source")?.addEventListener("click", () => {
     setAgent(
@@ -842,6 +836,7 @@ function applyPreferences({ persist }) {
     profile: state.profile,
     preferences: state.appliedPreferences,
     applied: true,
+    demoContextGranted: state.demoContextGranted,
   });
   state.sourceB = choosePartnerOffer(state.partnerDeals, state.appliedPreferences);
   recordEvent("user.intervention", {
@@ -1007,6 +1002,19 @@ els.controls.addEventListener("change", (event) => {
   renderRules();
 });
 
+els.demoContext?.addEventListener("change", async () => {
+  state.demoContextGranted = els.demoContext.checked;
+  state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
+  setAgent(state.demoContextGranted ? "You approved the clearly labeled demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile context is off. No persona-derived fields are sent to partners.");
+  const result = await discoverPartnerDeals();
+  state.partnerDeals = result.deals;
+  state.originOutcomes = result.originOutcomes;
+  state.sourceB = choosePartnerOffer(result.deals);
+  state.discoveryComplete = true;
+  updateConnections();
+  renderJourney();
+});
+
 document.getElementById("apply-preferences").addEventListener("click", () => {
   applyPreferences({ persist: true });
 });
@@ -1059,9 +1067,15 @@ els.forgetAll.addEventListener("click", forgetAllMemory);
 
 function registerEngineTools() {
   if (!SUPPORTED || typeof document.modelContext?.registerTool !== "function") return;
-  const register = (tool) => {
+  const register = (tool, capabilityId = "offers.discover") => {
     try {
-      document.modelContext.registerTool(tool);
+      const capability = CAPABILITIES.find((item) => item.id === capabilityId);
+      document.modelContext.registerTool({ ...tool, execute: async (input) => {
+        const grant = createInvocationGrant({ capabilityId, audienceOrigin: location.origin, scopes: [capability.requiredScope], purpose: `engine tool ${tool.name}` });
+        const result = await invokeCapability({ capabilityId, grant, callerOrigin: location.origin, expectedOrigin: location.origin, purpose: `engine tool ${tool.name}`, input, validateInput: (value) => Boolean(value && typeof value === "object" && !Array.isArray(value)), validateOutput: (value) => value !== undefined, handler: tool.execute });
+        if (!result.ok) return { denied: true, reason: result.authorization?.code || result.code };
+        return result.value;
+      } });
     } catch {
       // A registration failure leaves the normal page journey usable.
     }
@@ -1077,7 +1091,7 @@ function registerEngineTools() {
       scope: "Jumping Beans product in this browser",
       retention: "Until the user chooses Forget",
     }),
-  });
+  }, "offers.discover");
   register({
     name: "set_display_preferences",
     description: "Stage presentation preferences for the next offer. The user must choose Save and apply or Apply once in the page before the preference affects Site B.",
@@ -1103,6 +1117,7 @@ function registerEngineTools() {
         profile: state.profile,
         preferences: state.preferences,
         applied: false,
+        demoContextGranted: state.demoContextGranted,
       });
       recordEvent("capability.invocation.succeeded", {
         capabilityId: "preferences.stage",
@@ -1123,7 +1138,7 @@ function registerEngineTools() {
         availableActions: ["Save and apply to Site B", "Apply once without saving"],
       };
     },
-  });
+  }, "preferences.stage");
   register({
     name: "build_offer_journey",
     description: "Show the open-inventory offer, the user's preference choice, and the opted-in or clearly labeled illustrative Site B offer as one journey.",
@@ -1138,7 +1153,7 @@ function registerEngineTools() {
         preferences: state.applied ? state.appliedPreferences : null,
       };
     },
-  });
+  }, "offers.discover");
   register({
     name: "set_deal_watch",
     description: "Stage a browser-scoped deal point for review. This tool never persists it; the user must confirm the exact fact, scope, retention, and outcome in the page.",
@@ -1163,7 +1178,7 @@ function registerEngineTools() {
         confirmationAction: "Use the page's Confirm and save deal watch button",
       };
     },
-  });
+  }, "deal_watch.stage");
   register({
     name: "get_profile",
     description: "Return the current user-controlled display profile, including whether the draft has been applied.",
@@ -1173,7 +1188,7 @@ function registerEngineTools() {
       draft: state.preferences,
       applied: state.applied ? state.appliedPreferences : null,
     }),
-  });
+  }, "offers.discover");
   register({
     name: "get_journey_receipt",
     description: "Return the observed offer-discovery journey, current user-approved context snapshot, capability versions, decision receipt, and recent event trail.",
@@ -1186,7 +1201,7 @@ function registerEngineTools() {
       decisionReceipt: state.decisionReceipt,
       events: state.events.slice(-50),
     }),
-  });
+  }, "offers.discover");
 }
 
 async function init() {
@@ -1194,6 +1209,7 @@ async function init() {
     profile: state.profile,
     preferences: state.preferences,
     applied: state.applied,
+    demoContextGranted: state.demoContextGranted,
   });
   recordEvent("journey.started", {
     intentType: state.journey.intentType,
@@ -1203,13 +1219,14 @@ async function init() {
   renderJourney();
   registerEngineTools();
   updateConnections();
-  const deals = await discoverPartnerDeals();
-  state.partnerDeals = deals;
-  state.sourceB = choosePartnerOffer(deals);
+  const result = await discoverPartnerDeals();
+  state.partnerDeals = result.deals;
+  state.originOutcomes = result.originOutcomes;
+  state.sourceB = choosePartnerOffer(result.deals);
   state.discoveryComplete = true;
   updateConnections();
   renderJourney();
-  if (deals.length) {
+  if (result.deals.length) {
     setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
   } else if (SUPPORTED) {
     setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B remains an explicitly labeled illustrative preview.");

@@ -26,6 +26,33 @@ The competition is a validation gate, not the product boundary. The immediate
 job is to harden the network while expanding the offering and making the
 ambitious product legible.
 
+## 2026-08-31 P0 resolver slice completed locally
+
+- Engine and partner resolution now pass through a deny-by-default,
+  purpose-bound capability grant check with scope, origin, capability-version,
+  and expiry validation. The engine adapts its registered tools into the same
+  boundary.
+- The WebMCP adapter exact-allowlists origin/tool pairs, applies per-origin
+  deadlines, accepts serialized input only after a compatibility-shaped error,
+  validates result envelopes and offer records, caps result counts, and emits
+  `ready`, `no-match`, `invalid`, `timeout`, or `failed` outcomes used by both
+  the network view and the decision receipt.
+- Default resolution is anonymous. The seeded Alex persona is no longer sent or
+  described as user-approved; a page control explicitly enables that labeled
+  demo context for the current request and describes recipient, purpose,
+  request-only retention, and fields. Ranking disclosure now matches the
+  presentation-format tie-breaker.
+- Site B renders the validated exposed set as a comparison, including rank,
+  source, verification, and visible withholding/truncation reasons. The local
+  deterministic gate covers authorization denial, malformed/timeout/failed
+  partial results, anonymous context projection, and multi-offer ordering.
+
+Still required before P0 acceptance: externally verifiable grants or a server
+execution gateway (the current grants are browser-local), payload-bound write
+confirmation/idempotency conflict hardening, cross-partner canonical product
+identity/freshness policy, and two fresh headed-Chrome cross-origin runs with
+exported receipts. No deployment was performed for this slice.
+
 ### 1. Harden the network foundation
 
 - Keep multi-origin discovery, partner opt-in, and broad partner categories in

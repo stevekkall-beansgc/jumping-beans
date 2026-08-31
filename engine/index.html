@@ -29,7 +29,7 @@
     <section class="bl-stack bl-measure intro" data-space="compact" aria-labelledby="page-title">
       <p class="eyebrow">Agent-led offer journey</p>
       <h1 id="page-title">Let the next offer remember what you chose.</h1>
-      <p class="lede">Concierge starts with an open catalog offer, checks an opted-in network, lets you choose what matters, and carries only those approved display rules forward.</p>
+      <p class="lede">Concierge starts with an open catalog offer. Partner calls begin without persona data; you may explicitly approve a labeled demo profile for one request. Approved context can affect eligibility and ranking.</p>
       <dl class="source-key" aria-label="Inventory source types">
         <div>
           <dt><span class="source-marker source-open" aria-hidden="true"></span>Open inventory</dt>
@@ -79,7 +79,7 @@
 
               <fieldset class="preference-fieldset" id="preference-controls">
                 <legend>Display rules</legend>
-                <p class="field-hint" id="preference-hint">These choices change presentation, not product facts or ranking.</p>
+                <p class="field-hint" id="preference-hint">Presentation formats can break ranking ties; they never change product facts, authorization, or eligibility.</p>
                 <div class="preference-options" aria-describedby="preference-hint">
                   <label><input type="checkbox" data-pref="testimonial"><span>Testimonials</span></label>
                   <label><input type="checkbox" data-pref="price-proof" checked><span>Price proof</span></label>
@@ -87,6 +87,9 @@
                   <label><input type="checkbox" data-pref="no-urgency"><span>No urgency</span></label>
                 </div>
               </fieldset>
+
+              <label class="demo-context-choice"><input id="demo-context" type="checkbox"><span>Use the labeled Alex demo profile for this request</span></label>
+              <p class="field-hint">Off by default. If you turn it on, its categories and budget are sent only to each opted-in partner to find offers; they are not saved as your profile.</p>
 
               <section class="bl-callout bl-stack memory-preview" data-space="compact" data-tone="info" aria-labelledby="memory-preview-title">
                 <h4 class="bl-callout__title" id="memory-preview-title">Before saving</h4>

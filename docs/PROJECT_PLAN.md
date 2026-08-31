@@ -39,10 +39,10 @@ Jumping Beans currently includes:
 - P0 capability, journey, context, ranking, and decision-receipt primitives;
 - network visibility showing connected origins and eligible/exposed counts.
 
-The local product gate is green at 317 assertions. The current browser smoke
-test confirms the expanded UI, but the available browser session did not expose
-WebMCP, so flagged headed-Chrome cross-origin execution remains an acceptance
-gate.
+The local product gate is green at 336 assertions after the resolver hardening
+slice. The available browser session confirms the local UI controls, but does
+not expose executable WebMCP partner tools, so flagged headed-Chrome
+cross-origin execution remains an acceptance gate.
 
 ## 3. Model ownership
 
@@ -190,11 +190,11 @@ asset/rights review are complete.
 
 | Priority | Deliverable | Owner | Status |
 |---|---|---|---|
-| P0.1 | Final architecture/security checklist | GPT-5.6-Sol | Queued for OpenAI review |
-| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Baseline implementation checkpoint complete; next slice queued |
-| P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Blocked by unavailable headed WebMCP browser |
+| P0.1 | Final architecture/security checklist | GPT-5.6-Sol | Complete; see `docs/P0_ARCHITECTURE_REVIEW.md` |
+| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; gate green at 336 assertions |
+| P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_ACCEPTANCE_REVIEW.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
-| P0.5 | Main-session integration and release decision | Main Codex session | In progress |
+| P0.5 | Main-session integration and release decision | Main Codex session | In progress; local checkpoint only, no deployment |
 
 ## 9. Execution notes
 
@@ -205,10 +205,12 @@ stopped before release use. The later Agency local-model tasks 169–171 were
 created in error after the model preference was clarified; they were not
 approved or executed and are superseded by the OpenAI review loop above.
 
-Terra’s baseline change was inspected and accepted locally, the generated
-bundle was refreshed, and the 317-assertion product gate passed. Future
-parallel implementation tasks must use actual isolated product worktrees or
-run serially through the main session.
+The corrected OpenAI loop ran serially in the shared product directory:
+GPT-5.6-Sol produced the architecture review, GPT-5.6-Terra implemented the
+resolver hardening and multi-offer slice, and GPT-5.6-Luna produced the
+acceptance report. The generated bundle was refreshed and the 336-assertion
+product gate passed. Future parallel implementation tasks must use actual
+isolated product worktrees or run serially through the main session.
 
 ## 10. Release principles
 

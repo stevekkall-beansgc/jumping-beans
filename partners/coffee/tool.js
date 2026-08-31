@@ -49,6 +49,7 @@ await document.modelContext.registerTool(
     },
     annotations: { readOnlyHint: true },
     execute: async ({ categories, maxPrice }, { signal } = {}) => {
+      if (!Array.isArray(categories) || !categories.every((category) => typeof category === "string") || (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0))) return { deals: [] };
       return {
         deals: catalog
           .filter(

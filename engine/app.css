@@ -888,6 +888,41 @@ h1 {
   text-align: right;
 }
 
+.demo-context-choice {
+  display: flex;
+  align-items: start;
+  gap: var(--bl-space-2);
+  margin-top: var(--bl-space-4);
+  font-weight: var(--bl-font-weight-medium);
+}
+
+.offer-comparison {
+  margin-top: var(--bl-space-5);
+  padding-top: var(--bl-space-4);
+  border-top: var(--bl-border-width) solid var(--bl-color-border);
+}
+
+.offer-comparison h4 {
+  margin: 0 0 var(--bl-space-3);
+}
+
+.offer-comparison ol {
+  display: grid;
+  gap: var(--bl-space-3);
+  margin: 0;
+  padding-left: var(--bl-space-5);
+}
+
+.offer-comparison li {
+  display: grid;
+  gap: var(--bl-space-1);
+}
+
+.offer-comparison span,
+.offer-comparison small {
+  color: var(--bl-color-text-muted);
+}
+
 @media (max-width: 58rem) {
   .layout {
     grid-template-columns: 1fr;

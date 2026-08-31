@@ -153,7 +153,10 @@ includesAll(engineApp, [
   'state.appliedMode = persist ? "saved" : "once"',
   "Apply once creates no persisted preference or offer note",
   "createPartnerFrames();",
-  "maxPrice: preferences.maxPrice ?? undefined",
+  "projectPartnerContext(state.contextSnapshot, origin)",
+  "resolvePartnerTools",
+  "originOutcomes",
+  "comparisonMarkup",
   "No opted-in offer matches this context",
   "get_journey_receipt",
 ], "engine WebMCP, provenance, and consent contract");
@@ -167,6 +170,35 @@ includesAll(p0Source, [
   "decisionReceipt",
   "observedOrInferred: \"observed\"",
 ], "P0 capability and journey primitives");
+const p0 = await import(`${pathToFileURL(path.join(root, "engine/p0.js")).href}?check=${Date.now()}`);
+const engineOrigin = "https://engine.invalid";
+const discoverGrant = p0.createInvocationGrant({ capabilityId: "offers.discover", audienceOrigin: engineOrigin, scopes: ["offers:read"], purpose: "test-discovery" });
+check(p0.authorizeInvocation({ capabilityId: "offers.discover", callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "missing-grant", "Capability boundary permits a missing grant");
+check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverGrant, callerOrigin: "https://other.invalid", expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "wrong-origin", "Capability boundary permits a wrong origin");
+check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, scopes: [] }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "insufficient-scope", "Capability boundary permits insufficient scope");
+check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, expiresAt: new Date(0).toISOString() }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "expired-grant", "Capability boundary permits an expired grant");
+check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverGrant, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).allowed, "Capability boundary rejects a valid scoped grant");
+const contractDeal = (sku, price, origin) => ({ sku, name: `Offer ${sku}`, category: "coffee", listPrice: price + 10, dealPrice: price, partnerId: origin, partnerName: origin, collateral: [{ type: "price-proof" }] });
+const contractOrigins = ["https://one.invalid", "https://two.invalid", "https://three.invalid", "https://four.invalid"];
+const partnerContract = await p0.resolvePartnerTools({
+  tools: contractOrigins.map((origin) => ({ origin, name: "get_matching_deals" })), allowedOrigins: contractOrigins,
+  timeoutMs: 10, inputForOrigin: () => ({ categories: [] }), execute: (tool) => {
+    if (tool.origin === contractOrigins[1]) return Promise.resolve({ deals: [{ nope: true }] });
+    if (tool.origin === contractOrigins[2]) return new Promise(() => {});
+    if (tool.origin === contractOrigins[3]) return Promise.reject(new Error("offline"));
+    return Promise.resolve({ deals: [contractDeal("one", 20, "one"), contractDeal("two", 10, "one")] });
+  },
+});
+check(partnerContract.deals.length === 2, "Partner adapter drops valid partial results");
+check(partnerContract.originOutcomes[contractOrigins[0]].status === "ready", "Partner adapter misses ready outcome");
+check(partnerContract.originOutcomes[contractOrigins[1]].status === "invalid", "Partner adapter accepts malformed output");
+check(partnerContract.originOutcomes[contractOrigins[2]].status === "timeout", "Partner adapter does not bound a timeout");
+check(partnerContract.originOutcomes[contractOrigins[3]].status === "failed", "Partner adapter does not normalize failed partner outcome");
+const comparison = p0.resolveOfferDeals([contractDeal("a", 30, "a"), contractDeal("b", 10, "b"), contractDeal("c", 20, "c")], { profile: null, preferences: { formats: [] }, limit: 2 });
+check(comparison.exposed.map((deal) => deal.sku).join(",") === "b,c", "Multi-offer comparison ordering is not deterministic");
+check(comparison.withheld.some((item) => item.stage === "exposure" && item.offerId === "a"), "Comparison truncation is not represented as withholding");
+const anonymousContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { formats: [] }, applied: false });
+check(p0.projectPartnerContext(anonymousContext, contractOrigins[0]).fields.categories.length === 0, "Default/demo persona context is transmitted without approval");
 const dealToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_deal_watch"'),
   engineApp.indexOf('name: "get_profile"'),
@@ -194,6 +226,7 @@ for (const partner of ["petsupply", "coffee", "watch"]) {
     'RUNTIME_MODE = LOCAL_HOSTS.has(location.hostname) ? "local" : "production"',
     'local: `${location.protocol}//${location.hostname}:8082`',
     "readOnlyHint: true",
+    "Array.isArray(categories)",
     "{ exposedTo: [CONCIERGE_ORIGIN] }",
     "provenance:",
     "not independently verified by Jumping Beans",
