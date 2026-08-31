@@ -49,17 +49,25 @@ gate.
 The main Codex session owns integration, scope, provenance, and final release
 decisions.
 
-| Workstream | Model owner | Accountability |
+| Workstream | OpenAI model owner | Accountability |
 |---|---|---|
 | Architecture, security, protocol boundaries | GPT-5.6-Sol | Capability contracts, authorization, threat model, MCP/UCP boundary, architecture review |
 | Core engine and network resolution | GPT-5.6-Terra | WebMCP adapter, resolver, personalization, ranking, receipts, network experience |
 | UX and personalization | GPT-5.6-Terra | Multi-offer experience, persona/context flows, comparison, user controls |
 | Browser acceptance and adversarial QA | GPT-5.6-Luna | Headed-Chrome runs, protocol variance, failure cases, evidence capture |
-| Mechanical validation and documentation | Bean local session | Product gate, fixtures, generated assets, mechanical checks, plan maintenance |
+| Mechanical validation and documentation | Main Codex session | Product gate, fixtures, generated assets, mechanical checks, plan maintenance |
 | Integration and release | Main Codex session | Change integration, regression review, release gate, no premature deployment |
 
-One model owns a vertical slice at a time. Overlapping edits to the same core
-files are avoided; independent implementation should use isolated worktrees.
+One OpenAI model owns a vertical slice at a time. The review loop is:
+
+1. Sol defines or reviews the contract and security boundary.
+2. Terra implements the vertical slice.
+3. Luna performs corroborative and adversarial acceptance review.
+4. Main Codex integrates findings, runs deterministic gates, and makes the
+   stop/go decision.
+
+Overlapping edits to the same core files are avoided; independent
+implementation uses isolated worktrees.
 
 ## 4. Phase 0 — P0 hardening
 
@@ -182,21 +190,25 @@ asset/rights review are complete.
 
 | Priority | Deliverable | Owner | Status |
 |---|---|---|---|
-| P0.1 | Final architecture/security checklist | GPT-5.6-Sol | Paused after initial review snapshot |
-| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Completed locally; gate re-run |
+| P0.1 | Final architecture/security checklist | GPT-5.6-Sol | Queued for OpenAI review |
+| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Baseline implementation checkpoint complete; next slice queued |
 | P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Blocked by unavailable headed WebMCP browser |
-| P0.4 | Mechanical gate, fixtures, and provenance maintenance | Bean local session | Completed locally |
+| P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
 | P0.5 | Main-session integration and release decision | Main Codex session | In progress |
 
 ## 9. Execution notes
 
-The first parallel dispatch used the saved Bean Labs project root, which is not
-itself a Git repository; the three tasks therefore shared the product working
-directory rather than receiving isolated product worktrees. Terra’s change was
-inspected and accepted locally, the generated bundle was refreshed, and the
-317-assertion product gate passed. Future parallel implementation tasks must
-use an actual isolated product worktree or run serially through the main
-session.
+The first ad hoc parallel dispatch used the saved Bean Labs project root, which
+is not itself a Git repository; those tasks therefore shared the product
+working directory rather than receiving isolated product worktrees. It was
+stopped before release use. The later Agency local-model tasks 169–171 were
+created in error after the model preference was clarified; they were not
+approved or executed and are superseded by the OpenAI review loop above.
+
+Terra’s baseline change was inspected and accepted locally, the generated
+bundle was refreshed, and the 317-assertion product gate passed. Future
+parallel implementation tasks must use actual isolated product worktrees or
+run serially through the main session.
 
 ## 10. Release principles
 
