@@ -44,7 +44,7 @@ function summarize(records, product) {
 async function getSummary(product, localRecords) {
   try {
     const response = await fetch(`/api/interest-summary?product=${encodeURIComponent(product)}`);
-    if (response.ok) return { ...await response.json(), source: "deployed KV" };
+    if (response.ok) return { ...await response.json(), source: "deployed D1-backed storage" };
   } catch {
     // The deterministic local server has no API; use same-origin browser data.
   }

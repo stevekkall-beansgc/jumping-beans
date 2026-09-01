@@ -1,13 +1,17 @@
 # Jumping Beans — production acceptance packet
 
 Date: 2026-09-01  
-Release: `v0.5.1` (`ecaf97329ba1b0c3269e090bd3643fae04332a0e`)
+Release: `v0.5.2`
 Deployment: [Cloudflare workflow 33526038926](https://github.com/stevekkall-beansgc/jumping-beans/actions/runs/33526038926)
-Decision: **CODE/DEPLOY PASS; COMPETITION ACCEPTANCE OPEN**
+Decision: **OPERATIONAL DEMO GO; COMPETITION ACCEPTANCE OPEN**
 
 This packet records fresh production checks. It does not replace the required
 clean extension-free Stable/Canary native WebMCP run, and it makes no claim
 that the competition gate is complete.
+
+Mobile continuity is accepted as supplemental operational evidence for the
+personal experience. It does not replace clean desktop Stable native WebMCP
+evidence.
 
 ## Public surfaces
 
@@ -26,7 +30,7 @@ that the competition gate is complete.
 | Anonymous account behavior | PASS | `GET /api/account` → `{"signedIn":false}` |
 | Google login route | PASS | HTTP 302 to `accounts.google.com`; state/nonce/PKCE present; OIDC cookie redacted and Secure/HttpOnly/SameSite=Lax |
 | Hosted UI | PASS | Account panel and explicit import controls present in deployed engine |
-| Watch summary | PASS | Empty 30-day cohort returned from production D1 |
+| Watch summary | PASS | 30-day production D1 cohort returned 2 active signals at `$123.45` |
 | Watch staging | PASS | HTTP 201 server-authoritative pending grant; no demand signal committed |
 | Watch session controls | PASS | Bootstrap response includes redacted `HttpOnly; SameSite=Strict; Secure` cookie |
 | Watch commit/replay/concurrency | PASS for approved smoke | One concurrent request committed, the other replayed; same-payload replay returned the original receipt; changed-payload replay returned HTTP 409; summary showed one `$123.45` record |
@@ -92,7 +96,7 @@ remained. The first account's hosted notes were not removed.
 
 In a separate production Watch session, the second identity staged and
 confirmed the approved non-binding `$123.45` target for `NIV-77007Q45`. The
-merchant view then showed two active signals in the deployed KV aggregate,
+merchant view then showed two active signals in the deployed D1 aggregate,
 with the expected `$123.45` median/range. No notification, purchase,
 reservation, payment, or account credential was created.
 

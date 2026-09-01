@@ -1,10 +1,12 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Release lineage: working-demo `v0.5.1` (`ecaf973`)
-Decision: **CODE/DEPLOY PASS; COMPETITION ACCEPTANCE HOLD**
+Release lineage: working-demo `v0.5.2`
+Decision: **OPERATIONAL DEMO GO; COMPETITION ACCEPTANCE HOLD**
 
-The release is not competition-ready for the expanded product contract until
+The public demo is approved for operational use, including mobile-assisted
+personal-experience continuity. It is not competition-ready for the expanded
+product contract until
 the remaining account lifecycle checks and clean native WebMCP browser
 evidence are accepted. The identity slice is implemented, configured,
 deployed, and accepted for one real account, with a second-account hosted
@@ -54,7 +56,8 @@ The release-triggered Cloudflare workflow completed successfully from
 allowlist. The live engine now shows the Alex/Jamie selector, honest no-result
 state, and Watch Co handoff; the live Watch page accepts the canonical decimal
 handoff and keeps confirmation disabled until the user reviews the exact action.
-The Watch D1-backed summary read smoke returned a valid empty cohort.
+The Watch D1-backed summary read smoke returned two active signals at `$123.45`
+for `NIV-77007Q45`, with the documented 30-day retention window.
 
 The dedicated `jumping-beans-engine-identity` D1 was provisioned and migration
 `engine/migrations/0001_identity.sql` was applied remotely. Google OIDC Worker

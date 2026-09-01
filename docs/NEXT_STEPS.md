@@ -1,7 +1,7 @@
 # Jumping Beans — next steps
 
-Status: v0.5.1 deployed; public/browser and hosted-personal-experience gates
-remain open before the competition-ready claim.
+Status: v0.5.2 operational release; final browser and lifecycle gates remain
+open before the competition-ready claim.
 Last updated: 2026-09-01.
 
 ## Current baseline
@@ -48,7 +48,7 @@ The slice is complete for release only when it provides:
 
 Current implementation: product gate **517 assertions passed**; remote
 `jumping-beans-engine-identity` D1 is provisioned and migrated; release
-`v0.5.1` is deployed from `ecaf973`; public anonymous/login-route/Watch-stage
+`v0.5.2` is deployed; public anonymous/login-route/Watch-stage
 smokes pass, one real signed-in account completed preference save, explicit
 memory import, logout, relogin, and hosted-memory restoration, and a second
 authenticated identity was confirmed isolated from those hosted notes after

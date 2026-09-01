@@ -52,7 +52,9 @@ with Watch Co's own explicit confirmation.
 The dedicated `jumping-beans-engine-identity` D1 is provisioned and migrated.
 The Google OAuth client, redirect URI, and Worker secrets are configured for
 `https://jumping-beans-engine.steve-k-kall.workers.dev/auth/callback`, and
-release `v0.5.0` is deployed. The anonymous account response, secure Google
-redirect, and public UI markers pass smoke checks. The remaining acceptance
-items are completing a real signed-in account journey, proving two-account
-isolation, and capturing fresh clean-browser evidence.
+release `v0.5.2` is deployed. The anonymous account response, secure Google
+redirect, real signed-in save/import/logout/relogin/forget journey, and
+two-account hosted-memory boundary pass the recorded checks. Remaining
+acceptance items are expiry, true cross-device hydration, full Watch
+record/receipt/session isolation, and fresh clean Stable native WebMCP
+evidence.
