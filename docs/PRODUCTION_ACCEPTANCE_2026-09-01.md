@@ -32,7 +32,8 @@ that the competition gate is complete.
 | Watch commit/replay/concurrency | PASS for approved smoke | One concurrent request committed, the other replayed; same-payload replay returned the original receipt; changed-payload replay returned HTTP 409; summary showed one `$123.45` record |
 | Signed-in personal experience | PASS for one account | Google sign-in, hosted preference save, explicit two-note import, logout, relogin, and hosted-note restoration passed in the headed browser |
 | Two-user isolation | PASS for hosted memory boundary | First account restored two hosted notes; second authenticated identity reported no hosted product notes while the same browser retained only local notes |
-| Stable/Canary native WebMCP | OPEN | Current Codex browser surfaces are not admissible clean extension-free evidence |
+| Canary native WebMCP capability | PASS | Clean Chrome Canary 154 reported native `modelContext`, `crossOriginIsolated: true`, exactly three allowlisted partner tools, and native partner calls returned bounded offers from all three origins |
+| Stable native WebMCP | OPEN | The clean Stable process is available, but the approved browser controls cannot attach to its isolated window in this session |
 
 No secret, raw session token, OAuth state, nonce, code verifier, CSRF token,
 or personal profile payload is included in this packet.
@@ -58,6 +59,19 @@ that defect in `7f9f95b`; Luna reviewed it; main integrated it as `ecaf973`;
 CI passed at 517 assertions; and v0.5.1 redeployed it. No rejected import
 uploaded the notes.
 
+## Clean Canary native WebMCP run
+
+In an extension-free Chrome Canary 154 window, the public engine reported
+`typeof document.modelContext === "object"` and `crossOriginIsolated === true`.
+Native `getTools({ fromOrigins })` returned the engine tools plus exactly one
+`get_matching_deals` tool for each of Petsupply, Coffee Co, and Watch Co. Native
+`executeTool()` calls (serialized input, as required by this Chromium build)
+returned bounded results from all three origins: 1, 9, and 24 offers
+respectively. A redacted native `get_journey_receipt()` call also returned the
+journey/capability receipt with the three connected origins. Because this
+console run did not complete the page's explicit apply action, its receipt had
+zero exposed offers and is not counted as the full public-journey acceptance.
+
 ## Second-account isolation run
 
 The user completed Google sign-in for a separate test identity. The resulting
@@ -73,7 +87,8 @@ secret is included here.
    and relogin checks; the two-account hosted-memory boundary is now proven.
 2. Repeat production isolation for watches, receipts, and sessions, not only
    hosted memory.
-3. Run the full public journey in clean Chrome Stable and Canary without the
+3. Complete the explicit-apply native journey receipt in clean Canary, then
+   run the full public journey in clean Chrome Stable without the
    Codex/ChatGPT extension: native discovery, three partner invocations,
    personalization, apply-once/save/forget, provenance, partial/no-match
    states, and a redacted native journey receipt.

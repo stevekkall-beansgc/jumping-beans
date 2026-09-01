@@ -8,7 +8,8 @@ The release is not competition-ready for the expanded product contract until
 the remaining account lifecycle checks and clean native WebMCP browser
 evidence are accepted. The identity slice is implemented, configured,
 deployed, and accepted for one real account, with a second-account hosted
-memory isolation check now passed;
+memory isolation check now passed. Canary native capability and partner calls
+are also proven;
 the remaining status is recorded in
 `docs/PRODUCTION_ACCEPTANCE_2026-09-01.md`.
 
@@ -75,8 +76,9 @@ original receipt, and a changed-payload replay was rejected with HTTP 409.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.
-3. Re-run the public journey in clean headed Chrome Stable and Canary without
-   an extension. Record discovery, execution, anonymous/approved context,
+3. Complete the explicit-apply native journey receipt in Canary and re-run the
+   public journey in clean headed Chrome Stable without an extension. Record
+   discovery, execution, anonymous/approved context,
    apply-once/save/forget, Watch stage/confirmation/replay, provenance, and a
    redacted receipt.
 4. Verify production multi-user/D1 write smoke checks, then
