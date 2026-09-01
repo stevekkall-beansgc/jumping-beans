@@ -1,7 +1,7 @@
 # Jumping Beans — next steps
 
-Status: working prototype shipped; P0 hardening is in progress and the full
-network product remains in scope.
+Status: working-demo code integrated; public/browser release gates remain open
+and the full network product remains in scope.
 Last updated: 2026-09-01.
 
 ## Current baseline
@@ -10,8 +10,8 @@ Last updated: 2026-09-01.
   layer records offer context, explains provenance, lets the user control
   preferences, and changes which offer collateral is shown and how it is
   presented.
-- The engine and three partner surfaces are live on Cloudflare. The current
-  release is `jumping-beans v0.2.0`; the shared Bean Labs design system is
+- The engine and three partner surfaces are live on Cloudflare. The last
+  published release is `jumping-beans v0.3.0`; the shared Bean Labs design system is
   `beanlabs v0.3.0`.
 - Offer inventory currently comes from open/public sources and normalized demo
   catalogs. Partner opt-in is demonstrated as an enrichment path, not a
@@ -47,14 +47,12 @@ ambitious product legible.
   deterministic gate covers authorization denial, malformed/timeout/failed
   partial results, anonymous context projection, and multi-offer ordering.
 
-Still required for the broader competition gate: externally verifiable grants
-or a server execution gateway (the current grants are browser-local),
-cross-partner canonical product identity/freshness policy, a Chrome runtime
-that exposes the `tools` permission to cross-origin frames, and a fresh 3/3
-embedded run with exported receipts. The engine now delegates both `tools` and
+Still required for the broader competition gate: a fresh 3/3 embedded run with
+exported receipts in clean Stable and Canary profiles, plus production
+multi-user/D1 smoke evidence. The engine delegates both `tools` and
 `cross-origin-isolated` to every partner frame and sends the required top-level
-`Permissions-Policy` allowlist. The fix is staged locally; production still
-needs an approved deploy and fresh 3/3 evidence.
+`Permissions-Policy` allowlist. The reviewed hardening is integrated locally;
+the public deployment still needs the exact candidate release.
 
 ## 2026-08-31 P0 Watch write-contract slice completed locally
 
