@@ -6,8 +6,7 @@ export const CAPABILITIES = Object.freeze([
   Object.freeze({ id: "preferences.stage", version: "1.0.0", title: "Stage presentation preferences", mode: "write", requiredScope: "preferences:stage", outcomeType: "preference_staged" }),
   Object.freeze({ id: "preferences.apply", version: "1.0.0", title: "Apply presentation preferences", mode: "write", requiredScope: "preferences:apply", outcomeType: "preference_applied" }),
   Object.freeze({ id: "memory.forget", version: "1.0.0", title: "Forget saved offer memory", mode: "write", requiredScope: "memory:delete", outcomeType: "memory_deleted" }),
-  Object.freeze({ id: "deal_watch.stage", version: "1.0.0", title: "Stage a deal watch", mode: "write", requiredScope: "watch:stage", outcomeType: "watch_staged" }),
-  Object.freeze({ id: "deal_watch.commit", version: "1.0.0", title: "Commit a browser-local deal watch", mode: "write", requiredScope: "watch:commit", outcomeType: "watch_saved" }),
+  Object.freeze({ id: "deal_watch.stage", version: "1.0.0", title: "Stage a Watch Co handoff", mode: "write", requiredScope: "watch:stage", outcomeType: "watch_handoff_staged" }),
   Object.freeze({ id: "interest.record", version: "1.0.0", title: "Record Watch Co demand interest", mode: "write", requiredScope: "interest:write", outcomeType: "interest_recorded" }),
 ]);
 export const PARTNER_RESULT_LIMIT = 24;
