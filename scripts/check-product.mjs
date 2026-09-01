@@ -70,6 +70,7 @@ function checkHtml(html, file) {
 
 runNode("generated UI freshness", ["scripts/sync-static-ui.mjs", "--check"]);
 runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
+runNode("engine identity contracts", ["engine/identity.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -137,6 +138,9 @@ includesAll(engineHtml, [
   'id="watch-confirmation"',
   'id="confirm-watch"',
   'id="forget-all"',
+  'id="account-login"',
+  'id="account-import-confirm"',
+  "Import selected browser memory",
 ], "engine consent journey");
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
@@ -184,9 +188,29 @@ includesAll(profileSelectionBlock, [
 check(!profileSelectionBlock.includes("discoverPartnerDeals("), "Draft profile selection directly invokes native partner discovery");
 const engineWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
 includesAll(engineWorker, [
-  '"Permissions-Policy": base.PERMISSIONS',
+  'headers.set("Permissions-Policy", base.PERMISSIONS)',
   'PERMISSIONS: `tools=(${permissionsPolicy})`',
+  'import { handleIdentity } from "./identity.mjs"',
+  "const identityResponse = await handleIdentity(request, env);",
 ], "engine WebMCP response policy");
+const identitySource = await readFile(path.join(root, "engine/identity.mjs"), "utf8");
+const identityMigration = await readFile(path.join(root, "engine/migrations/0001_identity.sql"), "utf8");
+const engineWrangler = await readFile(path.join(root, "engine/wrangler.toml"), "utf8");
+includesAll(identitySource, [
+  "GOOGLE_OIDC_CLIENT_ID",
+  "GOOGLE_OIDC_CLIENT_SECRET",
+  "code_challenge_method",
+  "nonce",
+  "safeReturnPath",
+  "token_digest",
+  "csrf_digest",
+  "explicit-browser-memory-import",
+  "import-confirmation-required",
+  "origin-rejected",
+], "engine hosted identity contract");
+check(!/postMessage|MessagePort|executeTool|getTools/.test(identitySource), "Engine identity introduces a non-native partner bridge or invocation path");
+includesAll(identityMigration, ["engine_users", "engine_identities", "engine_sessions", "engine_user_data", "token_digest", "csrf_digest"], "engine identity D1 migration contract");
+includesAll(engineWrangler, ["[[d1_databases]]", 'binding = "ENGINE_DB"', "ENGINE_PUBLIC_ORIGIN", "ENGINE_IDENTITY_MODE"], "engine identity D1 binding contract");
 const spikeEngine = await readFile(path.join(root, "spikes/a-cross-origin/engine/tool.js"), "utf8");
 const spikePartner = await readFile(path.join(root, "spikes/a-cross-origin/partner/tool.js"), "utf8");
 const spikeServer = await readFile(path.join(root, "spikes/a-cross-origin/serve.py"), "utf8");

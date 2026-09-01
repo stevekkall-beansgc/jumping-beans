@@ -50,6 +50,18 @@ const els = {
   prompt: document.getElementById("prompt"),
   demoContext: document.getElementById("demo-context"),
   demoProfile: document.getElementById("demo-profile"),
+  accountStatus: document.getElementById("account-status"),
+  accountLogin: document.getElementById("account-login"),
+  accountDetails: document.getElementById("account-details"),
+  accountDisplayName: document.getElementById("account-display-name"),
+  accountSaveProfile: document.getElementById("account-save-profile"),
+  accountSavePreferences: document.getElementById("account-save-preferences"),
+  accountImportConfirm: document.getElementById("account-import-confirm"),
+  accountImport: document.getElementById("account-import"),
+  accountMemorySummary: document.getElementById("account-memory-summary"),
+  accountForgetMemory: document.getElementById("account-forget-memory"),
+  accountForgetProfile: document.getElementById("account-forget-profile"),
+  accountLogout: document.getElementById("account-logout"),
   toast: document.getElementById("toast"),
 };
 
@@ -152,6 +164,7 @@ const state = {
   demoContextGranted: false,
   appliedJourneyRevision: 0,
   selectedWatchOfferId: null,
+  account: { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" },
 };
 
 function recordEvent(type, payload = {}) {
@@ -739,6 +752,54 @@ function renderMemory() {
   els.forgetAll.hidden = !items.length && !state.hasSavedPreferences;
 }
 
+function renderAccount() {
+  const account = state.account;
+  const signedIn = Boolean(account.signedIn);
+  els.accountLogin.hidden = signedIn;
+  els.accountDetails.hidden = !signedIn;
+  if (!signedIn) {
+    els.accountStatus.textContent = account.error || "Continue anonymously, or sign in to keep a separate account-owned copy of choices you explicitly save.";
+    return;
+  }
+  const name = account.profile?.displayName || account.user?.displayName || account.user?.email || "your account";
+  els.accountStatus.textContent = `Signed in as ${name}. Hosted account data is separate from this browser’s local draft and is never sent to partners.`;
+  els.accountDisplayName.value = account.profile?.displayName || "";
+  const count = Array.isArray(account.memory) ? account.memory.length : 0;
+  els.accountMemorySummary.textContent = count
+    ? `Your account has ${count} saved product note${count === 1 ? "" : "s"}.`
+    : "Your account has no saved product notes.";
+}
+
+async function accountRequest(path, payload) {
+  // This is only a same-origin account request. WebMCP partner discovery and
+  // invocation stay native browser APIs and never receive account credentials.
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-jb-csrf": state.account.csrfToken || "" },
+    body: JSON.stringify(payload),
+  });
+  const next = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(next.error || "account-request-failed");
+  state.account = { ...state.account, ...next, error: "" };
+  renderAccount();
+  return next;
+}
+
+async function loadAccount() {
+  try {
+    const response = await fetch("/api/account", { credentials: "same-origin", headers: { accept: "application/json" } });
+    const account = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(account.error || "Hosted account service is unavailable");
+    state.account = { ...state.account, ...account, error: "" };
+  } catch {
+    // The public offer journey remains fully anonymous if the optional service
+    // is not provisioned or the browser is offline.
+    state.account = { ...state.account, signedIn: false, csrfToken: null, error: "Hosted account service is unavailable; you can continue anonymously." };
+  }
+  renderAccount();
+}
+
 function addMemory(title, detail, kind) {
   const key = `${kind}:${title}:${detail}`;
   if (state.memory.some((item) => item.key === key)) return true;
@@ -1100,6 +1161,73 @@ els.memoryList.addEventListener("click", (event) => {
 
 els.forgetAll.addEventListener("click", forgetAllMemory);
 
+els.accountSaveProfile?.addEventListener("click", async () => {
+  try {
+    await accountRequest("/api/account/profile", { profile: { displayName: els.accountDisplayName.value } });
+    showToast("Account profile saved");
+  } catch (error) {
+    setAgent(`Account profile was not saved: ${error.message}.`);
+  }
+});
+
+els.accountSavePreferences?.addEventListener("click", async () => {
+  try {
+    await accountRequest("/api/account/preferences", { preferences: state.preferences });
+    showToast("Current display rules saved to your account");
+  } catch (error) {
+    setAgent(`Account display rules were not saved: ${error.message}.`);
+  }
+});
+
+els.accountImport?.addEventListener("click", async () => {
+  if (!els.accountImportConfirm.checked) {
+    setAgent("Select the explicit browser-memory import checkbox before anything is uploaded.");
+    els.accountImportConfirm.focus();
+    return;
+  }
+  try {
+    await accountRequest("/api/account/import", {
+      confirmed: true,
+      profile: { displayName: els.accountDisplayName.value },
+      preferences: state.preferences,
+      memory: state.memory,
+    });
+    els.accountImportConfirm.checked = false;
+    showToast("Selected browser memory imported to your account");
+  } catch (error) {
+    setAgent(`Browser memory was not imported: ${error.message}.`);
+  }
+});
+
+els.accountForgetMemory?.addEventListener("click", async () => {
+  try {
+    await accountRequest("/api/account/memory", { action: "forget-all" });
+    showToast("Account product notes forgotten");
+  } catch (error) {
+    setAgent(`Account product notes were not forgotten: ${error.message}.`);
+  }
+});
+
+els.accountForgetProfile?.addEventListener("click", async () => {
+  try {
+    await accountRequest("/api/account/profile", { profile: {} });
+    showToast("Account profile cleared");
+  } catch (error) {
+    setAgent(`Account profile was not cleared: ${error.message}.`);
+  }
+});
+
+els.accountLogout?.addEventListener("click", async () => {
+  try {
+    await accountRequest("/api/account/logout", {});
+    state.account = { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" };
+    renderAccount();
+    showToast("Logged out of hosted account");
+  } catch (error) {
+    setAgent(`Logout did not complete: ${error.message}.`);
+  }
+});
+
 function registerEngineTools() {
   if (!SUPPORTED || typeof document.modelContext?.registerTool !== "function") return;
   const register = (tool, capabilityId = "offers.discover") => {
@@ -1255,6 +1383,7 @@ async function init() {
   observeNativeToolChanges();
   await createPartnerFrames();
   renderJourney();
+  void loadAccount();
   registerEngineTools();
   updateConnections();
   const result = await discoverPartnerDeals();

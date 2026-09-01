@@ -747,6 +747,20 @@ h1 {
   font-size: var(--bl-font-size-md);
 }
 
+.account-section label:not(.demo-context-choice) {
+  display: grid;
+  gap: var(--bl-space-2);
+  font-weight: var(--bl-font-weight-semibold);
+}
+
+.account-section input[type="text"] {
+  width: 100%;
+}
+
+.account-actions {
+  margin-top: var(--bl-space-3);
+}
+
 .rule-list,
 .memory-list {
   display: grid;

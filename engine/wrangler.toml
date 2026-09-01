@@ -6,3 +6,19 @@ compatibility_date = "2025-01-01"
 
 [observability]
 enabled = true
+
+# Bind a dedicated D1 database before deploying. This is intentionally not
+# Watch Co's WATCH_DB; Watch ignores engine identity claims and remains its own
+# stage/commit authority.
+[[d1_databases]]
+binding = "ENGINE_DB"
+database_name = "jumping-beans-engine-identity"
+database_id = "REPLACE_WITH_APPROVED_ENGINE_IDENTITY_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+# Set this to the exact HTTPS engine origin in each deployed environment.
+ENGINE_PUBLIC_ORIGIN = "https://jumping-beans-engine.steve-k-kall.workers.dev"
+# Only use local-development when testing an HTTP localhost Worker; production
+# keeps __Host- cookies with Secure, HttpOnly, and SameSite protections.
+ENGINE_IDENTITY_MODE = "production"

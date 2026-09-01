@@ -67,6 +67,17 @@ Functions.
 > write APIs issue a Secure, HttpOnly, SameSite session cookie and require its
 > server-bound CSRF token; do not proxy, wildcard, or relax this boundary.
 
+## Optional engine identity
+
+The engine's hosted profile/preferences/memory service needs a distinct
+`ENGINE_DB` D1 binding and the migration in `engine/migrations/`; it must never
+share Watch Co's write database. Configure the exact HTTPS
+`ENGINE_PUBLIC_ORIGIN`, then add Google OAuth secrets
+`GOOGLE_OIDC_CLIENT_ID` and `GOOGLE_OIDC_CLIENT_SECRET` through Wrangler or
+the deployment environment (not `wrangler.toml`). Register the exact callback
+`https://<engine-origin>/auth/callback` with Google. Full setup and the
+security boundary are in [`IDENTITY_SETUP.md`](IDENTITY_SETUP.md).
+
 ## After deployment
 1. Confirm headers on each live URL:
    `curl -sI https://<origin>/ | grep -iE "cross-origin|origin-trial"`

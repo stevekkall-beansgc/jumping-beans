@@ -33,6 +33,11 @@ tiers and plain static files plus a couple of small serverless functions.
    persists its non-binding demand signal.
 8. The shop's `/merchant` view polls an aggregate of that interest
    (`/api/interest-summary`): the shop asked, the engine answered.
+9. Optionally, a shopper can sign in with Google on the engine. Account profile,
+   display rules, and product notes are stored in the engine's dedicated D1
+   database only after an explicit save or browser-memory import confirmation.
+   Anonymous use and browser-local drafts remain available; engine account
+   credentials and data never enter partner tool inputs or journey receipts.
 
 The engine also exposes a journey receipt to an agent: capability IDs and
 versions, connected origins, user-approved context, eligibility counts,
@@ -105,6 +110,8 @@ node scripts/check-product.mjs           # run the complete read-only product ga
 
 See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for source paths, the
 standalone-repo behavior, adapter rationale, and the required pre-ship review.
+See [`docs/IDENTITY_SETUP.md`](docs/IDENTITY_SETUP.md) to provision the optional
+engine-only Google OIDC and D1 account experience.
 
 Before any new or materially refreshed surface ships, refresh generated assets,
 refresh the engine bundle when applicable, and run `node

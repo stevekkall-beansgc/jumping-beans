@@ -185,6 +185,29 @@
           <ul class="memory-list" id="memory-list"></ul>
           <button class="bl-button text-button" data-variant="danger" id="forget-all" type="button" hidden>Forget all saved notes</button>
         </section>
+
+        <section class="memory-section account-section" aria-labelledby="account-title">
+          <h3 id="account-title">Hosted personal experience</h3>
+          <p id="account-status" class="field-hint">Continue anonymously, or sign in to keep a separate account-owned copy of choices you explicitly save.</p>
+          <a class="bl-button" data-variant="secondary" id="account-login" href="/auth/login?returnTo=/">Sign in with Google</a>
+          <div id="account-details" hidden>
+            <label for="account-display-name">Account display name</label>
+            <input id="account-display-name" name="accountDisplayName" type="text" maxlength="120" autocomplete="name">
+            <div class="bl-actions account-actions">
+              <button class="bl-button" data-variant="secondary" id="account-save-profile" type="button">Save profile</button>
+              <button class="bl-button" data-variant="quiet" id="account-save-preferences" type="button">Save current display rules</button>
+            </div>
+            <label class="demo-context-choice"><input id="account-import-confirm" type="checkbox"><span>Import this browser’s saved rules and product notes to my account</span></label>
+            <p class="field-hint">This is optional and never happens automatically. It uploads only the local rules and notes currently shown here; partner data, receipts, and session credentials are excluded.</p>
+            <button class="bl-button" data-variant="secondary" id="account-import" type="button">Import selected browser memory</button>
+            <p id="account-memory-summary" class="field-hint"></p>
+            <div class="bl-actions account-actions">
+              <button class="bl-button" data-variant="danger" id="account-forget-memory" type="button">Forget account product notes</button>
+              <button class="bl-button" data-variant="danger" id="account-forget-profile" type="button">Clear account profile</button>
+              <button class="bl-button" data-variant="quiet" id="account-logout" type="button">Log out</button>
+            </div>
+          </div>
+        </section>
       </aside>
     </div>
   </main>
