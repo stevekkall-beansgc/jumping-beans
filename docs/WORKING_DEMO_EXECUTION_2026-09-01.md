@@ -71,7 +71,7 @@ original receipt, and a changed-payload replay was rejected with HTTP 409.
 ## Release blockers
 
 1. Complete the remaining hosted account lifecycle checks, including account
-   forget, expiry, reload/cross-device persistence, and production isolation
+   forget, expiry, true cross-device persistence, and production isolation
    for Watch records, receipts, and sessions.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
