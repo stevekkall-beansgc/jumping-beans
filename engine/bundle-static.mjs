@@ -26,7 +26,7 @@ function walk(d, prefix) {
     const p = path.join(d, f);
     const s = statSync(p);
     if (s.isDirectory()) {
-      if (f === "node_modules" || f === ".git") continue;
+      if (f === "node_modules" || f === ".git" || f === ".wrangler") continue;
       walk(p, prefix + "/" + f);
     } else if (exts.has(path.extname(f)) && !exclude.has(f)) {
       assets[(prefix + "/" + f).replace(/\/\//g, "/")] = readFileSync(p, "utf8");
