@@ -1,7 +1,7 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Release candidate: `v0.4.1` (documentation refresh over the deployed `v0.4.0` code)
+Release lineage: working-demo `v0.4.x` (documentation refresh over the deployed code)
 Decision: **CODE/DEPLOY PASS; BROWSER ACCEPTANCE HOLD**
 
 ## Review loop

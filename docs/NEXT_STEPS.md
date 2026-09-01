@@ -10,8 +10,8 @@ Last updated: 2026-09-01.
   layer records offer context, explains provenance, lets the user control
   preferences, and changes which offer collateral is shown and how it is
   presented.
-- The engine and three partner surfaces are live on Cloudflare. The last
-  published release is `jumping-beans v0.3.0`; the shared Bean Labs design system is
+- The engine and three partner surfaces are live on Cloudflare. The latest
+  working-demo release is published; the shared Bean Labs design system is
   `beanlabs v0.3.0`.
 - Offer inventory currently comes from open/public sources and normalized demo
   catalogs. Partner opt-in is demonstrated as an enrichment path, not a
