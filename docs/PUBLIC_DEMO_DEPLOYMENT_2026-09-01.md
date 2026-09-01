@@ -10,9 +10,10 @@ Deployment decision: **PUBLIC / serving traffic**
 - Coffee Co: <https://coffee-amk.pages.dev/>
 - Watch Co: <https://watch-ce8.pages.dev/>
 
-The four units retain their stable public origins. The deployment used the
-validated source checkpoint `5988e0f` and published the engine Worker plus all
-three Pages projects, including Watch Pages Functions.
+The four units retain their stable public origins. The partner deployments used
+the validated source checkpoint `5988e0f`; the engine was then redeployed from
+the final bundle-refresh checkpoint `d332ad6`. All three Pages projects,
+including Watch Pages Functions, were published successfully.
 
 ## Smoke-check result
 
