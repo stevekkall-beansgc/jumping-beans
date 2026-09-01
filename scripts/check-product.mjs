@@ -143,10 +143,11 @@ const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
   "frame.allow = `tools ${origin}; cross-origin-isolated ${origin}`",
   "getTools({ fromOrigins: PARTNER_ORIGINS })",
+  "PARTNER_ORIGINS.includes(tool.origin)",
   "executeTool(tool, JSON.stringify(input))",
   'sourceKind === "open"',
-  'sourceKind === "preview"',
-  "Illustrative preview",
+  'status: "not-requested"',
+  "will not create a substitute partner result",
   "Source and verification",
   "requiresUserConfirmation: true",
   "persisted: false",
@@ -249,9 +250,40 @@ check(partnerContract.originOutcomes[contractOrigins[2]].status === "timeout", "
 check(partnerContract.originOutcomes[contractOrigins[3]].status === "failed", "Partner adapter does not normalize failed partner outcome");
 const comparison = p0.resolveOfferDeals([contractDeal("a", 30, "a"), contractDeal("b", 10, "b"), contractDeal("c", 20, "c")], { profile: null, preferences: { formats: [] }, limit: 2 });
 check(comparison.exposed.map((deal) => deal.sku).join(",") === "b,c", "Multi-offer comparison ordering is not deterministic");
-check(comparison.withheld.some((item) => item.stage === "exposure" && item.offerId === "a"), "Comparison truncation is not represented as withholding");
+check(comparison.withheld.some((item) => item.stage === "exposure" && item.offerId === "unattributed:a"), "Comparison truncation is not represented as withholding");
 const anonymousContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { formats: [] }, applied: false });
 check(p0.projectPartnerContext(anonymousContext, contractOrigins[0]).fields.categories.length === 0, "Default/demo persona context is transmitted without approval");
+const draftDemoContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { formats: ["video"], maxPrice: 10 }, applied: false, demoContextGranted: true });
+check(draftDemoContext.source === "anonymous-browser-context" && draftDemoContext.values.maxPrice == null && !p0.projectPartnerContext(draftDemoContext, contractOrigins[0]).approved, "Draft demo context can reach a partner projection");
+const appliedDemoContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { formats: ["video"], maxPrice: 10 }, applied: true, demoContextGranted: true });
+check(appliedDemoContext.source === "explicit-applied-demo-context" && p0.projectPartnerContext(appliedDemoContext, contractOrigins[0]).fields.maxPrice === 10, "Explicit applied demo context is not distinct from anonymous context");
+const sameSkuDifferentOrigins = p0.resolveOfferDeals([
+  { ...contractDeal("shared", 10, "one"), origin: contractOrigins[0] },
+  { ...contractDeal("shared", 11, "two"), origin: contractOrigins[1] },
+], { profile: null, preferences: { formats: [] } });
+check(sameSkuDifferentOrigins.considered.length === 2 && new Set(sameSkuDifferentOrigins.considered.map((record) => record.offerId)).size === 2, "Equal SKUs from different origins collapse into one offer identity");
+const invalidPartnerResponses = [
+  { deals: [{ ...contractDeal("bad-extra", 10, "one"), unexpected: true }] },
+  { deals: [{ ...contractDeal("bad-collateral", 10, "one"), collateral: [{ type: "image", nested: { unsafe: true } }] }] },
+  { deals: [{ ...contractDeal("bad-string", 10, "one"), name: "x".repeat(p0.PARTNER_STRING_MAX_LENGTH + 1) }] },
+];
+check(invalidPartnerResponses.every((response) => !p0.validatePartnerEnvelope(response)), "Partner response validation permits unbounded fields or nested collateral");
+const offerExpiryCases = ["", null, 0, false, {}, "not-a-date", new Date(Date.now() - 1_000).toISOString(), new Date(Date.now() + 60_000).toUTCString()];
+check(offerExpiryCases.every((expiresAt) => !p0.validatePartnerEnvelope({ deals: [{ ...contractDeal("offer-expiry", 10, "one"), expiresAt }] })), "Partner offer accepts absent-like, stale, invalid, typed, or non-canonical expiresAt values");
+check(p0.validatePartnerEnvelope({ deals: [{ ...contractDeal("offer-expiry-future", 10, "one"), expiresAt: new Date(Date.now() + 60_000).toISOString() }] }), "Partner offer rejects a canonical future expiresAt value");
+const provenanceExpiryCases = ["", null, 0, false, "not-a-date", new Date(Date.now() - 1_000).toISOString(), new Date(Date.now() + 60_000).toUTCString()];
+check(provenanceExpiryCases.every((expiresAt) => !p0.validatePartnerEnvelope({ deals: [{ ...contractDeal("provenance-expiry", 10, "one"), provenance: { expiresAt } }] })), "Partner provenance accepts absent-like, stale, invalid, or non-canonical expiry values");
+check(p0.validatePartnerEnvelope({ deals: [{ ...contractDeal("provenance-future", 10, "one"), provenance: { expiresAt: new Date(Date.now() + 60_000).toISOString() } }] }), "Partner provenance rejects a canonical future expiry value");
+const oversizedDeal = { ...contractDeal("oversized", 10, "one"), name: "n".repeat(p0.PARTNER_STRING_MAX_LENGTH), category: "c".repeat(256), sku: "s".repeat(256), partnerId: "p".repeat(256), partnerName: "p".repeat(256), vendor: "v".repeat(256), source: "s".repeat(256), imageUrl: "https://example.invalid/" + "i".repeat(p0.PARTNER_STRING_MAX_LENGTH - 24), landing: "https://example.invalid/" + "l".repeat(p0.PARTNER_STRING_MAX_LENGTH - 24), collateral: Array.from({ length: p0.PARTNER_COLLATERAL_LIMIT }, () => ({ type: "testimonial", text: "t".repeat(p0.PARTNER_STRING_MAX_LENGTH), source: "s".repeat(p0.PARTNER_STRING_MAX_LENGTH), label: "l".repeat(p0.PARTNER_STRING_MAX_LENGTH), title: "h".repeat(p0.PARTNER_STRING_MAX_LENGTH) })) };
+check(!p0.validatePartnerEnvelope({ deals: Array.from({ length: 24 }, () => oversizedDeal) }), "Partner response validation permits an oversized serialized payload");
+check(!p0.validatePartnerEnvelope({ deals: [contractDeal("limit-bypass", 10, "one")] }, { maxOffers: 99, maxBytes: Number.MAX_SAFE_INTEGER }), "Partner response validation permits caller-expanded limits");
+const boundedInvalidOutcome = await p0.resolvePartnerTools({
+  tools: [{ origin: contractOrigins[0], name: "get_matching_deals" }], allowedOrigins: [contractOrigins[0]], inputForOrigin: () => ({ categories: [] }),
+  execute: () => Promise.resolve({ deals: [{ ...contractDeal("nested", 10, "one"), collateral: [{ type: "image", nested: { untrusted: true } }] }] }),
+});
+check(boundedInvalidOutcome.deals.length === 0 && boundedInvalidOutcome.originOutcomes[contractOrigins[0]].status === "invalid", "Bounded invalid partner payload does not produce an honest invalid outcome");
+check(p0.isCompatibilityInputError(new TypeError("Expected a JSON string input")), "Serialized-input compatibility error does not permit the native retry");
+check(!p0.isCompatibilityInputError(new Error("invalid partner response envelope")) && !p0.isCompatibilityInputError(Object.assign(new Error("Expected a JSON string input"), { name: "SecurityError" })), "Partner validation or security failures are retried as protocol variance");
 const dealToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_deal_watch"'),
   engineApp.indexOf('name: "get_profile"'),
@@ -259,6 +291,7 @@ const dealToolBlock = engineApp.slice(
 check(!dealToolBlock.includes("writeStored("), "set_deal_watch writes browser storage without page confirmation");
 check(!dealToolBlock.includes("addMemory("), "set_deal_watch writes offer memory without page confirmation");
 check(dealToolBlock.includes("prepareDealWatch(targetPrice)"), "set_deal_watch does not stage the page confirmation flow");
+check(!/illustrative (?:fallback|preview)/i.test(engineApp), "Engine agent-facing copy retains fabricated partner fallback language");
 
 const engineConfig = await readFile(path.join(root, "engine/config.js"), "utf8");
 includesAll(engineConfig, [
@@ -325,6 +358,10 @@ const summaryApi = await import(`${pathToFileURL(path.join(root, "partners/watch
 const sku = productModule.INTEREST_PRODUCTS[0].sku;
 const action = await actionContract.stageAction({ payload: { product: sku, pricePoint: "100.50" }, validSkus: productModule.INTEREST_PRODUCT_SKUS, now: Date.now() });
 check(action.semanticPayload.targetPriceMinor === 10050 && action.semanticPayloadHash.length === 64, "Watch action normalization or SHA-256 hash is not canonical");
+const futureAction = { ...action, stagedAt: new Date(Date.now() + 60_000).toISOString(), expiresAt: new Date(Date.now() + 60_000 + actionContract.STAGE_GRANT_TTL_MS).toISOString() };
+check(!actionContract.validateStagedAction(futureAction, { validSkus: productModule.INTEREST_PRODUCT_SKUS }).ok, "Watch action accepts a future stagedAt timestamp");
+const impossibleDuration = { ...action, expiresAt: new Date(Date.parse(action.stagedAt) + actionContract.STAGE_GRANT_TTL_MS - 1).toISOString() };
+check(!actionContract.validateStagedAction(impossibleDuration, { validSkus: productModule.INTEREST_PRODUCT_SKUS }).ok, "Watch action accepts an impossible staging duration");
 check(actionContract.minorUnits("10.999") === null, "Watch action accepts non-canonical minor units");
 await Promise.all(["extra", "currency"].map(async (field) => {
   try { actionContract.normalizeInterestPayload({ product: sku, pricePoint: "10.00", [field]: field === "extra" ? true : "EUR" }, { validSkus: productModule.INTEREST_PRODUCT_SKUS }); check(false, "Watch action accepts unknown fields or non-USD currency"); }
@@ -353,6 +390,12 @@ check(!JSON.stringify(committedBody.receipt).includes(stagedBody.confirmationGra
 const replayResponse = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv });
 const replayBody = await replayResponse.json();
 check(replayResponse.status === 200 && replayBody.replayed && replayBody.receipt.expiresAt === committedBody.receipt.expiresAt, "Watch same-payload replay changes retention or does not return the original receipt");
+const realDateNow = Date.now;
+try {
+  Date.now = () => Date.parse(action.expiresAt) + 1;
+  const expiredReplay = await api.onRequestPost({ request: apiRequest("/api/register-interest", { action, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv });
+  check(expiredReplay.status === 200 && (await expiredReplay.json()).replayed, "Watch committed-action replay fails after the staging grant expires");
+} finally { Date.now = realDateNow; }
 const changedAction = { ...action, semanticPayload: { ...action.semanticPayload, targetPriceMinor: 99999 } };
 changedAction.semanticPayloadHash = await actionContract.sha256(actionContract.canonicalJson(changedAction.semanticPayload));
 check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: changedAction, grantId: stagedBody.grantId, confirmationGrant: stagedBody.confirmationGrant }, requestOptions), env: localWriteEnv })).status === 409, "Watch changed-payload replay does not return idempotency conflict");

@@ -215,7 +215,7 @@ function updateConnections() {
   const names = origins.map((origin) => PARTNER_NAMES[origin] || safeOrigin(origin));
   const discovered = origins.length;
   if (!SUPPORTED) {
-    els.status.textContent = "Open inventory ready. WebMCP is unavailable here; Site B is an illustrative preview.";
+    els.status.textContent = "Open inventory ready. WebMCP is unavailable here; no opted-in partner result is available.";
     els.protocol.textContent = "WebMCP · unavailable in this browser";
     els.sourceCount.textContent = "No tool check available";
     els.statusDot.dataset.on = "0";
@@ -296,6 +296,9 @@ function discoverGrant() {
 }
 
 async function discoverPartnerDeals(preferences = state.appliedPreferences) {
+  // Native discovery is deferred until the page applies an explicit choice.
+  // This keeps draft preferences and a merely toggled demo control in-page.
+  if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])) };
   if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {} };
   recordEvent("capability.invocation.started", {
     capabilityId: "offers.discover",
@@ -308,7 +311,7 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
     try {
       const tools = await document.modelContext.getTools({ fromOrigins: PARTNER_ORIGINS });
       matching = tools
-        .filter((tool) => tool.name === TOOL_NAMES.matchingDeals && tool.origin)
+        .filter((tool) => tool.name === TOOL_NAMES.matchingDeals && PARTNER_ORIGINS.includes(tool.origin))
         .filter((tool, index, all) => all.findIndex((candidate) => candidate.origin === tool.origin) === index);
       if (matching.length || attempt === 2) break;
     } catch (error) {
@@ -377,38 +380,6 @@ function observeNativeToolChanges() {
       applyPartnerDiscovery(await discoverPartnerDeals());
     }, 0);
   });
-}
-
-function fallbackPartnerOffer() {
-  return {
-    ...OPEN_INVENTORY,
-    sku: "preview-walk-kit",
-    merchant: "Petsupply",
-    partnerName: "Petsupply",
-    sourceType: "illustrative preview",
-    sourceLabel: "Preview data",
-    sourceDescription: "Illustrative fallback shown because no opted-in WebMCP offer response is available in this browser.",
-    verificationLabel: "Unverified example; not a live partner-tool response",
-    observedAt: loadedAt,
-    collateral: [
-      {
-        type: "testimonial",
-        text: "A merchant could put a verified customer story here.",
-        source: "Illustrative collateral slot",
-      },
-      {
-        type: "price-proof",
-        text: "Save $18 versus the listed price",
-        source: "Illustrative catalog comparison",
-      },
-      {
-        type: "video",
-        title: "A merchant could add a short product video",
-        duration: 18,
-        source: "Illustrative collateral slot",
-      },
-    ],
-  };
 }
 
 function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
@@ -480,27 +451,18 @@ function provenanceMarkup(deal, sourceKind) {
   const destination = safeUrl(deal.landing);
   const sourceOrigin = safeUrl(deal.partnerOrigin || deal.origin);
   const isOpen = sourceKind === "open";
-  const isPreview = sourceKind === "preview";
   const who = isOpen
     ? `Jumping Beans loaded a public record attributed to ${deal.merchant || deal.vendor || "the catalog merchant"}`
-    : isPreview
-      ? "Jumping Beans rendered an illustrative fallback; no partner tool returned it"
-      : `${deal.partnerName || deal.merchant || "The partner"} returned the record through WebMCP`;
+    : `${deal.partnerName || deal.merchant || "The partner"} returned the record through WebMCP`;
   const source = isOpen
     ? "Public product-feed snapshot bundled with this demo"
-    : isPreview
-      ? "Illustrative fallback bundled with this demo"
-      : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.hostname}` : ""}`;
+    : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.hostname}` : ""}`;
   const when = isOpen
     ? `Loaded into this page ${absoluteTime(deal.observedAt)}; the source capture time is unavailable`
-    : isPreview
-      ? `Preview loaded ${absoluteTime(deal.observedAt)}`
-      : `Tool response received ${absoluteTime(deal.observedAt)}`;
+    : `Tool response received ${absoluteTime(deal.observedAt)}`;
   const evidence = isOpen
     ? `Catalog record ${deal.sku}; no live price check ran`
-    : isPreview
-      ? "No tool receipt is available"
-      : `Tool response from ${sourceOrigin?.hostname || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
+    : `Tool response from ${sourceOrigin?.hostname || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
   const sourceLink = destination
     ? `<a href="${escapeHtml(destination.href)}" target="_blank" rel="noopener noreferrer">Merchant product page</a>`
     : escapeHtml(source);
@@ -532,28 +494,16 @@ function offerMarkup(deal, sourceKind, label, preferences) {
       : collateral.type === "video"
         ? `${escapeHtml(collateral.title || "Product video")} · ${escapeHtml(collateral.duration || 18)} seconds`
         : escapeHtml(collateral.text);
-  const sourceClass =
-    sourceKind === "open"
-      ? "source-open"
-      : sourceKind === "preview"
-        ? "source-preview"
-        : "source-optin";
-  const sourceLabel =
-    sourceKind === "open"
-      ? "Open inventory"
-      : sourceKind === "preview"
-        ? "Illustrative preview"
-        : "Opted-in partner";
+  const sourceClass = sourceKind === "open" ? "source-open" : "source-optin";
+  const sourceLabel = sourceKind === "open" ? "Open inventory" : "Opted-in partner";
   const reason =
     sourceKind === "open"
       ? "Found in a bundled public catalog snapshot. No partner connection was needed."
-      : sourceKind === "preview"
-        ? "Shown to demonstrate the preference handoff because no opted-in tool response is available."
-        : "Matched through an opted-in WebMCP offer tool and rendered using your applied display rules.";
+      : "Matched through an opted-in WebMCP offer tool and rendered using your applied display rules.";
   return `
     <header class="step-card-head">
       <div><p class="step-kicker">${escapeHtml(label)}</p><h3>${escapeHtml(deal.name)}</h3></div>
-      <span class="bl-badge source-pill ${sourceClass}" data-status="${sourceKind === "preview" ? "info" : sourceKind === "open" ? "neutral" : "success"}">${sourceLabel}</span>
+      <span class="bl-badge source-pill ${sourceClass}" data-status="${sourceKind === "open" ? "neutral" : "success"}">${sourceLabel}</span>
     </header>
     <div class="offer">
       <div class="offer-art">${offerImage(deal)}</div>
@@ -625,25 +575,26 @@ function renderNextStep() {
     );
     return;
   }
-  const deal = state.sourceB || fallbackPartnerOffer();
-  const sourceKind = state.sourceB ? "optin" : "preview";
+  if (!state.sourceB) {
+    renderOfferCard(
+      els.nextStep,
+      `<header class="step-card-head"><div><p class="step-kicker">Site B · no partner result</p><h3>No opted-in partner offer is available</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">No result</span></header><p class="offer-copy">No partner offer was returned for this request. Jumping Beans will not create a substitute partner result.</p>${networkMarkup()}`,
+    );
+    return;
+  }
+  const deal = state.sourceB;
+  const sourceKind = "optin";
   const destination =
     deal.partnerOrigin || PARTNER_ORIGINS[0] || deal.landing;
   const href = withPreferenceQuery(destination, activePreferences);
-  const label = state.applied
-    ? state.sourceB
-      ? "Site B · adapted by an opted-in partner"
-      : "Site B · adapted illustrative preview"
-    : state.sourceB
-      ? "Site B · opted-in offer ready"
-      : "Site B · illustrative preview ready";
-  const openLabel = state.sourceB ? "Open opted-in Site B" : "Open illustrative Site B";
+  const label = "Site B · adapted by an opted-in partner";
+  const openLabel = "Open opted-in Site B";
   const actions = `
     <div class="bl-actions step-actions">
       ${href ? `<a class="bl-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
       <button class="bl-button" data-variant="secondary" id="show-source" type="button">Explain partner opt-in</button>
     </div>`;
-  const comparison = state.sourceB ? comparisonMarkup(state.capabilityResolution?.exposed || [], activePreferences) : "";
+  const comparison = comparisonMarkup(state.capabilityResolution?.exposed || [], activePreferences);
   const withheld = state.capabilityResolution?.withheld || [];
   const withholding = withheld.length ? `<p class="reason"><strong>Withheld offers</strong><br>${withheld.length} offer${withheld.length === 1 ? " was" : "s were"} withheld: ${escapeHtml(withheld.map((item) => item.reason).join("; "))}</p>` : "";
   renderOfferCard(
@@ -652,9 +603,7 @@ function renderNextStep() {
   );
   document.getElementById("show-source")?.addEventListener("click", () => {
     setAgent(
-      state.sourceB
-        ? "The baseline offer did not require merchant participation. This Site B response did: the partner opted in to expose structured offer data and optional collateral through WebMCP."
-        : "This is only an illustrative Site B treatment. No opted-in tool response is available in this browser, so the preview is labeled unverified and does not imply a connection.",
+      "The baseline offer did not require merchant participation. This Site B response did: the partner opted in to expose structured offer data and optional collateral through WebMCP.",
     );
   });
 }
@@ -813,6 +762,14 @@ function forgetAllMemory() {
   };
   state.applied = false;
   state.appliedMode = null;
+  state.demoContextGranted = false;
+  els.demoContext.checked = false;
+  state.partnerDeals = [];
+  state.sourceB = null;
+  state.originOutcomes = {};
+  state.capabilityResolution = null;
+  state.decisionReceipt = null;
+  state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: false, demoContextGranted: false });
   state.hasSavedPreferences = false;
   Object.values(STORAGE).forEach(removeStored);
   recordEvent("memory.deleted", {
@@ -858,7 +815,7 @@ function renderJourney() {
   }
 }
 
-function applyPreferences({ persist }) {
+async function applyPreferences({ persist }) {
   state.applied = true;
   state.appliedMode = persist ? "saved" : "once";
   state.appliedPreferences = {
@@ -871,7 +828,8 @@ function applyPreferences({ persist }) {
     applied: true,
     demoContextGranted: state.demoContextGranted,
   });
-  state.sourceB = choosePartnerOffer(state.partnerDeals, state.appliedPreferences);
+  state.partnerDeals = [];
+  state.sourceB = null;
   recordEvent("user.intervention", {
     capabilityId: "preferences.apply",
     capabilityVersion: "1.0.0",
@@ -910,6 +868,7 @@ function applyPreferences({ persist }) {
     mode: state.appliedMode,
   });
   renderJourney();
+  applyPartnerDiscovery(await discoverPartnerDeals(state.appliedPreferences));
 }
 
 function handlePrompt(value) {
@@ -1038,16 +997,16 @@ els.controls.addEventListener("change", (event) => {
 els.demoContext?.addEventListener("change", async () => {
   state.demoContextGranted = els.demoContext.checked;
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
-  setAgent(state.demoContextGranted ? "You approved the clearly labeled demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile context is off. No persona-derived fields are sent to partners.");
-  applyPartnerDiscovery(await discoverPartnerDeals());
+  setAgent(state.demoContextGranted ? (state.applied ? "You approved the clearly labeled applied demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile consent is staged. Apply the display choice before any partner discovery can use it.") : "Demo profile context is off. No persona-derived fields are sent to partners.");
+  if (state.applied) applyPartnerDiscovery(await discoverPartnerDeals());
 });
 
-document.getElementById("apply-preferences").addEventListener("click", () => {
-  applyPreferences({ persist: true });
+document.getElementById("apply-preferences").addEventListener("click", async () => {
+  await applyPreferences({ persist: true });
 });
 
-document.getElementById("apply-once").addEventListener("click", () => {
-  applyPreferences({ persist: false });
+document.getElementById("apply-once").addEventListener("click", async () => {
+  await applyPreferences({ persist: false });
 });
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
@@ -1058,6 +1017,12 @@ document.getElementById("reset-preferences").addEventListener("click", () => {
   state.pendingRemember = false;
   state.applied = false;
   state.appliedMode = null;
+  state.partnerDeals = [];
+  state.sourceB = null;
+  state.originOutcomes = {};
+  state.capabilityResolution = null;
+  state.decisionReceipt = null;
+  state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: false, demoContextGranted: state.demoContextGranted });
   setAgent("Draft choices reset. Nothing was saved or forgotten.");
   renderJourney();
 });
@@ -1168,15 +1133,15 @@ function registerEngineTools() {
   }, "preferences.stage");
   register({
     name: "build_offer_journey",
-    description: "Show the open-inventory offer, the user's preference choice, and the opted-in or clearly labeled illustrative Site B offer as one journey.",
+    description: "Show the open-inventory offer, the user's preference choice, and either an opted-in Site B offer or an honest no-result outcome as one journey.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
     execute: async () => {
       renderJourney();
       return {
         openInventory: state.sourceA.name,
-        nextSite: state.sourceB?.partnerName || "illustrative preview",
-        nextSiteSource: state.sourceB ? "opted-in WebMCP partner" : "illustrative fallback",
+        nextSite: state.sourceB?.partnerName || "no partner result",
+        nextSiteSource: state.sourceB ? "opted-in WebMCP partner" : "no opted-in partner result",
         preferences: state.applied ? state.appliedPreferences : null,
       };
     },
@@ -1254,7 +1219,7 @@ async function init() {
   if (result.deals.length) {
     setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
   } else if (SUPPORTED) {
-    setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B remains an explicitly labeled illustrative preview.");
+    setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B shows an honest no-result outcome.");
   }
 }
 

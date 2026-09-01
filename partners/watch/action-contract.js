@@ -50,14 +50,14 @@ export async function stageAction({ payload, validSkus, lineage = {}, now = Date
   const actionId = randomId("action"); const idempotencyKey = randomId("idem");
   return Object.freeze({ schemaVersion: ACTION_SCHEMA_VERSION, actionType: INTEREST_ACTION_TYPE, capability: INTEREST_CAPABILITY, scope: INTEREST_SCOPE, authority: "watch-server-pending", actionId, idempotencyKey, semanticPayload, semanticPayloadHash, lineage: { journeyId: text(lineage.journeyId) || null, requestId: text(lineage.requestId) || null, stageInvocationId: text(lineage.stageInvocationId) || randomId("stage"), stageEventId: text(lineage.stageEventId) || null, trust: "browser-self-attested" }, stagedAt: new Date(now).toISOString(), expiresAt: new Date(now + STAGE_GRANT_TTL_MS).toISOString() });
 }
-export function validateStagedAction(action, { validSkus, now = Date.now() } = {}) {
+export function validateStagedAction(action, { validSkus, now = Date.now(), allowExpired = false } = {}) {
   if (!action || typeof action !== "object" || Array.isArray(action)) return { ok: false, code: "invalid-action" };
   const allowed = new Set(["schemaVersion", "actionType", "capability", "scope", "authority", "actionId", "idempotencyKey", "semanticPayload", "semanticPayloadHash", "lineage", "stagedAt", "expiresAt"]);
   if (Object.keys(action).some((key) => !allowed.has(key))) return { ok: false, code: "invalid-action" };
-  if (action.schemaVersion !== ACTION_SCHEMA_VERSION || action.actionType !== INTEREST_ACTION_TYPE || action.capability !== INTEREST_CAPABILITY || action.scope !== INTEREST_SCOPE || !validId(action.actionId, "action") || !validId(action.idempotencyKey, "idem")) return { ok: false, code: "invalid-action" };
+  if (action.schemaVersion !== ACTION_SCHEMA_VERSION || action.actionType !== INTEREST_ACTION_TYPE || action.capability !== INTEREST_CAPABILITY || action.scope !== INTEREST_SCOPE || action.authority !== "watch-server-pending" || !validId(action.actionId, "action") || !validId(action.idempotencyKey, "idem")) return { ok: false, code: "invalid-action" };
   const stagedAt = Date.parse(action.stagedAt); const expiresAt = Date.parse(action.expiresAt);
-  if (!Number.isFinite(stagedAt) || !Number.isFinite(expiresAt) || expiresAt <= now || expiresAt - stagedAt > STAGE_GRANT_TTL_MS + 1000) return { ok: false, code: "expired-action" };
-  try { normalizeInterestPayload({ product: action.semanticPayload?.product, pricePoint: action.semanticPayload?.targetPriceMinor / 100, currency: action.semanticPayload?.currency }, { validSkus }); } catch { return { ok: false, code: "invalid-action" }; }
+  if (!Number.isFinite(stagedAt) || !Number.isFinite(expiresAt) || new Date(stagedAt).toISOString() !== action.stagedAt || new Date(expiresAt).toISOString() !== action.expiresAt || stagedAt > now || expiresAt - stagedAt !== STAGE_GRANT_TTL_MS || (!allowExpired && expiresAt <= now)) return { ok: false, code: "expired-action" };
+  try { const normalized = normalizeInterestPayload({ product: action.semanticPayload?.product, pricePoint: action.semanticPayload?.targetPriceMinor / 100, currency: action.semanticPayload?.currency }, { validSkus }); if (canonicalJson(normalized) !== canonicalJson(action.semanticPayload)) return { ok: false, code: "invalid-action" }; } catch { return { ok: false, code: "invalid-action" }; }
   return { ok: true };
 }
 export async function verifyActionHash(action) { const normalized = normalizeInterestPayload({ product: action.semanticPayload?.product, pricePoint: action.semanticPayload?.targetPriceMinor / 100, currency: action.semanticPayload?.currency }); return (await sha256(canonicalJson(normalized))) === action.semanticPayloadHash; }

@@ -12,6 +12,9 @@ export const CAPABILITIES = Object.freeze([
 ]);
 export const PARTNER_RESULT_LIMIT = 24;
 export const PARTNER_TIMEOUT_MS = 3500;
+export const PARTNER_RESULT_MAX_BYTES = 64 * 1024;
+export const PARTNER_STRING_MAX_LENGTH = 2_048;
+export const PARTNER_COLLATERAL_LIMIT = 8;
 
 export function opaqueId(prefix) { const random = globalThis.crypto?.randomUUID?.(); return random ? `${prefix}_${random}` : `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`; }
 export function createJourney({ intentType, surface = "web", protocol = "webmcp" }) { return { journeyId: opaqueId("journey"), parentRequestId: opaqueId("request"), intentType, intentVersion: "1.0.0", surface, protocol, startedAt: new Date().toISOString(), status: "active" }; }
@@ -43,28 +46,60 @@ export async function invokeCapability({ capabilityId, version = "1.0.0", grant,
 }
 
 export function createContextSnapshot({ profile, preferences, applied, demoContextGranted = false }) {
-  const source = demoContextGranted ? "explicit-demo-context" : "anonymous-browser-context";
-  return { contextSnapshotId: opaqueId("context"), source, scope: "Jumping Beans product in this browser", capturedAt: new Date().toISOString(), values: { personaId: demoContextGranted ? profile?.personaId || null : null, recurringCategories: demoContextGranted ? [...(profile?.recurringCategories || [])] : [], budgetCeilings: demoContextGranted ? { ...(profile?.budgetCeilings || {}) } : {}, preferredChannels: [], presentationFormats: [...(preferences?.formats || [])], maxPrice: preferences?.maxPrice ?? null, applied: Boolean(applied) }, provenance: { demoContext: demoContextGranted ? "user-approved for this resolution" : "not transmitted", preferences: applied ? "user-entered" : "draft-not-transmitted" }, trust: { userContext: demoContextGranted ? "explicitly-approved-demo-context" : "anonymous", businessAuthorization: "not-provided" } };
+  // A checked demo control is only consent after the corresponding preference
+  // has been applied. Draft state stays inside this document.
+  const appliedContext = Boolean(applied);
+  const explicitDemoContext = appliedContext && Boolean(demoContextGranted);
+  const source = explicitDemoContext ? "explicit-applied-demo-context" : "anonymous-browser-context";
+  return { contextSnapshotId: opaqueId("context"), source, scope: "Jumping Beans product in this browser", capturedAt: new Date().toISOString(), values: { personaId: explicitDemoContext ? profile?.personaId || null : null, recurringCategories: explicitDemoContext ? [...(profile?.recurringCategories || [])] : [], budgetCeilings: explicitDemoContext ? { ...(profile?.budgetCeilings || {}) } : {}, preferredChannels: [], presentationFormats: appliedContext ? [...(preferences?.formats || [])] : [], maxPrice: appliedContext ? preferences?.maxPrice ?? null : null, applied: appliedContext }, provenance: { demoContext: explicitDemoContext ? "user-approved applied demo context" : "not transmitted", preferences: appliedContext ? "user-applied" : "draft-not-transmitted" }, trust: { userContext: explicitDemoContext ? "explicitly-approved-applied-demo-context" : "anonymous", businessAuthorization: "not-provided" } };
 }
 export function projectPartnerContext(context, origin) {
-  const values = context?.values || {}; const approved = context?.provenance?.demoContext === "user-approved for this resolution";
+  const values = context?.values || {}; const approved = context?.source === "explicit-applied-demo-context" && context?.provenance?.demoContext === "user-approved applied demo context" && values.applied === true;
   return { recipient: origin, purpose: "find eligible offer records", retention: "request-only", approved, fields: { categories: approved ? [...(values.recurringCategories || [])] : [], maxPrice: approved && Number.isFinite(values.maxPrice) ? values.maxPrice : undefined }, fieldProvenance: { categories: approved ? "explicit-demo-context" : "not-transmitted", maxPrice: approved ? "user-entered" : "not-transmitted" } };
 }
 export function createEvent(journey, type, payload = {}) { return { eventId: opaqueId("event"), journeyId: journey.journeyId, occurredAt: new Date().toISOString(), type, source: "jumping-beans-engine", observedOrInferred: "observed", schemaVersion: "1.0.0", ...payload }; }
 
 function normalizedText(value) { return String(value || "").trim().toLocaleLowerCase(); }
-function offerIdentity(deal, index) { return normalizedText(deal.gtin || deal.upc || deal.id || deal.sku) || `${normalizedText(deal.merchant || deal.partnerName)}:${normalizedText(deal.name)}:${normalizedText(deal.category)}:${index}`; }
+function offerIdentity(deal, index) { const origin = normalizedText(deal?.partnerOrigin || deal?.origin) || "unattributed"; const localId = normalizedText(deal?.gtin || deal?.upc || deal?.id || deal?.sku) || `${normalizedText(deal?.merchant || deal?.partnerName)}:${normalizedText(deal?.name)}:${normalizedText(deal?.category)}:${index}`; return `${origin}:${localId}`; }
 export function offerProvenance(deal = {}) { return { origin: deal.partnerOrigin || deal.origin || null, partnerName: deal.partnerName || deal.merchant || deal.vendor || null, sourceType: deal.sourceType || "unknown", sourceLabel: deal.sourceLabel || "Source label unavailable", observedAt: deal.observedAt || null, verification: deal.verificationLabel || "Verification status unavailable" }; }
-export function validateOffer(deal) {
-  if (!deal || typeof deal !== "object" || Array.isArray(deal)) return false;
-  if (!["sku", "name", "category", "partnerId"].every((key) => typeof deal[key] === "string" && deal[key].trim())) return false;
-  if (![deal.listPrice, deal.dealPrice].every((value) => Number.isFinite(Number(value)) && Number(value) >= 0)) return false;
-  if (deal.expiresAt && (Number.isNaN(Date.parse(deal.expiresAt)) || Date.parse(deal.expiresAt) <= Date.now())) return false;
-  return !deal.collateral || (Array.isArray(deal.collateral) && deal.collateral.every((item) => item && typeof item.type === "string"));
+function boundedString(value, limit = PARTNER_STRING_MAX_LENGTH) { return typeof value === "string" && value.trim().length > 0 && value.length <= limit; }
+function plainRecord(value) { return Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype); }
+function hasOnlyKeys(value, allowed) { return Object.keys(value).every((key) => allowed.has(key)); }
+function validUrl(value) { try { const url = new URL(value); return url.protocol === "https:" || url.protocol === "http:"; } catch { return false; } }
+function canonicalFutureTimestamp(value) { if (!boundedString(value, 64)) return false; const timestamp = Date.parse(value); return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value && timestamp > Date.now(); }
+function validCollateral(item) {
+  if (!plainRecord(item) || !hasOnlyKeys(item, new Set(["type", "url", "text", "label", "source", "title", "duration"]))) return false;
+  if (!boundedString(item.type, 64) || !["image", "video", "testimonial", "price-proof"].includes(item.type)) return false;
+  for (const key of ["url", "text", "label", "source", "title"]) if (item[key] != null && !boundedString(item[key])) return false;
+  if (item.url != null && !validUrl(item.url)) return false;
+  return item.duration == null || (Number.isFinite(item.duration) && item.duration >= 0 && item.duration <= 86_400);
 }
-export function validatePartnerEnvelope(value, { maxOffers = PARTNER_RESULT_LIMIT } = {}) { return Boolean(value && typeof value === "object" && !Array.isArray(value) && Array.isArray(value.deals) && value.deals.length <= maxOffers && value.deals.every(validateOffer)); }
+function validProvenance(value) {
+  if (value == null) return true;
+  if (!plainRecord(value) || !hasOnlyKeys(value, new Set(["actor", "source", "verification", "expiresAt"]))) return false;
+  if (!["actor", "source", "verification"].every((key) => value[key] == null || boundedString(value[key]))) return false;
+  if (!Object.hasOwn(value, "expiresAt")) return true;
+  return canonicalFutureTimestamp(value.expiresAt);
+}
+export function validateOffer(deal) {
+  if (!plainRecord(deal) || !hasOnlyKeys(deal, new Set(["sku", "name", "category", "listPrice", "dealPrice", "imageUrl", "expiresAt", "landing", "vendor", "source", "partnerId", "partnerName", "collateral", "provenance"]))) return false;
+  if (!["sku", "name", "category", "partnerId"].every((key) => boundedString(deal[key], 256))) return false;
+  if (["imageUrl", "landing"].some((key) => deal[key] != null && (!boundedString(deal[key]) || !validUrl(deal[key])))) return false;
+  if (["vendor", "source", "partnerName"].some((key) => deal[key] != null && !boundedString(deal[key], 256))) return false;
+  if (![deal.listPrice, deal.dealPrice].every((value) => Number.isFinite(value) && value >= 0 && value <= 10_000_000)) return false;
+  if (Object.hasOwn(deal, "expiresAt") && !canonicalFutureTimestamp(deal.expiresAt)) return false;
+  return (!deal.collateral || (Array.isArray(deal.collateral) && deal.collateral.length <= PARTNER_COLLATERAL_LIMIT && deal.collateral.every(validCollateral))) && validProvenance(deal.provenance);
+}
+export function validatePartnerEnvelope(value, { maxOffers = PARTNER_RESULT_LIMIT, maxBytes = PARTNER_RESULT_MAX_BYTES } = {}) {
+  if (!plainRecord(value) || !hasOnlyKeys(value, new Set(["deals"])) || !Array.isArray(value.deals) || !Number.isInteger(maxOffers) || maxOffers < 0 || maxOffers > PARTNER_RESULT_LIMIT || !Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > PARTNER_RESULT_MAX_BYTES || value.deals.length > maxOffers) return false;
+  try { return new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxBytes && value.deals.every(validateOffer); } catch { return false; }
+}
 function timeoutAfter(ms) { return new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error("partner deadline exceeded"), { code: "timeout" })), ms)); }
-export function isCompatibilityInputError(error) { return /json|string|serializ|argument|input/i.test(String(error?.message || error)); }
+export function isCompatibilityInputError(error) {
+  if (/(AbortError|NotAllowedError|SecurityError|TimeoutError)/.test(String(error?.name || ""))) return false;
+  const message = String(error?.message || error);
+  return /(?:expected|expects|requires|must be|only accepts)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+(?:string|input|argument)|(?:input|argument)\s+(?:must be|expected as|should be)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+string/i.test(message);
+}
 
 // Each origin has an independent deadline. Malformed results never reach ranking.
 export async function resolvePartnerTools({ tools, allowedOrigins, execute, inputForOrigin, timeoutMs = PARTNER_TIMEOUT_MS, maxOffers = PARTNER_RESULT_LIMIT, expectedToolName = "get_matching_deals" }) {
@@ -75,7 +110,7 @@ export async function resolvePartnerTools({ tools, allowedOrigins, execute, inpu
     const tool = unique.get(origin);
     if (!tool || tool.name !== expectedToolName || tool.origin !== origin) { outcomes[origin] = { status: "failed", count: 0, reason: "unrecognized capability or origin" }; return []; }
     try {
-      const raw = await Promise.race([execute(tool, inputForOrigin(origin)), timeoutAfter(timeoutMs)]); const value = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const raw = await Promise.race([execute(tool, inputForOrigin(origin)), timeoutAfter(timeoutMs)]); if (typeof raw === "string" && new TextEncoder().encode(raw).byteLength > PARTNER_RESULT_MAX_BYTES) { outcomes[origin] = { status: "invalid", count: 0, reason: "partner response exceeds serialized byte limit" }; return []; } const value = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (!validatePartnerEnvelope(value, { maxOffers })) { outcomes[origin] = { status: "invalid", count: 0, reason: "invalid partner response envelope" }; return []; }
       outcomes[origin] = { status: value.deals.length ? "ready" : "no-match", count: value.deals.length, reason: value.deals.length ? "validated offers" : "partner returned no matching offers" };
       const observedAt = new Date().toISOString(); return value.deals.map((deal) => ({ ...deal, origin: tool.origin, partnerOrigin: tool.origin, partnerName: deal.partnerName || tool.partnerName || null, sourceType: "opted-in partner", sourceLabel: "WebMCP offer tool", sourceDescription: "The partner opted in to return a validated structured offer record.", observedAt, verificationLabel: "Partner-provided through WebMCP; not independently verified by Jumping Beans" }));

@@ -9,7 +9,10 @@ export async function onRequestPost({ request, env }) {
   const parsed = await readJson(request, { allowedFields: ["action", "grantId", "confirmationGrant"] });
   if (!parsed.ok) return json({ ok: false, error: parsed.error }, parsed.status);
   const { action, grantId, confirmationGrant } = parsed.body;
-  const check = validateStagedAction(action, { validSkus: INTEREST_PRODUCT_SKUS });
+  // A previously committed action may be replayed after its short staging
+  // grant expired. Impossible timestamps remain rejected; commitInterest
+  // still rejects expired pending grants before any new mutation.
+  const check = validateStagedAction(action, { validSkus: INTEREST_PRODUCT_SKUS, allowExpired: true });
   if (!check.ok || !await verifyActionHash(action)) return json({ ok: false, error: check.code || "semantic-payload-mismatch" }, 400);
   if (typeof grantId !== "string" || typeof confirmationGrant !== "string" || grantId.length > 200 || confirmationGrant.length > 200) return json({ ok: false, error: "confirmation-grant-required" }, 401);
   try {
