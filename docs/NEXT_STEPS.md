@@ -1,6 +1,6 @@
 # Jumping Beans — next steps
 
-Status: v0.5.0 deployed; public/browser and hosted-personal-experience gates
+Status: v0.5.1 deployed; public/browser and hosted-personal-experience gates
 remain open before the competition-ready claim.
 Last updated: 2026-09-01.
 
@@ -48,10 +48,11 @@ The slice is complete for release only when it provides:
 
 Current implementation: product gate **516 assertions passed**; remote
 `jumping-beans-engine-identity` D1 is provisioned and migrated; release
-`v0.5.0` is deployed from `9b756fc`; public anonymous/login-route/Watch-stage
-smokes pass. Remaining external work is fresh signed-in account persistence,
-two-user headed-browser evidence, and clean extension-free Stable/Canary
-WebMCP evidence.
+`v0.5.1` is deployed from `ecaf973`; public anonymous/login-route/Watch-stage
+smokes pass, and one real signed-in account completed preference save, explicit
+memory import, logout, relogin, and hosted-memory restoration. Remaining
+external work is two-user headed-browser evidence, production Watch commit
+proof, and clean extension-free Stable/Canary WebMCP evidence.
 
 Watch Co remains the authority for its own D1-backed write path. Cross-site
 account linkage must be explicit normal web authentication and must not use a

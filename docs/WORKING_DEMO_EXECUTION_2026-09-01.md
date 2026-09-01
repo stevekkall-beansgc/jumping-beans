@@ -1,13 +1,14 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Release lineage: working-demo `v0.5.0` (`9b756fc`)
+Release lineage: working-demo `v0.5.1` (`ecaf973`)
 Decision: **CODE/DEPLOY PASS; COMPETITION ACCEPTANCE HOLD**
 
 The release is not competition-ready for the expanded product contract until
 the hosted login/personal-experience browser flow, clean native WebMCP browser
 evidence, two-user isolation, and production Watch write evidence are
-accepted. The identity slice is now implemented, configured, and deployed;
+accepted. The identity slice is now implemented, configured, deployed, and
+accepted for one real account;
 the remaining status is recorded in
 `docs/PRODUCTION_ACCEPTANCE_2026-09-01.md`.
 
@@ -63,9 +64,8 @@ handoff and evidence.
 
 ## Release blockers
 
-1. Complete the hosted login/personal-experience smoke in a clean headed
-   browser, including explicit import, forget, logout, expiry, relogin, and a
-   second authenticated identity.
+1. Complete the hosted login/personal-experience smoke for a second
+   authenticated identity, including cross-user isolation and account forget.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.
