@@ -24,6 +24,7 @@ import {
   resolvePartnerTools,
   resolveOfferDeals,
 } from "./p0.js";
+import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget } from "./personal-experience.js";
 
 const els = {
   status: document.getElementById("status"),
@@ -165,6 +166,9 @@ const state = {
   appliedJourneyRevision: 0,
   selectedWatchOfferId: null,
   account: { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" },
+  draftRevision: 0,
+  preferenceSource: "browser",
+  memorySource: "browser",
 };
 
 function recordEvent(type, payload = {}) {
@@ -730,7 +734,7 @@ function renderMemory() {
       const time = document.createElement("time");
       const forget = document.createElement("button");
       title.textContent = item.title || item.name || "Offer note";
-      detail.textContent = item.detail || item.reason || "Saved to this browser";
+      detail.textContent = item.detail || item.reason || (state.memorySource === "account" ? "Saved to your hosted account" : "Saved to this browser");
       time.dateTime = item.observedAt || "";
       time.textContent = item.observedAt
         ? `Saved ${absoluteTime(item.observedAt)}`
@@ -750,6 +754,32 @@ function renderMemory() {
       ? "Using one saved display preference."
       : "Using no saved product notes.";
   els.forgetAll.hidden = !items.length && !state.hasSavedPreferences;
+}
+
+function markDraftEdited({ preferences = false } = {}) {
+  state.draftRevision += 1;
+  if (preferences) state.preferenceSource = "browser";
+}
+
+function hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersistence) {
+  const hydrated = accountJourneyHydration({
+    account,
+    hasBrowserPersistence,
+    requestDraftRevision,
+    currentDraftRevision: state.draftRevision,
+    preferences: state.preferences,
+    memory: state.memory,
+  });
+  if (!hydrated) return false;
+  state.preferences = hydrated.preferences;
+  state.appliedPreferences = hydrated.appliedPreferences;
+  state.memory = hydrated.memory;
+  state.preferenceSource = hydrated.preferenceSource;
+  state.memorySource = hydrated.memorySource;
+  state.hasSavedPreferences = hydrated.hasSavedPreferences;
+  state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: false, demoContextGranted: state.demoContextGranted });
+  renderJourney();
+  return true;
 }
 
 function renderAccount() {
@@ -787,11 +817,14 @@ async function accountRequest(path, payload) {
 }
 
 async function loadAccount() {
+  const requestDraftRevision = state.draftRevision;
+  const hasBrowserPersistence = hasStored(STORAGE.preferences) || hasStored(STORAGE.memory);
   try {
     const response = await fetch("/api/account", { credentials: "same-origin", headers: { accept: "application/json" } });
     const account = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(account.error || "Hosted account service is unavailable");
     state.account = { ...state.account, ...account, error: "" };
+    hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersistence);
   } catch {
     // The public offer journey remains fully anonymous if the optional service
     // is not provisioned or the browser is offline.
@@ -813,6 +846,7 @@ function addMemory(title, detail, kind) {
     observedAt: new Date().toISOString(),
   });
   state.memory = state.memory.slice(0, 30);
+  state.memorySource = "browser";
   const saved = writeStored(STORAGE.memory, state.memory);
   renderMemory();
   return saved;
@@ -821,6 +855,7 @@ function addMemory(title, detail, kind) {
 function forgetMemory(key) {
   const item = state.memory.find((entry) => entry.key === key);
   state.memory = state.memory.filter((entry) => entry.key !== key);
+  state.memorySource = "browser";
   writeStored(STORAGE.memory, state.memory);
   if (item?.kind === "preference") {
     removeStored(STORAGE.preferences);
@@ -838,6 +873,7 @@ function forgetMemory(key) {
 
 function forgetAllMemory() {
   state.appliedJourneyRevision += 1;
+  markDraftEdited({ preferences: true });
   state.memory = [];
   state.pendingWatch = null;
   state.selectedWatchOfferId = null;
@@ -898,6 +934,7 @@ function renderJourney() {
 }
 
 async function applyPreferences({ persist }) {
+  markDraftEdited({ preferences: true });
   state.applied = true;
   state.appliedMode = persist ? "saved" : "once";
   state.appliedPreferences = {
@@ -919,6 +956,7 @@ async function applyPreferences({ persist }) {
   if (persist) {
     const preferencesSaved = writeStored(STORAGE.preferences, state.appliedPreferences);
     state.hasSavedPreferences = preferencesSaved;
+    state.preferenceSource = "browser";
     const labels = state.appliedPreferences.formats
       .map((format) => formatLabels[format] || format)
       .join(" · ") || "Default presentation";
@@ -971,6 +1009,7 @@ async function rerunAppliedJourney() {
 }
 
 function handlePrompt(value) {
+  markDraftEdited({ preferences: true });
   const text = value.toLowerCase();
   if (text.includes("proof") || text.includes("testimonial")) {
     state.preferences.formats = [
@@ -1079,6 +1118,7 @@ els.controls.addEventListener("change", (event) => {
   if (!input) return;
   state.preferences.formats = [...els.controls.querySelectorAll("[data-pref]:checked")]
     .map((control) => control.dataset.pref);
+  markDraftEdited({ preferences: true });
   renderMemoryPreview();
   renderRules();
 });
@@ -1113,6 +1153,7 @@ document.getElementById("apply-once").addEventListener("click", async () => {
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
   state.appliedJourneyRevision += 1;
+  markDraftEdited({ preferences: true });
   state.preferences = {
     ...DEFAULT_PREFERENCES,
     formats: [...DEFAULT_PREFERENCES.formats],
@@ -1202,6 +1243,11 @@ els.accountImport?.addEventListener("click", async () => {
 els.accountForgetMemory?.addEventListener("click", async () => {
   try {
     await accountRequest("/api/account/memory", { action: "forget-all" });
+    if (state.memorySource === "account") {
+      state.memory = accountMemoryAfterForget({ memorySource: state.memorySource, memory: state.memory });
+      state.memorySource = "browser";
+      renderJourney();
+    }
     showToast("Account product notes forgotten");
   } catch (error) {
     setAgent(`Account product notes were not forgotten: ${error.message}.`);
@@ -1220,6 +1266,15 @@ els.accountForgetProfile?.addEventListener("click", async () => {
 els.accountLogout?.addEventListener("click", async () => {
   try {
     await accountRequest("/api/account/logout", {});
+    const journeyAfterLogout = accountJourneyAfterLogout({ preferenceSource: state.preferenceSource, memorySource: state.memorySource, preferences: state.preferences, memory: state.memory, anonymousPreferences: DEFAULT_PREFERENCES, hasSavedPreferences: state.hasSavedPreferences });
+    state.preferences = journeyAfterLogout.preferences;
+    state.appliedPreferences = journeyAfterLogout.appliedPreferences;
+    state.memory = journeyAfterLogout.memory;
+    state.preferenceSource = journeyAfterLogout.preferenceSource;
+    state.memorySource = journeyAfterLogout.memorySource;
+    state.hasSavedPreferences = journeyAfterLogout.hasSavedPreferences;
+    state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
+    renderJourney();
     state.account = { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" };
     renderAccount();
     showToast("Logged out of hosted account");

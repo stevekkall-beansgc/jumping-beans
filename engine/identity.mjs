@@ -138,7 +138,9 @@ function memory(value) { if (!Array.isArray(value)) return []; return value.filt
 
 async function accountPayload(env, session, csrfToken = null) {
   const row = await first(db(env).prepare("/* engine:data */ SELECT profile_json, preferences_json, memory_json, updated_at FROM engine_user_data WHERE user_id = ?").bind(session.user_id));
-  return { signedIn: true, user: { email: session.email, displayName: session.display_name || null }, profile: profile(parseStored(row?.profile_json, {})), preferences: preferences(parseStored(row?.preferences_json, {})), memory: memory(parseStored(row?.memory_json, [])), updatedAt: row?.updated_at || null, csrfToken };
+  const rawPreferences = row?.preferences_json || "{}";
+  const rawMemory = row?.memory_json || "[]";
+  return { signedIn: true, user: { email: session.email, displayName: session.display_name || null }, profile: profile(parseStored(row?.profile_json, {})), preferences: preferences(parseStored(rawPreferences, {})), memory: memory(parseStored(rawMemory, [])), hasPreferences: rawPreferences !== "{}", hasMemory: rawMemory !== "[]", updatedAt: row?.updated_at || null, csrfToken };
 }
 
 async function requireAccount(request, env) {

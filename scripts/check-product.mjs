@@ -71,6 +71,7 @@ function checkHtml(html, file) {
 runNode("generated UI freshness", ["scripts/sync-static-ui.mjs", "--check"]);
 runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
 runNode("engine identity contracts", ["engine/identity.test.mjs"]);
+runNode("personal experience hydration contracts", ["engine/personal-experience.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -167,6 +168,9 @@ includesAll(engineApp, [
   "profile: PERSONAS[0]",
   "rerunAppliedJourney",
   "appliedJourneyRevision",
+  "hydrateAccountJourney",
+  "draftRevision",
+  "hasBrowserPersistence",
 ], "engine WebMCP, provenance, and consent contract");
 includesAll(engineHtml, [
   'id="demo-profile"',
@@ -207,6 +211,8 @@ includesAll(identitySource, [
   "explicit-browser-memory-import",
   "import-confirmation-required",
   "origin-rejected",
+  "hasPreferences",
+  "hasMemory",
 ], "engine hosted identity contract");
 check(!/postMessage|MessagePort|executeTool|getTools/.test(identitySource), "Engine identity introduces a non-native partner bridge or invocation path");
 includesAll(identityMigration, ["engine_users", "engine_identities", "engine_sessions", "engine_user_data", "token_digest", "csrf_digest"], "engine identity D1 migration contract");
@@ -625,7 +631,7 @@ check(prohibited.every((text) => !/live and verified|verified by the shop/i.test
 
 const staticModule = await import(`${pathToFileURL(path.join(root, "engine/static.js")).href}?check=${Date.now()}`);
 for (const route of [
-  "/", "/index.html", "/app.js", "/config.js", "/app.css",
+  "/", "/index.html", "/app.js", "/config.js", "/app.css", "/personal-experience.js",
   "/design-system/tokens.css", "/design-system/tokens.json", "/design-system/source.json", "/design-system/primitives.css",
 ]) {
   check(route in staticModule.default, `engine/static.js is missing ${route}`);
