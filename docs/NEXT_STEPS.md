@@ -29,13 +29,12 @@ ambitious product legible.
 
 ## New P0 — hosted identity and personal experience
 
-The current engine profile and offer memory are browser-local. They are not a
-login service and must not be described as a personal account. Add an optional
-hosted login path, preferably Google OIDC using the established Bean Labs auth
-pattern, with a dedicated Jumping Beans identity/session authority and
-user-scoped D1 records.
+The hosted identity slice is now implemented and locally reviewed. The
+dedicated Jumping Beans identity/session authority and user-scoped D1 schema are
+in place, but public login is not enabled until the Google OIDC client and
+Worker secrets are configured.
 
-The slice is complete only when it provides:
+The slice is complete for release only when it provides:
 
 - anonymous access remains intact;
 - validated state/nonce, safe redirects, revocable server-side sessions,
@@ -46,6 +45,11 @@ The slice is complete only when it provides:
 - inspect, edit, save, forget, logout, expiry, and relogin behavior;
 - two-account isolation for profiles, memory, watches, and receipts;
 - no account credentials or session material in WebMCP inputs or receipts.
+
+Current implementation: product gate **516 assertions passed**; remote
+`jumping-beans-engine-identity` D1 is provisioned and migrated. Remaining
+external work is Google OAuth client/redirect configuration, Worker secrets,
+deployment, and fresh two-user headed-browser evidence.
 
 Watch Co remains the authority for its own D1-backed write path. Cross-site
 account linkage must be explicit normal web authentication and must not use a

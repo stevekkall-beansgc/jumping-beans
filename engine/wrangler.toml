@@ -13,7 +13,7 @@ enabled = true
 [[d1_databases]]
 binding = "ENGINE_DB"
 database_name = "jumping-beans-engine-identity"
-database_id = "REPLACE_WITH_APPROVED_ENGINE_IDENTITY_D1_DATABASE_ID"
+database_id = "e2874583-ced0-43da-b190-b710a4fee546"
 migrations_dir = "migrations"
 
 [vars]

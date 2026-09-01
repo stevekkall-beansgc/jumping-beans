@@ -35,9 +35,10 @@ the hosted login and personal-experience slice is implemented and accepted.
 - Watch Co owns the D1-backed stage/confirm/commit boundary. The engine only
   hands off a selected Watch offer and canonical target price by navigation;
   it does not claim a local saved watch or call a Watch API.
-- No Jumping Beans identity or account-scoped persistence exists yet; current
-  profile and memory behavior is browser-local. This is an open P0 slice, not a
-  completed login service.
+- The hosted identity slice is integrated and passes the deterministic account,
+  hydration, import, logout, and draft-race contracts. It uses a dedicated
+  engine D1, separate from Watch Co's `WATCH_DB`; native WebMCP and Watch
+  authority were not changed.
 
 ## Production checks
 
@@ -49,17 +50,23 @@ state, and Watch Co handoff; the live Watch page accepts the canonical decimal
 handoff and keeps confirmation disabled until the user reviews the exact action.
 The Watch D1-backed summary read smoke returned a valid empty cohort.
 
+The dedicated `jumping-beans-engine-identity` D1 was provisioned and migration
+`engine/migrations/0001_identity.sql` was applied remotely. Google OIDC Worker
+secrets are not configured yet, so hosted login remains intentionally disabled
+while anonymous use continues to fail safe.
+
 ## Release blockers
 
-1. Implement and accept the hosted login service and personal experience:
-   optional anonymous access, established-provider login, secure revocable
-   sessions, user-scoped D1 records, explicit local-memory import, reload and
-   cross-device persistence, logout/expiry, and two-user isolation.
-2. Re-run the public journey in clean headed Chrome Stable and Canary without
+1. Configure the exact Google OAuth client/redirect URI and Worker secrets,
+   deploy the integrated identity slice, and run the hosted login smoke.
+2. Accept the hosted personal experience in clean headed browsers: relogin,
+   expiry, reload/cross-device persistence, explicit local-memory import,
+   logout, and two-user isolation.
+3. Re-run the public journey in clean headed Chrome Stable and Canary without
    an extension. Record discovery, execution, anonymous/approved context,
    apply-once/save/forget, Watch stage/confirmation/replay, provenance, and a
    redacted receipt.
-3. Verify multiple-user isolation and production write smoke checks, then
+4. Verify production multi-user/D1 write smoke checks, then
    reconcile the acceptance record with the deployed release artifact.
 
 No competition or release success is claimed by this record.
