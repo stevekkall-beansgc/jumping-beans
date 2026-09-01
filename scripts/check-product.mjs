@@ -190,6 +190,11 @@ includesAll(profileSelectionBlock, [
   "await rerunAppliedJourney()",
 ], "engine profile selection and applied-journey refresh contract");
 check(!profileSelectionBlock.includes("discoverPartnerDeals("), "Draft profile selection directly invokes native partner discovery");
+const nativePreferenceToolBlock = engineApp.slice(
+  engineApp.indexOf('name: "set_display_preferences"'),
+  engineApp.indexOf('name: "build_offer_journey"'),
+);
+includesAll(nativePreferenceToolBlock, ["markDraftEdited({ preferences: true })", "state.preferences ="], "native preference staging hydration-race contract");
 const engineWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
 includesAll(engineWorker, [
   'headers.set("Permissions-Policy", base.PERMISSIONS)',

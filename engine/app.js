@@ -1326,6 +1326,10 @@ function registerEngineTools() {
       if (maxPrice != null && (!Number.isFinite(maxPrice) || maxPrice < 0)) {
         return { staged: false, error: "maxPrice must be zero or greater", persisted: false };
       }
+      // A native tool can run while the optional account fetch is in flight.
+      // Mark it as a browser-owned draft before mutation so a late account
+      // response cannot overwrite it or retain account provenance.
+      markDraftEdited({ preferences: true });
       state.preferences = {
         ...state.preferences,
         formats,

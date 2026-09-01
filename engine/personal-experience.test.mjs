@@ -30,6 +30,16 @@ assert.deepEqual(savedPreferences.memory, localNote, "save");
 assert.equal(accountJourneyHydration({ account: hosted, hasBrowserPersistence: true, requestDraftRevision: 0, currentDraftRevision: 0, preferences: defaults, memory: localNote }), null);
 assert.equal(accountJourneyHydration({ account: hosted, hasBrowserPersistence: false, requestDraftRevision: 0, currentDraftRevision: 1, preferences: defaults, memory: localNote }), null);
 
+// Regression: an account response delayed behind the native
+// set_display_preferences tool sees the marker it sets before mutation. The
+// native draft remains browser-owned instead of being replaced by account data.
+const delayedAccountRequestRevision = 8;
+const nativeToolDraft = { formats: ["testimonial"], tone: "calm", maxPrice: 20 };
+const revisionAfterNativeSetDisplayPreferences = delayedAccountRequestRevision + 1;
+const delayedAccountHydration = accountJourneyHydration({ account: hosted, hasBrowserPersistence: false, requestDraftRevision: delayedAccountRequestRevision, currentDraftRevision: revisionAfterNativeSetDisplayPreferences, preferences: nativeToolDraft, memory: [] });
+assert.equal(delayedAccountHydration, null, "delayed account response overwrites native set_display_preferences draft");
+assert.equal(nativeToolDraft.formats[0], "testimonial", "native set_display_preferences draft loses to account data");
+
 // Forget only clears account-backed notes; browser notes stay browser-local.
 assert.deepEqual(accountMemoryAfterForget({ memorySource: "account", memory: hosted.memory }), []);
 assert.deepEqual(accountMemoryAfterForget({ memorySource: "browser", memory: localNote }), localNote);
