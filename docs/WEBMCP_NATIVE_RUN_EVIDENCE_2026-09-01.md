@@ -2,7 +2,7 @@
 
 Date: 2026-09-01  
 Scope: local native WebMCP acceptance after the 8082 policy recovery  
-Decision: **STOP / evidence lane invalid; product code remains mechanically ready**
+Decision: **LOCAL CONNECTED-PROFILE LANE STOP; PUBLIC CLEAN-PROFILE ACCEPTANCE PASS**
 
 ## What was run
 
@@ -147,11 +147,9 @@ is valid for Alex's approved categories; it is not a failed WebMCP invocation.
 ## Conclusion
 
 The application recovery is complete and mechanically gated. Clean minimal
-discovery passes in Stable and Canary, plus a clean post-fix full-engine
-network capture, are now recorded. The remaining evidence gap is the exported
-journey receipt and a second full-engine channel capture if the competition
-packet requires both channels; no further application-code change is justified
-by the current run.
+discovery passes in Stable and Canary, plus the post-fix full-engine network
+capture, are recorded above. The final public clean-profile run below closes
+the full personalized journey acceptance sequence.
 
 ## Clean-profile preparation
 
@@ -167,3 +165,42 @@ The Codex browser connector is not attached to these isolated profiles because
 they intentionally do not contain the connector extension. The user captured
 the visible fixture JSON directly, which is sufficient for this minimal-lane
 acceptance record.
+
+## Final public clean-profile acceptance run
+
+On 2026-09-01, the deployed engine was tested at:
+
+`https://jumping-beans-engine.steve-k-kall.workers.dev/`
+
+The run used a Chrome Canary incognito window with no ChatGPT extension
+sidepanel. The public page reported native WebMCP discovery of all three
+opted-in partner origins:
+
+- Petsupply
+- Coffee Co
+- Watch Co
+
+The anonymous default first returned no persona-derived partner matches, as
+required by the privacy contract. The labeled Alex demo profile was then
+explicitly enabled for this request, and the user-controlled `Price proof`
+presentation was applied with `Apply once without saving`.
+
+The resulting public journey showed:
+
+- Site B labeled `adapted by an opted-in partner`;
+- Petsupply's `Cushioned Dog Harness` at `$48.00`, with partner provenance;
+- native WebMCP explanation for the matched offer;
+- `Petsupply ready · 15 eligible · 10 exposed`;
+- `Coffee Co ready · 9 eligible · 2 exposed`;
+- `Watch Co no-match · 0 eligible · 0 exposed`;
+- `Nothing is saved` in browser memory.
+
+The engine's read-only `get_journey_receipt` was also discovered through the
+native `getTools()` surface and invoked with the browser's serialized native
+`executeTool()` form. The returned receipt included a journey identifier,
+request/context identifiers, `explicit-demo-context`, and the decision/event
+record for the completed run. No raw grants, credentials, or user profile data
+were retained in this packet.
+
+The final source gate passed **414 assertions** and `git diff --check` passed.
+The released tree remains clean at `v0.3.0` / `48782ae`.
