@@ -353,6 +353,32 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   return invocation.value;
 }
 
+function applyPartnerDiscovery(result) {
+  state.partnerDeals = result.deals;
+  state.originOutcomes = result.originOutcomes;
+  state.sourceB = choosePartnerOffer(result.deals);
+  state.discoveryComplete = true;
+  updateConnections();
+  renderJourney();
+}
+
+let nativeToolchangeReconciliationQueued = false;
+
+function observeNativeToolChanges() {
+  if (!SUPPORTED || typeof document.modelContext?.addEventListener !== "function") return;
+  // `toolchange` only tells us that the browser registry changed. Reconcile it
+  // through a fresh, allowlisted native discovery rather than treating the
+  // event as a tool registry or reusing a cached RegisteredTool.
+  document.modelContext.addEventListener("toolchange", () => {
+    if (nativeToolchangeReconciliationQueued) return;
+    nativeToolchangeReconciliationQueued = true;
+    window.setTimeout(async () => {
+      nativeToolchangeReconciliationQueued = false;
+      applyPartnerDiscovery(await discoverPartnerDeals());
+    }, 0);
+  });
+}
+
 function fallbackPartnerOffer() {
   return {
     ...OPEN_INVENTORY,
@@ -1013,13 +1039,7 @@ els.demoContext?.addEventListener("change", async () => {
   state.demoContextGranted = els.demoContext.checked;
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
   setAgent(state.demoContextGranted ? "You approved the clearly labeled demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile context is off. No persona-derived fields are sent to partners.");
-  const result = await discoverPartnerDeals();
-  state.partnerDeals = result.deals;
-  state.originOutcomes = result.originOutcomes;
-  state.sourceB = choosePartnerOffer(result.deals);
-  state.discoveryComplete = true;
-  updateConnections();
-  renderJourney();
+  applyPartnerDiscovery(await discoverPartnerDeals());
 });
 
 document.getElementById("apply-preferences").addEventListener("click", () => {
@@ -1222,17 +1242,15 @@ async function init() {
     intentType: state.journey.intentType,
     contextSnapshotId: state.contextSnapshot.contextSnapshotId,
   });
+  // Attach before the first partner navigation so registration cannot race the
+  // native lifecycle observer. Initial discovery below remains authoritative.
+  observeNativeToolChanges();
   await createPartnerFrames();
   renderJourney();
   registerEngineTools();
   updateConnections();
   const result = await discoverPartnerDeals();
-  state.partnerDeals = result.deals;
-  state.originOutcomes = result.originOutcomes;
-  state.sourceB = choosePartnerOffer(result.deals);
-  state.discoveryComplete = true;
-  updateConnections();
-  renderJourney();
+  applyPartnerDiscovery(result);
   if (result.deals.length) {
     setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
   } else if (SUPPORTED) {

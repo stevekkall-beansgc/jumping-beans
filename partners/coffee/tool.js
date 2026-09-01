@@ -11,6 +11,7 @@ const CONCIERGE_ORIGIN = ENGINE_ORIGINS[RUNTIME_MODE];
 const PARTNER_NAME = "Coffee Co";
 const PARTNER_ID = "coffee";
 const TOOL_NAME = "get_matching_deals";
+const MAX_RESPONSE_DEALS = 24;
 
 const catalog = await fetch("/catalog.json").then((r) => r.json());
 const TESTIMONIALS = {
@@ -58,6 +59,7 @@ await document.modelContext.registerTool(
               (maxPrice == null || d.dealPrice <= maxPrice) &&
               (!signal || !signal.aborted)
           )
+          .slice(0, MAX_RESPONSE_DEALS)
           .map((d) => ({
             ...enrich(d),
             partnerId: PARTNER_ID,

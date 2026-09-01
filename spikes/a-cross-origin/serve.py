@@ -4,6 +4,11 @@ import http.server, socketserver, sys
 from pathlib import Path
 
 PORT, DIR = int(sys.argv[1]), Path(sys.argv[2])
+LOCAL_ENGINE_PARTNER_ORIGINS = (
+    '"http://127.0.0.1:8084" '
+    '"http://127.0.0.1:8085" '
+    '"http://127.0.0.1:8086"'
+)
 
 class H(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
@@ -19,13 +24,16 @@ class H(http.server.SimpleHTTPRequestHandler):
         if PORT == 8082:
             self.send_header(
                 "Permissions-Policy",
-                'tools=(self "http://127.0.0.1:8084" "http://127.0.0.1:8085" '
-                '"http://127.0.0.1:8086" "http://localhost:8084" '
-                '"http://localhost:8085" "http://localhost:8086")',
+                f"tools=(self {LOCAL_ENGINE_PARTNER_ORIGINS})",
+            )
+        elif PORT == 8182:
+            self.send_header(
+                "Permissions-Policy",
+                'tools=(self "http://127.0.0.1:8183")',
             )
         super().end_headers()
 
 socketserver.ThreadingTCPServer.allow_reuse_address = True
 with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), H) as srv:
-    print(f"serving {DIR} on http://localhost:{PORT} (WebMCP-isolated)")
+    print(f"serving {DIR} on http://127.0.0.1:{PORT} (WebMCP-isolated)")
     srv.serve_forever()

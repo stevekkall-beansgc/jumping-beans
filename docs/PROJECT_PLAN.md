@@ -25,12 +25,17 @@ The competition is a validation gate, not the product boundary. The product
 should not be reduced to one scripted transaction merely to satisfy a demo
 cutline.
 
+The next architecture checkpoint is the native aggregation design in
+`docs/WEBMCP_AGGREGATION_ARCHITECTURE.md`: one browser-native aggregator for
+default read resolution, with direct partner WebMCP calls retained for detail,
+proof, verification, and consequential actions.
+
 ## 2. Current baseline
 
 Jumping Beans currently includes:
 
 - an engine and three independently served partner origins;
-- open-inventory baseline data and clearly labeled partner/fallback states;
+- open-inventory baseline data and clearly labeled native WebMCP discovery states;
 - cross-origin WebMCP discovery and partner opt-in;
 - user-controlled browser-local preferences and offer memory;
 - save-and-apply versus apply-once behavior;
@@ -39,10 +44,13 @@ Jumping Beans currently includes:
 - P0 capability, journey, context, ranking, and decision-receipt primitives;
 - network visibility showing connected origins and eligible/exposed counts.
 
-The local product gate is green at 336 assertions after the resolver hardening
-slice. The available browser session confirms the local UI controls, but does
-not expose executable WebMCP partner tools, so flagged headed-Chrome
-cross-origin execution remains an acceptance gate.
+The local product gate is green at 413 assertions. The minimal native
+cross-origin fixture and the full-engine response-policy paths are mechanically
+checked. Direct native WebMCP partner execution works in headed Chrome 151,
+but embedded 3/3 discovery and execution still require a clean, extension-free
+Stable and Canary run before the competition claim can be accepted. The
+2026-09-01 attempt is recorded in
+`docs/WEBMCP_NATIVE_RUN_EVIDENCE_2026-09-01.md`.
 
 ## 3. Model ownership
 
@@ -51,7 +59,7 @@ decisions.
 
 | Workstream | OpenAI model owner | Accountability |
 |---|---|---|
-| Architecture, security, protocol boundaries | GPT-5.6-Sol | Capability contracts, authorization, threat model, MCP/UCP boundary, architecture review |
+| Architecture, security, protocol boundaries | GPT-5.6-Sol | Native WebMCP contracts, authorization, threat model, architecture review |
 | Core engine and network resolution | GPT-5.6-Terra | WebMCP adapter, resolver, personalization, ranking, receipts, network experience |
 | UX and personalization | GPT-5.6-Terra | Multi-offer experience, persona/context flows, comparison, user controls |
 | Browser acceptance and adversarial QA | GPT-5.6-Luna | Headed-Chrome runs, protocol variance, failure cases, evidence capture |
@@ -79,7 +87,8 @@ implementation uses isolated worktrees.
 - deduplicate partner tools by origin;
 - preserve partial partner success;
 - record per-origin invocation outcomes;
-- show explicit degraded and no-match states.
+- show explicit native discovery failure, timeout, and no-match states;
+- never synthesize a partner result or label a non-WebMCP result as connected.
 
 ### 4.2 Personalization and resolution
 
@@ -87,7 +96,7 @@ implementation uses isolated worktrees.
 - apply category relevance, profile budgets, and explicit price ceilings;
 - rank deterministically using user-selected presentation preferences;
 - return a decision receipt explaining eligibility and exposure;
-- never reintroduce a filtered offer during ranking or fallback rendering.
+- never reintroduce a filtered offer during ranking or native result rendering.
 
 ### 4.3 Safe writes
 
@@ -114,13 +123,14 @@ implementation uses isolated worktrees.
 P0 is accepted when the product gate is green and flagged headed Chrome proves:
 
 1. two fresh end-to-end runs;
-2. multiple real partner origins;
-3. real partner tool execution;
-4. preference-aware filtering and ranking;
-5. honest partial-failure and no-match behavior;
-6. staged confirmation for consequential writes;
-7. replay-safe idempotency;
-8. provenance and decision-receipt evidence.
+2. embedded native WebMCP discovery from all three partner origins;
+3. real partner tool execution through `executeTool()`;
+4. multiple real partner origins with per-origin provenance;
+5. preference-aware filtering and ranking;
+6. honest partial-failure and no-match behavior;
+7. staged confirmation for consequential writes;
+8. replay-safe idempotency;
+9. provenance and decision-receipt evidence.
 
 ## 5. Phase 1 — Expand the network product
 
@@ -159,17 +169,14 @@ Add, in order:
 Each intent class gets its own baseline, terminal outcome, quality dimensions,
 and security tests.
 
-## 6. Phase 2 — Platform expansion
+## 6. Phase 2 — WebMCP platform expansion
 
 Only after real integrations justify the boundary:
 
 - durable user and tenant storage;
-- hosted capability registry and lifecycle management;
-- server execution gateway;
+- WebMCP-native partner onboarding and lifecycle management;
 - network analytics and path views;
 - experimentation;
-- MCP projection;
-- UCP semantic mapping;
 - graph views and durable outcome measurement.
 
 These are staged expansion tracks, not rejected product directions.
@@ -190,11 +197,11 @@ asset/rights review are complete.
 
 | Priority | Deliverable | Owner | Status |
 |---|---|---|---|
-| P0.1 | Final architecture/security checklist | GPT-5.6-Sol | Complete; see `docs/P0_ARCHITECTURE_REVIEW.md` |
-| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; gate green at 336 assertions |
-| P0.3 | Headed-Chrome acceptance matrix and blocker report | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_ACCEPTANCE_REVIEW.md` |
+| P0.1 | WebMCP-only architecture/security contract | GPT-5.6-Sol | Complete; STOP/NO-GO; see `docs/WEBMCP_ONLY_ARCHITECTURE_SECURITY_REVIEW.md` |
+| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; gate green at 413 assertions |
+| P0.3 | Native WebMCP runtime and competition acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/WEBMCP_COMPETITION_ACCEPTANCE.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
-| P0.5 | Main-session integration and release decision | Main Codex session | In progress; local checkpoint only, no deployment |
+| P0.5 | Main-session integration and release decision | Main Codex session | Recovery path integrated; native embedded 3/3 remains open |
 | P0.6 | Consequential-write contract, D1 repository, and request boundary | GPT-5.6-Terra | Code complete; approved D1 provisioned/migrated; local Pages+D1 HTTP matrix green |
 | P0.7 | Write-boundary adversarial acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_WRITE_ACCEPTANCE_REVIEW.md` |
 
@@ -210,7 +217,7 @@ approved or executed and are superseded by the OpenAI review loop above.
 The corrected OpenAI loop ran serially in the shared product directory:
 GPT-5.6-Sol produced the architecture review, GPT-5.6-Terra implemented the
 resolver hardening and multi-offer slice, and GPT-5.6-Luna produced the
-acceptance report. The generated bundle was refreshed and the 336-assertion
+acceptance report. The generated bundle was refreshed and the 413-assertion
 product gate passed. The next write-hardening loop added the canonical action
 contract, server-owned pending-action seam, payload-bound replay semantics,
 and redacted action receipts; the gate passed at 340 assertions. Luna found
@@ -222,8 +229,8 @@ Functions against SQLite D1: session bootstrap, stage, commit, replay,
 changed-payload conflict, same-key concurrency, and summary all passed. The
 request-boundary checkpoint added exact origin policy, cookie/CSRF session
 binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters (369
-assertions in the current configuration). Real deployed HTTPS and WebMCP
-evidence remain required. Future
+assertions in the current configuration). Real deployed native WebMCP
+evidence remains required. Future
 parallel implementation tasks must use actual isolated product worktrees or
 run serially through the main session.
 

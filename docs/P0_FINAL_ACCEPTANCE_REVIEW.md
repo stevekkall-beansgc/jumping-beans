@@ -14,10 +14,11 @@ overages before merchant mutation.
 
 P0 hardening is accepted locally, but the production/network acceptance gate
 remains open. The approved D1 is provisioned and the local Pages+D1 path proves
-atomic replay/concurrency behavior. The current headed Chrome can execute the
-engine and each partner directly, but its cross-origin iframe policy surface
-does not expose the `tools` permission, so a 3/3 embedded-network pass cannot
-be claimed from this browser build. Production remains the older deployed
+atomic replay/concurrency behavior. The browser-managed Chrome profile used for
+the latest embedded check exposed a `codexGetTools`/`codexExecuteTool` adapter
+on `document.modelContext`, so it cannot establish a native WebMCP verdict.
+The 3/3 network pass remains unproven and must be rerun in a clean,
+extension-free headed Chrome profile. Production remains the older deployed
 implementation.
 
 ## Requirement-by-requirement result
@@ -43,7 +44,7 @@ implementation.
 | Receipt redaction | PASS | Returned receipt contained no raw confirmation grant, raw idempotency key, or session value |
 | Local stage/commit persistence | PASS only within one process | Separate stage then commit API calls succeeded through the shared local-development seam; no cross-isolate/restart durability proven |
 | Fresh local Watch staging UI | PASS | Engine opened exact product/price, scope, retention, and non-outcomes before confirmation; no commit was clicked |
-| WebMCP registration/discovery | PARTIAL / EMBEDDED NETWORK OPEN | Fresh headed Chrome executed the engine tools and all three partner `get_matching_deals` tools directly. The engine receipt was captured with anonymous context and explicit origin outcomes. Cross-origin iframe discovery remained unavailable because Chrome reported no effective `tools` permission-policy feature for the child frames; this is not a 3/3 network acceptance pass. |
+| WebMCP registration/discovery | NOT PROVEN / EMBEDDED NETWORK OPEN | The current minimal two-origin fixture rejects the available Chrome profile because `document.modelContext` includes `codexGetTools`/`codexExecuteTool`. Its embedded discovery result is non-native adapter evidence, not a 3/3 network acceptance pass. |
 | Production updated behavior | NOT PROVEN / FAIL for checkpoint | Production still showed the old “Record target price” page with no action/receipt elements |
 | Production untouched | PASS | No deployment or cloud mutation was performed; repository changes are the pre-existing checkpoint plus this report |
 
@@ -149,6 +150,19 @@ gpt-5.6-luna does not support command "webmcp_list_tools"
 A Watch partner script did log `[watch] registered: get_matching_deals`; this
 was not sufficient to claim discoverable or executable WebMCP acceptance.
 
+### Native-runtime validity correction
+
+The corrected two-origin fixture at `spikes/a-cross-origin/` uses an isolated
+consumer at `127.0.0.1:8182` and producer at `:8183`, with exact top-level
+policy, reciprocal producer `exposedTo`, pre-navigation iframe delegation, and
+native `getTools`/`executeTool` calls. It also detects `codex*` members on
+`document.modelContext` and fails closed rather than using an extension adapter.
+The available headed Chrome profile contains `codexGetTools` and
+`codexExecuteTool`, so its empty embedded result cannot be used to diagnose a
+Chrome policy defect. Earlier direct and embedded observations must therefore
+be repeated in an extension-free flagged Chrome profile before they are used as
+native acceptance evidence.
+
 Production checks:
 
 ```text
@@ -213,8 +227,9 @@ sed -n '1,160p' partners/watch/migrations/0001_write_actions.sql
    including privacy-preserving network/deployment ceilings.
 3. Complete production HTTPS cookie/origin/CSRF verification without claiming
    that the header/session model authenticates an anonymous user.
-4. Publish the engine's explicit `Permissions-Policy: tools=(self <partner origins>)`
-   fix, then capture a fresh 3/3 journey through partner tools and receipt evidence.
+4. Run the exact two-origin fixture, then the three-partner engine journey, in
+   a fresh extension-free Chrome Stable profile with the documented WebMCP
+   flags; repeat in Canary before attributing any embedded failure to Chromium.
 5. Link the Watch action receipt into the engine journey receipt, then rerun the
    full final matrix before any deployment decision.
 

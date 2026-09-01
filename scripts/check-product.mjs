@@ -165,6 +165,54 @@ includesAll(engineWorker, [
   '"Permissions-Policy": base.PERMISSIONS',
   'PERMISSIONS: `tools=(${permissionsPolicy})`',
 ], "engine WebMCP response policy");
+const spikeEngine = await readFile(path.join(root, "spikes/a-cross-origin/engine/tool.js"), "utf8");
+const spikePartner = await readFile(path.join(root, "spikes/a-cross-origin/partner/tool.js"), "utf8");
+const spikeServer = await readFile(path.join(root, "spikes/a-cross-origin/serve.py"), "utf8");
+includesAll(spikeEngine, [
+  'const PRODUCER_ORIGIN = "http://127.0.0.1:8183"',
+  'const TOOL_NAME = "get_items"',
+  "const DISCOVERY_ATTEMPTS = 3",
+  "const DISCOVERY_RETRY_MS = 250",
+  'const useBareAllow = new URL(location.href).searchParams.get("allow") === "bare"',
+  '? "tools; cross-origin-isolated"',
+  ': `tools ${PRODUCER_ORIGIN}; cross-origin-isolated ${PRODUCER_ORIGIN}`',
+  "const modelContextMembers = document.modelContext",
+  'const nonNativeMembers = modelContextMembers.filter((member) => member.startsWith("codex"))',
+  "nativeSurface: nonNativeMembers.length === 0",
+  "non-native modelContext adapter detected",
+  'toolchangeSupported: typeof document.modelContext?.addEventListener === "function"',
+  'addEventListener("toolchange"',
+  "void discoverPartnerTool(evidence)",
+  'frame.src = `${PRODUCER_ORIGIN}/`',
+  "getTools({ fromOrigins: [PRODUCER_ORIGIN] })",
+  "discoveryAttempts.push",
+  "document.modelContext.executeTool",
+], "minimal native consumer reproduction contract");
+includesAll(spikePartner, [
+  'const CONSUMER_ORIGIN = "http://127.0.0.1:8182"',
+  "const registrationEvidence = {",
+  "crossOriginIsolated,",
+  'name: "get_items"',
+  "document.modelContext.registerTool",
+  "{ exposedTo: [CONSUMER_ORIGIN] }",
+], "minimal native producer reproduction contract");
+includesAll(spikeServer, [
+  "if PORT == 8082",
+  '"http://127.0.0.1:8084"',
+  '"http://127.0.0.1:8085"',
+  '"http://127.0.0.1:8086"',
+  "f\"tools=(self {LOCAL_ENGINE_PARTNER_ORIGINS})\"",
+], "local full-engine response-policy contract");
+includesAll(spikeServer, [
+  "'tools=(self \"http://127.0.0.1:8183\")'",
+  "elif PORT == 8182",
+], "minimal native response-policy contract");
+includesAll(engineApp, [
+  "function observeNativeToolChanges()",
+  'document.modelContext.addEventListener("toolchange"',
+  "applyPartnerDiscovery(await discoverPartnerDeals())",
+  "observeNativeToolChanges();",
+], "engine native toolchange reconciliation contract");
 const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
 includesAll(p0Source, [
   "offers.discover",
@@ -236,6 +284,10 @@ for (const partner of ["petsupply", "coffee", "watch"]) {
     "provenance:",
     "not independently verified by Jumping Beans",
   ], `${file} origin and offer-tool contract`);
+  includesAll(tool, [
+    "const MAX_RESPONSE_DEALS = 24",
+    ".slice(0, MAX_RESPONSE_DEALS)",
+  ], `${file} native response-ceiling contract`);
 }
 
 const watchHtml = surfaces.get("partners/watch/index.html");

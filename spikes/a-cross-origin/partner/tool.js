@@ -1,7 +1,20 @@
+const CONSUMER_ORIGIN = "http://127.0.0.1:8182";
+const status = document.getElementById("registration");
+const registrationEvidence = {
+  producerOrigin: location.origin,
+  crossOriginIsolated,
+  modelContext: typeof document.modelContext,
+  registration: null,
+};
+
+function reportRegistration() {
+  status.textContent = JSON.stringify(registrationEvidence, null, 2);
+}
+
 const tool = {
   name: "get_items",
-  title: "Get matching items",
-  description: "Return catalog items matching the given categories and an optional max price.",
+  title: "Get bounded test items",
+  description: "Return a fixed, bounded native WebMCP result for the cross-origin reproduction.",
   inputSchema: {
     type: "object",
     properties: {
@@ -10,19 +23,20 @@ const tool = {
     },
     required: ["categories"],
   },
-  execute: async ({ categories, maxPrice }) => {
-    const items = [
-      { sku: "kibble-12", name: "Kibble 12kg", category: "dog-food", price: 31.5 },
-      { sku: "treats-2pk", name: "Treats (2 pack)", category: "dog-food", price: 11.0 },
-      { sku: "beans-1lb", name: "Whole beans 1lb", category: "coffee", price: 12.0 },
-    ];
-    return { items: items.filter(i =>
-      categories.includes(i.category) &&
-      (maxPrice == null || i.price <= maxPrice)) };
-  },
+  execute: async () => ({
+    items: [{ sku: "beans-1lb", category: "coffee", price: 12 }],
+  }),
 };
-await document.modelContext.registerTool(tool, {
-  // ⚠️ exposedTo goes in the OPTIONS (2nd) argument — NOT inside the tool dict.
-  exposedTo: ["http://localhost:8082"],
-});
-console.log("[partner] registered:", tool.name);
+
+if (!document.modelContext?.registerTool) {
+  registrationEvidence.registration = "document.modelContext is unavailable on the producer";
+  reportRegistration();
+} else {
+  try {
+    await document.modelContext.registerTool(tool, { exposedTo: [CONSUMER_ORIGIN] });
+    registrationEvidence.registration = `registered ${tool.name} for ${CONSUMER_ORIGIN}`;
+  } catch (error) {
+    registrationEvidence.registration = `registration failed: ${error?.name || "Error"} ${error?.message || String(error)}`;
+  }
+  reportRegistration();
+}
