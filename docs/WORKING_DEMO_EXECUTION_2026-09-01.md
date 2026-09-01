@@ -62,7 +62,9 @@ secrets are configured and the release deployment is live. Anonymous use
 continues to fail safe; the public login route reaches Google's account
 chooser. One account completed the signed-in journey and a separate second
 identity reported no hosted notes while the first account's browser-local notes
-remained visible.
+remained visible after reload. The second identity also imported and forgot its
+disposable hosted notes without removing local notes, and completed a separate
+approved production Watch write whose merchant aggregate showed two signals.
 
 The approved production Watch smoke also passed: one concurrent commit was
 committed, the duplicate was replayed, a same-payload replay returned the
@@ -70,9 +72,9 @@ original receipt, and a changed-payload replay was rejected with HTTP 409.
 
 ## Release blockers
 
-1. Complete the remaining hosted account lifecycle checks, including account
-   forget, expiry, true cross-device persistence, and production isolation
-   for Watch records, receipts, and sessions.
+1. Complete the remaining hosted account lifecycle checks, including expiry,
+   true cross-device persistence, and production isolation for Watch records,
+   receipts, and sessions.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.

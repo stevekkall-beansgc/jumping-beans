@@ -30,8 +30,8 @@ that the competition gate is complete.
 | Watch staging | PASS | HTTP 201 server-authoritative pending grant; no demand signal committed |
 | Watch session controls | PASS | Bootstrap response includes redacted `HttpOnly; SameSite=Strict; Secure` cookie |
 | Watch commit/replay/concurrency | PASS for approved smoke | One concurrent request committed, the other replayed; same-payload replay returned the original receipt; changed-payload replay returned HTTP 409; summary showed one `$123.45` record |
-| Signed-in personal experience | PASS for one account | Google sign-in, hosted preference save, explicit two-note import, logout, relogin, hosted-note restoration, and second-account reload persistence passed in headed browsers |
-| Two-user isolation | PASS for hosted memory boundary | First account restored two hosted notes; second authenticated identity reported no hosted product notes while the same browser retained only local notes |
+| Signed-in personal experience | PASS for one account | Google sign-in, hosted preference save, explicit two-note import, logout, relogin, hosted-note restoration, second-account reload persistence, and disposable hosted-note forget passed in headed browsers |
+| Two-user isolation | PASS for hosted memory and separate Watch session | First account restored two hosted notes; second authenticated identity reported no hosted product notes, retained only local notes, and independently committed an approved Watch signal |
 | Canary native WebMCP capability | PASS | Clean Chrome Canary 154 reported native `modelContext`, `crossOriginIsolated: true`, exactly three allowlisted partner tools, and native partner calls returned bounded offers from all three origins |
 | Stable native WebMCP | OPEN | The clean Stable process is available, but the approved browser controls cannot attach to its isolated window in this session |
 
@@ -85,18 +85,29 @@ Reloading the second-account session preserved its signed-in state and still
 reported no saved hosted product notes. The browser-local two-note set remained
 separate, confirming reload hydration does not cross account boundaries.
 
+For the disposable lifecycle check, the second account explicitly imported its
+two local notes, verified two hosted notes, then used the account-level forget
+control. The hosted count returned to zero while the two browser-local notes
+remained. The first account's hosted notes were not removed.
+
+In a separate production Watch session, the second identity staged and
+confirmed the approved non-binding `$123.45` target for `NIV-77007Q45`. The
+merchant view then showed two active signals in the deployed KV aggregate,
+with the expected `$123.45` median/range. No notification, purchase,
+reservation, payment, or account credential was created.
+
 ## Remaining release gates
 
-1. Complete the remaining account-owned forget and expiry checks, plus a true
-   cross-device hydration check; the two-account hosted-memory boundary and
-   reload behavior are now proven.
-2. Repeat production isolation for watches, receipts, and sessions, not only
-   hosted memory.
-3. Complete the explicit-apply native journey receipt in clean Canary, then
-   run the full public journey in clean Chrome Stable without the
-   Codex/ChatGPT extension: native discovery, three partner invocations,
-   personalization, apply-once/save/forget, provenance, partial/no-match
-   states, and a redacted native journey receipt.
+1. Complete the remaining account-owned expiry check and a true cross-device
+   hydration check; hosted forget, two-account memory isolation, and reload
+   behavior are now proven.
+2. Repeat production isolation for watch records, receipts, and sessions, not
+   only hosted memory and a separate Watch write.
+3. Preserve the clean Canary native journey receipt evidence and run the full
+   public journey in clean Chrome Stable without the Codex/ChatGPT extension:
+   native discovery, three partner invocations, personalization, apply-once/
+   save/forget, provenance, partial/no-match states, and a redacted native
+   journey receipt.
 4. Retain the approved Watch Co smoke evidence above and reconcile the final
    acceptance record after the remaining browser lanes pass.
 5. Run release preflight for the final acceptance documentation, push the final
