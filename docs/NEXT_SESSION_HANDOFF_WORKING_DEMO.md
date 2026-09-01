@@ -1,9 +1,13 @@
 # Jumping Beans — Next Session Handoff: Working Product Demo
 
-Status: ready for execution  
+Status: current packet superseded by [HANDOFF_2026-09-01_V0.5.2.md](HANDOFF_2026-09-01_V0.5.2.md); ready for continuation
 Created: 2026-09-01  
 Primary goal: deliver a public, user-ready Jumping Beans demo with complete,
 honest, repeatable flows—not merely a protocol proof.
+
+> Current-state amendment: use the linked dated packet above as the source of
+> truth. This document contains the original execution contract and historical
+> context; its older starting-state values are intentionally superseded.
 
 ## Copy/paste opening prompt for the next Codex session
 
@@ -36,9 +40,10 @@ clean public-browser run, evidence, a clean Git tree, and a released commit.
 ## Starting state
 
 - Repository: `/Users/stephenkall/beans/products/jumping-beans`
-- Current source release: `v0.3.0` at `48782ae`
-- Latest provenance commit: `7b2b65e`
-- `main` is synced with GitHub and clean at handoff.
+- Current source release: `v0.5.2` deployed; the current handoff packet and
+  documentation are on clean, synced `main`.
+- Latest release commit: `fa51ded`; latest synced documentation commit:
+  `b67e80c`.
 - Public engine: `https://jumping-beans-engine.steve-k-kall.workers.dev/`
 - Public partners:
   - `https://petsupply.pages.dev/`
