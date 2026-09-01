@@ -29,7 +29,7 @@ that the competition gate is complete.
 | Watch summary | PASS | Empty 30-day cohort returned from production D1 |
 | Watch staging | PASS | HTTP 201 server-authoritative pending grant; no demand signal committed |
 | Watch session controls | PASS | Bootstrap response includes redacted `HttpOnly; SameSite=Strict; Secure` cookie |
-| Watch commit/replay/concurrency | OPEN | Deterministic and modeled D1 gates pass; fresh production commit proof remains required |
+| Watch commit/replay/concurrency | PASS for approved smoke | One concurrent request committed, the other replayed; same-payload replay returned the original receipt; changed-payload replay returned HTTP 409; summary showed one `$123.45` record |
 | Signed-in personal experience | PASS for one account | Google sign-in, hosted preference save, explicit two-note import, logout, relogin, and hosted-note restoration passed in the headed browser |
 | Two-user isolation | OPEN | Requires two authenticated test identities in clean headed sessions |
 | Stable/Canary native WebMCP | OPEN | Current Codex browser surfaces are not admissible clean extension-free evidence |
@@ -69,9 +69,22 @@ uploaded the notes.
    Codex/ChatGPT extension: native discovery, three partner invocations,
    personalization, apply-once/save/forget, provenance, partial/no-match
    states, and a redacted native journey receipt.
-4. Complete one explicitly approved Watch Co production commit, then verify
-   same-payload replay, changed-payload conflict, same-key concurrency, and
-   truthful summary behavior. The commit is a consequential demand-signal
-   write and must be action-time confirmed before it is submitted.
-5. Update the acceptance record with the fresh evidence, run release preflight,
-   push the final release commit, and leave the working tree clean and synced.
+4. Retain the approved Watch Co smoke evidence above and reconcile the final
+   acceptance record after the remaining browser lanes pass.
+5. Run release preflight for the final acceptance documentation, push the final
+   release commit, and leave the working tree clean and synced.
+
+## Approved production Watch smoke
+
+The approved smoke used SKU `NIV-77007Q45` at `$123.45`. Watch Co staged a
+server-authoritative pending grant, then two identical commit requests were
+sent concurrently:
+
+- first response: HTTP 201, `committed`;
+- second response: HTTP 200, `replayed`;
+- later same-payload replay: HTTP 200, `replayed`;
+- changed-payload replay: HTTP 409, `idempotency-conflict`;
+- public summary: count 1, median/min/max `$123.45`, 30-day window.
+
+The record is explicitly non-binding demand research. No notification,
+purchase, reservation, or payment was created.
