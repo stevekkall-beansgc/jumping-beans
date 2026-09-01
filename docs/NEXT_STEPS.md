@@ -1,8 +1,7 @@
 # Jumping Beans — next steps
 
-Status: working-demo code integrated; public/browser release gates remain open
-and the full network product remains in scope. Hosted identity and personal
-account persistence are also required before the competition-ready claim.
+Status: v0.5.0 deployed; public/browser and hosted-personal-experience gates
+remain open before the competition-ready claim.
 Last updated: 2026-09-01.
 
 ## Current baseline
@@ -29,10 +28,11 @@ ambitious product legible.
 
 ## New P0 — hosted identity and personal experience
 
-The hosted identity slice is now implemented and locally reviewed. The
-dedicated Jumping Beans identity/session authority and user-scoped D1 schema are
-in place, but public login is not enabled until the Google OIDC client and
-Worker secrets are configured.
+The hosted identity slice is implemented, locally reviewed, deployed, and
+configured with the Google OIDC client and Worker secrets. Anonymous access
+still works, and the public login route reaches Google's account chooser. A
+real signed-in account journey and two-user production isolation proof remain
+open acceptance gates.
 
 The slice is complete for release only when it provides:
 
@@ -47,9 +47,11 @@ The slice is complete for release only when it provides:
 - no account credentials or session material in WebMCP inputs or receipts.
 
 Current implementation: product gate **516 assertions passed**; remote
-`jumping-beans-engine-identity` D1 is provisioned and migrated. Remaining
-external work is Google OAuth client/redirect configuration, Worker secrets,
-deployment, and fresh two-user headed-browser evidence.
+`jumping-beans-engine-identity` D1 is provisioned and migrated; release
+`v0.5.0` is deployed from `9b756fc`; public anonymous/login-route/Watch-stage
+smokes pass. Remaining external work is fresh signed-in account persistence,
+two-user headed-browser evidence, and clean extension-free Stable/Canary
+WebMCP evidence.
 
 Watch Co remains the authority for its own D1-backed write path. Cross-site
 account linkage must be explicit normal web authentication and must not use a

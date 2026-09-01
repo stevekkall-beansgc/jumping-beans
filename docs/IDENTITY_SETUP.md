@@ -1,6 +1,7 @@
-# Optional engine identity setup
+# Hosted engine identity setup
 
-The hosted personal experience is optional. Without its D1 binding and Google
+The hosted personal experience is optional for visitors, but is a required
+competition-readiness gate for the product. Without its D1 binding and Google
 OIDC configuration, `/api/account` fails closed and the public engine remains
 anonymous and usable. It is not a WebMCP transport and it does not change
 partner discovery or invocation.
@@ -45,3 +46,13 @@ Before release, run the product gate and manually verify: anonymous browsing,
 Google login/callback/logout, expired or replayed callbacks, cross-site write
 rejection, account save/import/forget, and that a Watch Co handoff still starts
 with Watch Co's own explicit confirmation.
+
+## Current production status (2026-09-01)
+
+The dedicated `jumping-beans-engine-identity` D1 is provisioned and migrated.
+The Google OAuth client, redirect URI, and Worker secrets are configured for
+`https://jumping-beans-engine.steve-k-kall.workers.dev/auth/callback`, and
+release `v0.5.0` is deployed. The anonymous account response, secure Google
+redirect, and public UI markers pass smoke checks. The remaining acceptance
+items are completing a real signed-in account journey, proving two-account
+isolation, and capturing fresh clean-browser evidence.

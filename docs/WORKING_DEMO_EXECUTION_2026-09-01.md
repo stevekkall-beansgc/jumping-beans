@@ -1,11 +1,15 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Release lineage: working-demo `v0.4.x` (documentation refresh over the deployed code)
-Decision: **CODE/DEPLOY PASS; BROWSER ACCEPTANCE HOLD**
+Release lineage: working-demo `v0.5.0` (`9b756fc`)
+Decision: **CODE/DEPLOY PASS; COMPETITION ACCEPTANCE HOLD**
 
 The release is not competition-ready for the expanded product contract until
-the hosted login and personal-experience slice is implemented and accepted.
+the hosted login/personal-experience browser flow, clean native WebMCP browser
+evidence, two-user isolation, and production Watch write evidence are
+accepted. The identity slice is now implemented, configured, and deployed;
+the remaining status is recorded in
+`docs/PRODUCTION_ACCEPTANCE_2026-09-01.md`.
 
 ## Review loop
 
@@ -52,13 +56,16 @@ The Watch D1-backed summary read smoke returned a valid empty cohort.
 
 The dedicated `jumping-beans-engine-identity` D1 was provisioned and migration
 `engine/migrations/0001_identity.sql` was applied remotely. Google OIDC Worker
-secrets are not configured yet, so hosted login remains intentionally disabled
-while anonymous use continues to fail safe.
+secrets are now configured and the release deployment is live. Anonymous use
+continues to fail safe; the public login route reaches Google's account
+chooser. A completed signed-in account journey is still pending headed-browser
+handoff and evidence.
 
 ## Release blockers
 
-1. Configure the exact Google OAuth client/redirect URI and Worker secrets,
-   deploy the integrated identity slice, and run the hosted login smoke.
+1. Complete the hosted login/personal-experience smoke in a clean headed
+   browser, including explicit import, forget, logout, expiry, relogin, and a
+   second authenticated identity.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.
