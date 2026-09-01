@@ -1,8 +1,8 @@
 # Jumping Beans — production acceptance packet
 
 Date: 2026-09-01  
-Release: `v0.5.2`
-Deployment: [Cloudflare workflow 33526038926](https://github.com/stevekkall-beansgc/jumping-beans/actions/runs/33526038926)
+Release: `v0.5.2` (`fa51ded5b2aa8e40e3027a9bdaf3711c68395cde`)
+Deployment: [Cloudflare workflow 33538384695](https://github.com/stevekkall-beansgc/jumping-beans/actions/runs/33538384695)
 Decision: **OPERATIONAL DEMO GO; COMPETITION ACCEPTANCE OPEN**
 
 This packet records fresh production checks. It does not replace the required

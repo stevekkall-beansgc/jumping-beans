@@ -1,7 +1,7 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Release lineage: working-demo `v0.5.2`
+Release lineage: working-demo `v0.5.2` (`fa51ded`)
 Decision: **OPERATIONAL DEMO GO; COMPETITION ACCEPTANCE HOLD**
 
 The public demo is approved for operational use, including mobile-assisted
