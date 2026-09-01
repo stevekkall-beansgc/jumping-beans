@@ -2,7 +2,7 @@
 
 Status: working prototype shipped; P0 hardening is in progress and the full
 network product remains in scope.
-Last updated: 2026-08-31.
+Last updated: 2026-09-01.
 
 ## Current baseline
 
@@ -94,6 +94,27 @@ fallback is valid.
 Still required: a deployed HTTPS run against the approved D1, durable
 rate-limit policy for privacy-preserving network and deployment-wide buckets,
 real production cookie behavior, and fresh headed-browser/WebMCP evidence.
+
+## 2026-09-01 Watch Co handoff slice completed locally
+
+- The engine no longer creates a browser-local deal watch or says that one was
+  saved. It stages only a selected Watch Co offer and target price for review.
+- Alex remains the default labeled demo profile. A visible Alex/Jamie selector
+  changes only draft context; its selected categories are projected only after
+  the user enables demo context and applies preferences. Changing it after an
+  applied journey invalidates and reruns that journey under the existing
+  consent choice, so Jamie's `watches` category can reach the review surface
+  without a substitute catalog or invocation path.
+- The final engine control is a navigation handoff containing the reviewed Watch
+  SKU and canonical target price. It does not invoke a Watch API, use a bridge,
+  or create a notification, order, payment, or server watch.
+- When the deterministic comparison contains more than one opted-in Watch Co
+  offer, a labeled selector changes only the locally reviewed handoff offer;
+  it does not rerank, rediscover, or invoke a partner.
+- Watch Co validates those presentation fields before prefilling its existing
+  declarative form. Refreshing the handoff page never stages or commits; Watch
+  Co remains responsible for its existing D1-backed stage, explicit checkbox
+  confirmation, commit, replay, and concurrency boundaries.
 
 ### 1. Harden the network foundation
 

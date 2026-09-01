@@ -24,11 +24,13 @@ tiers and plain static files plus a couple of small serverless functions.
    without saving” remains available.
 5. Site B receives only the selected display context. Product facts keep their
    own source and verification disclosure.
-6. A shopper can save a deal watch and receive a proactive in-page update when the
-   demo monitor finds a qualifying price (the browser-open monitor is explicit;
-   outbound email/SMS delivery is roadmap).
-7. On the watch shop, visitors — or their agent — fill a declarative
-   `register_interest` form.
+6. When an opted-in Watch Co offer is selected, the engine can stage its exact
+   product and target price for review, then opens Watch Co with those fields
+   prefilled. This is a navigation handoff, not a Watch Co invocation or a
+   saved engine watch.
+7. On the Watch Co shop, visitors — or their agent — fill a declarative
+   `register_interest` form. Watch Co alone stages, explicitly confirms, and
+   persists its non-binding demand signal.
 8. The shop's `/merchant` view polls an aggregate of that interest
    (`/api/interest-summary`): the shop asked, the engine answered.
 
@@ -55,8 +57,14 @@ merchant readout) — the agent surfaces are additive.
 Each partner registers a `get_matching_deals` WebMCP tool and exposes it to the
 engine origin. Partner responses may include merchant-provided collateral such
 as testimonials and price proof. The engine additionally exposes user-owned
-profile, offer-memory, presentation-preference, offer-journey, and deal-watch
-tools. Watch has a declarative `register_interest` form (SPEC §4b), an interest
+profile, offer-memory, presentation-preference, offer-journey, and a staged
+Watch Co handoff tool. The handoff passes only the reviewed Watch SKU and target
+price in a navigation URL; it never uses a partner API or claims persistence.
+Alex is the default labeled demo profile; selecting a different labeled profile
+remains draft-only until the shopper explicitly enables demo context and applies
+preferences. When several eligible Watch Co offers are rendered, the shopper can
+explicitly choose one ranked offer for the handoff without another partner call.
+Watch has a declarative `register_interest` form (SPEC §4b), an interest
 store behind `/api/register-interest` and `/api/interest-summary`, and a
 `/merchant/` demand-signal view.
 

@@ -88,8 +88,15 @@
                 </div>
               </fieldset>
 
-              <label class="demo-context-choice"><input id="demo-context" type="checkbox"><span>Use the labeled Alex demo profile for this request</span></label>
-              <p class="field-hint">Off by default. If you turn it on, its categories and budget are sent only to each opted-in partner to find offers; they are not saved as your profile.</p>
+              <div class="demo-profile-field">
+                <label for="demo-profile">Labeled demo profile</label>
+                <select id="demo-profile" name="demoProfile">
+                  <option value="alex-budget-parent" selected>Alex — budget parent</option>
+                  <option value="jamie-gift-shopper">Jamie — gift shopper</option>
+                </select>
+              </div>
+              <label class="demo-context-choice"><input id="demo-context" type="checkbox"><span>Use the selected labeled demo profile for this request</span></label>
+              <p class="field-hint">Off by default. Selecting a profile changes only this draft. Its categories and budget are sent only to each opted-in partner after you enable this checkbox and apply preferences; they are not saved as your profile.</p>
 
               <section class="bl-callout bl-stack memory-preview" data-space="compact" data-tone="info" aria-labelledby="memory-preview-title">
                 <h4 class="bl-callout__title" id="memory-preview-title">Before saving</h4>
@@ -117,20 +124,20 @@
 
         <section class="bl-callout deal-watch" aria-labelledby="watch-title">
           <div class="watch-copy">
-            <h3 id="watch-title">Want a price change remembered?</h3>
-            <p id="watch-detail">Prepare one product-scoped deal point, then review it before anything is saved.</p>
+            <h3 id="watch-title">Want to share a Watch Co target price?</h3>
+            <p id="watch-detail">Stage one Watch Co product and target price for review. Jumping Beans does not save or monitor it.</p>
           </div>
-          <button class="bl-button" data-variant="secondary" id="watch-button" type="button">Prepare deal watch</button>
+          <button class="bl-button" data-variant="secondary" id="watch-button" type="button">Prepare Watch Co handoff</button>
           <section class="bl-callout bl-stack watch-confirmation" data-space="compact" data-tone="info" id="watch-confirmation" aria-labelledby="watch-confirmation-title" hidden>
-            <h4 class="bl-callout__title" id="watch-confirmation-title">Before saving</h4>
+            <h4 class="bl-callout__title" id="watch-confirmation-title">Before opening Watch Co</h4>
             <p id="watch-fact"></p>
             <dl>
-              <div><dt>Scope</dt><dd>Jumping Beans product, in this browser</dd></div>
-              <div><dt>Retention</dt><dd>Until you use Forget</dd></div>
-              <div><dt>Outcome</dt><dd>Save a local watch and matching offer note; no notification, order, payment, or message is created</dd></div>
+              <div><dt>Scope</dt><dd>Exact product and target price in a one-time navigation to Watch Co</dd></div>
+              <div><dt>Retention</dt><dd>Not retained by Jumping Beans. Watch Co will state its retention before confirmation.</dd></div>
+              <div><dt>Outcome</dt><dd>Watch Co will prefill the exact product and target price. It alone stages, confirms, and persists a demand signal; no notification, order, payment, or message is created here.</dd></div>
             </dl>
             <div class="bl-actions watch-actions">
-              <button class="bl-button" id="confirm-watch" type="button">Confirm and save deal watch</button>
+              <button class="bl-button" id="confirm-watch" type="button">Open Watch Co to stage target price</button>
               <button class="bl-button" data-variant="quiet" id="cancel-watch" type="button">Not now</button>
             </div>
           </section>

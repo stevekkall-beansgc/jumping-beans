@@ -3,6 +3,7 @@
 // the richer offer structure and presentation control WebMCP makes possible.
 
 import {
+  ORIGINS,
   PARTNER_ORIGINS,
   PARTNER_NAMES,
   TOOL_NAMES,
@@ -48,13 +49,13 @@ const els = {
   cancelWatch: document.getElementById("cancel-watch"),
   prompt: document.getElementById("prompt"),
   demoContext: document.getElementById("demo-context"),
+  demoProfile: document.getElementById("demo-profile"),
   toast: document.getElementById("toast"),
 };
 
 const STORAGE = {
   preferences: "jumping-beans-preferences",
   memory: "jumping-beans-offer-memory",
-  watches: "jumping-beans-deal-watches",
 };
 const DEFAULT_PREFERENCES = { formats: ["price-proof"], tone: "calm", maxPrice: null };
 const loadedAt = new Date().toISOString();
@@ -126,20 +127,17 @@ const initialPreferences = {
   maxPrice: storedPreferences.maxPrice ?? null,
 };
 const storedMemory = readStored(STORAGE.memory, []);
-const storedWatches = readStored(STORAGE.watches, []);
 const state = {
   profile: PERSONAS[0],
   preferences: { ...initialPreferences, formats: [...initialPreferences.formats] },
   appliedPreferences: { ...initialPreferences, formats: [...initialPreferences.formats] },
   memory: Array.isArray(storedMemory) ? storedMemory : [],
-  watches: Array.isArray(storedWatches) ? storedWatches : [],
   partnerDeals: [],
   connectedTools: [],
   sourceA: OPEN_INVENTORY,
   sourceB: null,
   applied: false,
   appliedMode: null,
-  simulatedUpdate: false,
   pendingWatch: null,
   pendingRemember: false,
   discoveryComplete: false,
@@ -152,6 +150,8 @@ const state = {
   connectedOrigins: [],
   originOutcomes: {},
   demoContextGranted: false,
+  appliedJourneyRevision: 0,
+  selectedWatchOfferId: null,
 };
 
 function recordEvent(type, payload = {}) {
@@ -360,6 +360,10 @@ function applyPartnerDiscovery(result) {
   state.partnerDeals = result.deals;
   state.originOutcomes = result.originOutcomes;
   state.sourceB = choosePartnerOffer(result.deals);
+  const watchOffers = watchHandoffOffers();
+  if (!watchOffers.some((deal) => deal.resolution.offerId === state.selectedWatchOfferId)) {
+    state.selectedWatchOfferId = watchOffers[0]?.resolution.offerId || null;
+  }
   state.discoveryComplete = true;
   updateConnections();
   renderJourney();
@@ -375,9 +379,13 @@ function observeNativeToolChanges() {
   document.modelContext.addEventListener("toolchange", () => {
     if (nativeToolchangeReconciliationQueued) return;
     nativeToolchangeReconciliationQueued = true;
+    const revision = state.appliedJourneyRevision;
     window.setTimeout(async () => {
       nativeToolchangeReconciliationQueued = false;
-      applyPartnerDiscovery(await discoverPartnerDeals());
+      if (!state.applied || revision !== state.appliedJourneyRevision) return;
+      const result = await discoverPartnerDeals();
+      if (!state.applied || revision !== state.appliedJourneyRevision) return;
+      applyPartnerDiscovery(result);
     }, 0);
   });
 }
@@ -561,9 +569,25 @@ function networkMarkup() {
   return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul></section>`;
 }
 
-function comparisonMarkup(deals, preferences) {
+function isWatchHandoffOffer(deal) {
+  return deal?.partnerOrigin === ORIGINS.watch
+    && typeof deal.sku === "string"
+    && typeof deal.name === "string"
+    && Number.isFinite(deal.dealPrice)
+    && typeof deal.resolution?.offerId === "string";
+}
+
+function watchHandoffOffers(deals = state.capabilityResolution?.exposed || []) {
+  return deals.filter(isWatchHandoffOffer);
+}
+
+function comparisonMarkup(deals) {
   if (!deals.length) return "";
-  return `<section class="offer-comparison" aria-label="Eligible partner offer comparison"><h4>Compare eligible partner offers</h4><ol>${deals.map((deal) => `<li><strong>#${deal.resolution.rank} · ${escapeHtml(deal.name)}</strong><span>${escapeHtml(deal.partnerName || deal.merchant || "Partner")} · ${money(deal.dealPrice)} · ${escapeHtml(deal.provenance?.sourceLabel || "WebMCP offer tool")}</span><small>${escapeHtml(deal.resolution.relevance)}. ${escapeHtml(deal.provenance?.verification || "Unverified")}</small></li>`).join("")}</ol></section>`;
+  const watchOffers = watchHandoffOffers(deals);
+  const handoffChoice = watchOffers.length
+    ? `<div class="handoff-offer-choice"><label for="watch-handoff-offer">Watch Co offer for target-price handoff</label><p>Choose one ranked Watch Co offer. This changes only the reviewed handoff; it does not call Watch Co or save anything.</p><select id="watch-handoff-offer">${watchOffers.map((deal) => `<option value="${escapeHtml(deal.resolution.offerId)}"${deal.resolution.offerId === state.selectedWatchOfferId ? " selected" : ""}>#${deal.resolution.rank} · ${escapeHtml(deal.name)} · ${money(deal.dealPrice)}</option>`).join("")}</select></div>`
+    : "";
+  return `<section class="offer-comparison" aria-label="Eligible partner offer comparison"><h4>Compare eligible partner offers</h4>${handoffChoice}<ol>${deals.map((deal) => `<li><strong>#${deal.resolution.rank} · ${escapeHtml(deal.name)}</strong><span>${escapeHtml(deal.partnerName || deal.merchant || "Partner")} · ${money(deal.dealPrice)} · ${escapeHtml(deal.provenance?.sourceLabel || "WebMCP offer tool")}</span><small>${escapeHtml(deal.resolution.relevance)}. ${escapeHtml(deal.provenance?.verification || "Unverified")}</small></li>`).join("")}</ol></section>`;
 }
 
 function renderNextStep() {
@@ -594,7 +618,7 @@ function renderNextStep() {
       ${href ? `<a class="bl-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
       <button class="bl-button" data-variant="secondary" id="show-source" type="button">Explain partner opt-in</button>
     </div>`;
-  const comparison = comparisonMarkup(state.capabilityResolution?.exposed || [], activePreferences);
+  const comparison = comparisonMarkup(state.capabilityResolution?.exposed || []);
   const withheld = state.capabilityResolution?.withheld || [];
   const withholding = withheld.length ? `<p class="reason"><strong>Withheld offers</strong><br>${withheld.length} offer${withheld.length === 1 ? " was" : "s were"} withheld: ${escapeHtml(withheld.map((item) => item.reason).join("; "))}</p>` : "";
   renderOfferCard(
@@ -606,12 +630,21 @@ function renderNextStep() {
       "The baseline offer did not require merchant participation. This Site B response did: the partner opted in to expose structured offer data and optional collateral through WebMCP.",
     );
   });
+  document.getElementById("watch-handoff-offer")?.addEventListener("change", (event) => {
+    const next = watchHandoffOffers().find((offer) => offer.resolution.offerId === event.target.value);
+    if (!next) return;
+    state.selectedWatchOfferId = next.resolution.offerId;
+    state.pendingWatch = null;
+    setAgent(`Selected ${next.name} from Watch Co for a possible target-price handoff. Nothing was saved, sent, or invoked.`);
+    renderJourney();
+  });
 }
 
 function renderControls() {
   els.controls.querySelectorAll("[data-pref]").forEach((input) => {
     input.checked = state.preferences.formats.includes(input.dataset.pref);
   });
+  if (els.demoProfile) els.demoProfile.value = state.profile.personaId;
 }
 
 function preferenceFact() {
@@ -703,7 +736,7 @@ function renderMemory() {
     : state.hasSavedPreferences
       ? "Using one saved display preference."
       : "Using no saved product notes.";
-  els.forgetAll.hidden = !items.length && !state.watches.length && !state.hasSavedPreferences;
+  els.forgetAll.hidden = !items.length && !state.hasSavedPreferences;
 }
 
 function addMemory(title, detail, kind) {
@@ -732,10 +765,6 @@ function forgetMemory(key) {
     removeStored(STORAGE.preferences);
     state.hasSavedPreferences = false;
   }
-  if (item?.kind === "watch") {
-    state.watches = [];
-    writeStored(STORAGE.watches, state.watches);
-  }
   recordEvent("memory.deleted", {
     capabilityId: "memory.forget",
     capabilityVersion: "1.0.0",
@@ -747,10 +776,10 @@ function forgetMemory(key) {
 }
 
 function forgetAllMemory() {
+  state.appliedJourneyRevision += 1;
   state.memory = [];
-  state.watches = [];
-  state.simulatedUpdate = false;
   state.pendingWatch = null;
+  state.selectedWatchOfferId = null;
   state.pendingRemember = false;
   state.preferences = {
     ...DEFAULT_PREFERENCES,
@@ -778,7 +807,7 @@ function forgetAllMemory() {
     scope: "Jumping Beans product in this browser",
     all: true,
   });
-  setAgent("I forgot the saved display rules, offer notes, and deal watch from this browser.");
+  setAgent("I forgot the saved display rules and offer notes from this browser.");
   renderJourney();
   showToast("All saved offer memory forgotten");
 }
@@ -794,24 +823,16 @@ function renderJourney() {
   renderMemoryPreview();
   renderRules();
   renderMemory();
-  els.watchConfirmation.hidden = !state.pendingWatch || Boolean(state.watches.length);
-  els.watchButton.hidden = Boolean(state.pendingWatch) && !state.watches.length;
-  if (state.watches.length) {
-    els.watchTitle.textContent = "Deal watch is saved";
-    els.watchDetail.textContent = state.simulatedUpdate
-      ? "An illustrative qualifying change is shown for this visit only; it was not added to browser memory."
-      : `Watching ${state.sourceA.name} below ${money(state.watches[0].target)} in this browser.`;
-    els.watchButton.textContent = state.simulatedUpdate
-      ? "Clear simulated price change"
-      : "Simulate a price change";
-  } else if (state.pendingWatch) {
-    els.watchTitle.textContent = "Confirm this deal watch";
-    els.watchDetail.textContent = "Review the exact fact, scope, retention, and outcome below.";
+  els.watchConfirmation.hidden = !state.pendingWatch;
+  els.watchButton.hidden = Boolean(state.pendingWatch);
+  if (state.pendingWatch) {
+    els.watchTitle.textContent = "Review this Watch Co handoff";
+    els.watchDetail.textContent = "Review the exact product and target price before opening Watch Co's independent confirmation flow.";
     els.watchFact.textContent = `Useful fact: surface ${state.pendingWatch.name} below ${money(state.pendingWatch.target)}.`;
   } else {
-    els.watchTitle.textContent = "Want a price change remembered?";
-    els.watchDetail.textContent = "Prepare one product-scoped deal point, then review it before anything is saved.";
-    els.watchButton.textContent = "Prepare deal watch";
+    els.watchTitle.textContent = "Want to share a Watch Co target price?";
+    els.watchDetail.textContent = "Stage one Watch Co product and target price for review. Jumping Beans does not save or monitor it.";
+    els.watchButton.textContent = "Prepare Watch Co handoff";
   }
 }
 
@@ -828,8 +849,6 @@ async function applyPreferences({ persist }) {
     applied: true,
     demoContextGranted: state.demoContextGranted,
   });
-  state.partnerDeals = [];
-  state.sourceB = null;
   recordEvent("user.intervention", {
     capabilityId: "preferences.apply",
     capabilityVersion: "1.0.0",
@@ -868,7 +887,26 @@ async function applyPreferences({ persist }) {
     mode: state.appliedMode,
   });
   renderJourney();
-  applyPartnerDiscovery(await discoverPartnerDeals(state.appliedPreferences));
+  await rerunAppliedJourney();
+}
+
+function invalidateAppliedJourney() {
+  state.pendingWatch = null;
+  state.selectedWatchOfferId = null;
+  state.partnerDeals = [];
+  state.sourceB = null;
+  state.originOutcomes = {};
+  state.capabilityResolution = null;
+  state.decisionReceipt = null;
+}
+
+async function rerunAppliedJourney() {
+  const revision = ++state.appliedJourneyRevision;
+  invalidateAppliedJourney();
+  renderJourney();
+  const result = await discoverPartnerDeals(state.appliedPreferences);
+  if (revision !== state.appliedJourneyRevision) return;
+  applyPartnerDiscovery(result);
 }
 
 function handlePrompt(value) {
@@ -894,86 +932,76 @@ function handlePrompt(value) {
   renderJourney();
 }
 
-function prepareDealWatch(targetPrice = Math.max(1, state.sourceA.dealPrice - 5)) {
-  const target = Number(targetPrice);
-  if (!Number.isFinite(target) || target <= 0) {
-    setAgent("A deal-watch target must be greater than zero. Nothing was saved.");
+function selectedWatchOffer() {
+  return watchHandoffOffers().find((deal) => deal.resolution.offerId === state.selectedWatchOfferId) || null;
+}
+
+function prepareDealWatch(targetPrice) {
+  const offer = selectedWatchOffer();
+  if (!offer) {
+    setAgent("A Watch Co offer must be the selected opted-in result before Jumping Beans can prepare a Watch Co handoff. Nothing was saved or sent.");
+    return false;
+  }
+  const defaultTarget = Math.max(1, offer.dealPrice - 5);
+  const target = Number(targetPrice ?? defaultTarget);
+  const formattedTarget = Number.isFinite(target) ? target.toFixed(2) : "";
+  const canonicalTarget = Number(formattedTarget);
+  if (!Number.isFinite(target) || target <= 0 || !Number.isSafeInteger(Math.round(target * 100)) || Math.abs(target - canonicalTarget) > 1e-9) {
+    setAgent("A target price must be a positive USD amount with no more than two decimal places. Nothing was saved or sent.");
     return false;
   }
   state.pendingWatch = {
-    sku: state.sourceA.sku,
-    name: state.sourceA.name,
-    target,
+    sku: offer.sku,
+    name: offer.name,
+    target: canonicalTarget,
     stagedAt: new Date().toISOString(),
   };
   recordEvent("capability.invocation.succeeded", {
     capabilityId: "deal_watch.stage",
     capabilityVersion: "1.0.0",
-    outcomeType: "watch_staged",
+    outcomeType: "watch_handoff_staged",
     persisted: false,
   });
-  setAgent(`I staged a watch for ${state.sourceA.name} below ${money(target)}. Review the exact terms and confirm in the page before anything is saved.`);
+  setAgent(`I staged a Watch Co handoff for ${offer.name} below ${money(target)}. Review the exact terms before opening Watch Co; nothing was saved or sent.`);
   renderJourney();
   els.confirmWatch.focus();
   return true;
 }
 
-function persistPendingWatch() {
+function watchHandoffUrl(watch) {
+  const destination = safeUrl(ORIGINS.watch);
+  if (!destination) return null;
+  destination.searchParams.set("jb_watch_product", watch.sku);
+  destination.searchParams.set("jb_target_price", watch.target.toFixed(2));
+  return destination.href;
+}
+
+function handoffPendingWatch() {
   if (!state.pendingWatch) return;
-  const previousMemory = [...state.memory];
-  const watch = {
-    sku: state.pendingWatch.sku,
-    name: state.pendingWatch.name,
-    target: state.pendingWatch.target,
-    createdAt: new Date().toISOString(),
-  };
-  state.watches = [watch];
-  state.pendingWatch = null;
-  const saved = writeStored(STORAGE.watches, state.watches);
-  const memorySaved = saved && addMemory(
-    "Deal watch",
-    `Watch ${watch.name} below ${money(watch.target)}`,
-    "watch",
-  );
-  if (!saved || !memorySaved) {
-    state.watches = [];
-    state.memory = previousMemory;
-    removeStored(STORAGE.watches);
-    writeStored(STORAGE.memory, state.memory);
+  const href = watchHandoffUrl(state.pendingWatch);
+  if (!href) {
+    setAgent("Watch Co's handoff address is unavailable. Nothing was saved or sent.");
+    return;
   }
   recordEvent("journey.outcome", {
     capabilityId: "deal_watch.stage",
     capabilityVersion: "1.0.0",
-    outcomeType: saved && memorySaved ? "watch_saved" : "watch_save_failed",
-    persisted: Boolean(saved && memorySaved),
-    scope: "Jumping Beans product in this browser",
+    outcomeType: "watch_handoff_opened",
+    persisted: false,
+    scope: "Watch Co handoff URL only",
   });
-  setAgent(
-    saved && memorySaved
-      ? `Confirmed and saved in this browser: surface ${watch.name} below ${money(watch.target)}. No notification, order, payment, or message was created.`
-      : "The confirmed watch could not be saved because browser storage is unavailable.",
-  );
-  showToast(saved && memorySaved ? "Deal watch confirmed and saved" : "Deal watch was not saved");
-  renderJourney();
+  location.assign(href);
 }
 
 function cancelPendingWatch() {
   state.pendingWatch = null;
-  setAgent("The staged deal watch was discarded. Nothing was saved.");
+  setAgent("The staged Watch Co handoff was discarded. Nothing was saved or sent.");
   renderJourney();
   els.watchButton.focus();
 }
 
 function setDealWatch() {
-  if (state.watches.length) {
-    state.simulatedUpdate = !state.simulatedUpdate;
-    setAgent(state.simulatedUpdate
-      ? "The demo shows a qualifying price change for this visit only. It was not added to browser memory and no notification was sent."
-      : "The visit-only simulated price change was cleared. The confirmed deal watch remains saved.");
-    showToast(state.simulatedUpdate ? "Visit-only price change shown" : "Simulation cleared");
-  } else {
-    prepareDealWatch();
-  }
+  prepareDealWatch();
   renderJourney();
 }
 
@@ -998,7 +1026,20 @@ els.demoContext?.addEventListener("change", async () => {
   state.demoContextGranted = els.demoContext.checked;
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
   setAgent(state.demoContextGranted ? (state.applied ? "You approved the clearly labeled applied demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile consent is staged. Apply the display choice before any partner discovery can use it.") : "Demo profile context is off. No persona-derived fields are sent to partners.");
-  if (state.applied) applyPartnerDiscovery(await discoverPartnerDeals());
+  if (state.applied) await rerunAppliedJourney();
+  else renderJourney();
+});
+
+els.demoProfile?.addEventListener("change", async () => {
+  state.profile = PERSONAS.find((profile) => profile.personaId === els.demoProfile.value) || PERSONAS[0];
+  state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
+  if (!state.applied) {
+    setAgent(`Selected ${state.profile.displayName} as a draft demo profile. No profile data will be sent until you enable demo context and apply preferences.`);
+    renderJourney();
+    return;
+  }
+  setAgent(`Changed the applied demo profile to ${state.profile.displayName}. The current journey is being rerun with the existing consent choice.`);
+  await rerunAppliedJourney();
 });
 
 document.getElementById("apply-preferences").addEventListener("click", async () => {
@@ -1010,11 +1051,13 @@ document.getElementById("apply-once").addEventListener("click", async () => {
 });
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
+  state.appliedJourneyRevision += 1;
   state.preferences = {
     ...DEFAULT_PREFERENCES,
     formats: [...DEFAULT_PREFERENCES.formats],
   };
   state.pendingRemember = false;
+  state.selectedWatchOfferId = null;
   state.applied = false;
   state.appliedMode = null;
   state.partnerDeals = [];
@@ -1028,7 +1071,7 @@ document.getElementById("reset-preferences").addEventListener("click", () => {
 });
 
 els.watchButton.addEventListener("click", setDealWatch);
-els.confirmWatch.addEventListener("click", persistPendingWatch);
+els.confirmWatch.addEventListener("click", handoffPendingWatch);
 els.cancelWatch.addEventListener("click", cancelPendingWatch);
 
 document.getElementById("preference-prompt-form").addEventListener("submit", (event) => {
@@ -1148,7 +1191,7 @@ function registerEngineTools() {
   }, "offers.discover");
   register({
     name: "set_deal_watch",
-    description: "Stage a browser-scoped deal point for review. This tool never persists it; the user must confirm the exact fact, scope, retention, and outcome in the page.",
+    description: "Stage an exact Watch Co product and target price for review. This tool never persists or invokes Watch Co; the user must explicitly open Watch Co's independent stage-and-confirm flow.",
     inputSchema: {
       type: "object",
       properties: { targetPrice: { type: "number", exclusiveMinimum: 0 } },
@@ -1157,17 +1200,17 @@ function registerEngineTools() {
     annotations: { readOnlyHint: false },
     execute: async ({ targetPrice }) => {
       if (!prepareDealWatch(targetPrice)) {
-        return { staged: false, error: "targetPrice must be greater than zero", persisted: false };
+        return { staged: false, error: "a matching Watch Co offer and targetPrice greater than zero are required", persisted: false };
       }
       return {
         staged: true,
         persisted: false,
         fact: `Surface ${state.pendingWatch.name} below ${money(state.pendingWatch.target)}`,
-        scope: "Jumping Beans product in this browser",
-        retention: "Until the user chooses Forget",
-        outcome: "Confirmation saves a local watch and offer note; it does not create a notification, order, payment, or message",
+        scope: "Exact product and target price in a one-time navigation to Watch Co",
+        retention: "Jumping Beans does not retain this handoff; Watch Co states its own retention before confirmation",
+        outcome: "Opening Watch Co only prefills the product and target price. Watch Co owns staging, explicit confirmation, and any server persistence; no notification, order, payment, or message is created by Jumping Beans",
         requiresUserConfirmation: true,
-        confirmationAction: "Use the page's Confirm and save deal watch button",
+        confirmationAction: "Use the page's Open Watch Co to stage target price button, then complete Watch Co's explicit confirmation",
       };
     },
   }, "deal_watch.stage");

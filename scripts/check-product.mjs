@@ -160,7 +160,28 @@ includesAll(engineApp, [
   "comparisonMarkup",
   "No opted-in offer matches this context",
   "get_journey_receipt",
+  "profile: PERSONAS[0]",
+  "rerunAppliedJourney",
+  "appliedJourneyRevision",
 ], "engine WebMCP, provenance, and consent contract");
+includesAll(engineHtml, [
+  'id="demo-profile"',
+  'value="alex-budget-parent"',
+  'value="jamie-gift-shopper"',
+  "Use the selected labeled demo profile for this request",
+], "engine explicit demo-profile selection contract");
+const profileSelectionBlock = engineApp.slice(
+  engineApp.indexOf('els.demoProfile?.addEventListener("change"'),
+  engineApp.indexOf('document.getElementById("apply-preferences")'),
+);
+includesAll(profileSelectionBlock, [
+  "PERSONAS.find",
+  "state.profile =",
+  "if (!state.applied)",
+  "No profile data will be sent until you enable demo context and apply preferences.",
+  "await rerunAppliedJourney()",
+], "engine profile selection and applied-journey refresh contract");
+check(!profileSelectionBlock.includes("discoverPartnerDeals("), "Draft profile selection directly invokes native partner discovery");
 const engineWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
 includesAll(engineWorker, [
   '"Permissions-Policy": base.PERMISSIONS',
@@ -211,9 +232,15 @@ includesAll(spikeServer, [
 includesAll(engineApp, [
   "function observeNativeToolChanges()",
   'document.modelContext.addEventListener("toolchange"',
-  "applyPartnerDiscovery(await discoverPartnerDeals())",
+  "const revision = state.appliedJourneyRevision",
+  "if (!state.applied || revision !== state.appliedJourneyRevision) return",
   "observeNativeToolChanges();",
 ], "engine native toolchange reconciliation contract");
+const toolchangeBlock = engineApp.slice(
+  engineApp.indexOf("function observeNativeToolChanges()"),
+  engineApp.indexOf("function choosePartnerOffer("),
+);
+check((toolchangeBlock.match(/revision !== state\.appliedJourneyRevision/g) || []).length === 2, "Native toolchange reconciliation does not reject stale pre- and post-discovery results");
 const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
 includesAll(p0Source, [
   "offers.discover",
@@ -224,7 +251,11 @@ includesAll(p0Source, [
   "decisionReceipt",
   "observedOrInferred: \"observed\"",
 ], "P0 capability and journey primitives");
+check(!p0Source.includes('id: "deal_watch.commit"') && !p0Source.includes("watch_saved"), "Capability catalog still advertises the removed local deal-watch commit");
 const p0 = await import(`${pathToFileURL(path.join(root, "engine/p0.js")).href}?check=${Date.now()}`);
+const handoffCapability = p0.capabilityFor("deal_watch.stage");
+check(handoffCapability?.title === "Stage a Watch Co handoff" && handoffCapability?.outcomeType === "watch_handoff_staged", "Capability catalog does not describe the Watch Co handoff stage");
+check(p0.capabilityFor("deal_watch.commit") === null, "Removed local deal-watch commit remains resolvable");
 const engineOrigin = "https://engine.invalid";
 const discoverGrant = p0.createInvocationGrant({ capabilityId: "offers.discover", audienceOrigin: engineOrigin, scopes: ["offers:read"], purpose: "test-discovery" });
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "missing-grant", "Capability boundary permits a missing grant");
@@ -288,9 +319,34 @@ const dealToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_deal_watch"'),
   engineApp.indexOf('name: "get_profile"'),
 );
-check(!dealToolBlock.includes("writeStored("), "set_deal_watch writes browser storage without page confirmation");
-check(!dealToolBlock.includes("addMemory("), "set_deal_watch writes offer memory without page confirmation");
+const dealHandoffBlock = engineApp.slice(
+  engineApp.indexOf("function selectedWatchOffer()"),
+  engineApp.indexOf("function showToast("),
+);
+check(!engineApp.includes("jumping-beans-deal-watches"), "Engine retains a localStorage key for a claimed deal watch");
+check(!dealHandoffBlock.includes("writeStored(") && !dealHandoffBlock.includes("localStorage") && !dealHandoffBlock.includes("addMemory("), "Engine deal-watch handoff persists or claims a local watch");
+check(!dealHandoffBlock.includes("fetch(") && !dealHandoffBlock.includes("XMLHttpRequest") && !dealHandoffBlock.includes("postMessage") && !dealHandoffBlock.includes("MessagePort") && !dealHandoffBlock.includes("/api/"), "Engine deal-watch handoff uses a non-navigation partner transport");
 check(dealToolBlock.includes("prepareDealWatch(targetPrice)"), "set_deal_watch does not stage the page confirmation flow");
+includesAll(dealHandoffBlock, [
+  "watchHandoffOffers().find",
+  'destination.searchParams.set("jb_watch_product", watch.sku)',
+  'destination.searchParams.set("jb_target_price", watch.target.toFixed(2))',
+  "location.assign(href)",
+  "persisted: false",
+  "Watch Co handoff URL only",
+], "engine Watch Co handoff contract");
+const comparisonBlock = engineApp.slice(
+  engineApp.indexOf("function isWatchHandoffOffer("),
+  engineApp.indexOf("function renderControls()"),
+);
+includesAll(comparisonBlock, [
+  "deal?.partnerOrigin === ORIGINS.watch",
+  'id="watch-handoff-offer"',
+  "state.selectedWatchOfferId",
+  "watchHandoffOffers().find",
+  "Nothing was saved, sent, or invoked.",
+], "selectable Watch Co handoff-offer contract");
+check(!comparisonBlock.includes("discoverPartnerDeals("), "Changing the Watch Co handoff offer invokes partner discovery");
 check(!/illustrative (?:fallback|preview)/i.test(engineApp), "Engine agent-facing copy retains fabricated partner fallback language");
 
 const engineConfig = await readFile(path.join(root, "engine/config.js"), "utf8");
@@ -335,7 +391,27 @@ includesAll(watchHtml, [
   "server-owned pending action",
   'id="interest-action"',
   'id="interest-receipt"',
+  "Watch Co alone stages, confirms, and records",
+  'id="interest-confirmed"',
+  "required",
+  "disabled",
+  'step="0.01"',
 ], "watch form, confirmation, and retention contract");
+const watchInterest = await readFile(path.join(root, "partners/watch/interest.js"), "utf8");
+const watchHandoffBlock = watchInterest.slice(
+  watchInterest.indexOf("function prefillHandoff()"),
+  watchInterest.indexOf("async function request("),
+);
+includesAll(watchHandoffBlock, [
+  "new URLSearchParams(location.search)",
+  'query.get("jb_watch_product")',
+  'query.get("jb_target_price")',
+  "INTEREST_PRODUCT_SKUS.has(handoffProduct)",
+  "minorUnits(handoffTargetPrice)",
+  "form.elements.pricePoint.value",
+  "nothing has been recorded",
+], "Watch Co safe handoff prefill contract");
+check(!watchHandoffBlock.includes("stage(") && !watchHandoffBlock.includes("request("), "Watch handoff prefill silently stages or commits a demand signal");
 
 const watchCatalog = JSON.parse(await readFile(path.join(root, "partners/watch/catalog.json"), "utf8"));
 const productModule = await import(`${pathToFileURL(path.join(root, "partners/watch/interest-products.js")).href}?check=${Date.now()}`);
