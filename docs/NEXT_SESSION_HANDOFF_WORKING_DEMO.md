@@ -63,6 +63,28 @@ current baseline, then reconcile stale status tables as part of the work.
 The demo should feel like a real user-controlled product, with the following
 flows fully functional end to end.
 
+### 0. Hosted identity and personal experience
+
+- Keep the public journey usable anonymously; login is optional, not a gate for
+  discovery.
+- Provide a real hosted login service with an established identity provider
+  (recommended: Google OIDC), validated state/nonce, safe redirects, revocable
+  server-side sessions, Secure/HttpOnly/SameSite cookies, CSRF protection, and
+  abuse limits.
+- Store only hashed session tokens and user-scoped records in an authoritative
+  Jumping Beans D1 database. Do not use WebMCP as an authentication channel.
+- Give signed-in users a durable, inspectable, editable, and forgettable
+  personal profile and offer memory across browsers/devices.
+- Never silently upload browser-local memory during first login; require an
+  explicit import decision.
+- Ensure two users cannot read or mutate one another's profile, memory,
+  watches, or receipts. Partner WebMCP calls receive only the explicitly
+  approved personalization projection, never account credentials or session
+  material.
+- Keep Watch Co's partner-owned write authority separate. Any account linkage
+  must use explicit normal web authentication and must not trust an engine-side
+  identity claim.
+
 ### 1. Anonymous discovery
 
 - Load the public engine without an extension or account dependency.
@@ -163,12 +185,14 @@ Reviewer: GPT-5.6-Sol before integration
 
 Implement the smallest complete slices in this order:
 
-1. demo shell, public loading, native discovery, and anonymous state;
-2. personalization, ranking, comparison, provenance, and one-time apply;
-3. save/forget memory and reload behavior;
-4. deal-watch stage/confirm/replay/concurrency behavior;
-5. native aggregation spike with direct partner detail/action paths;
-6. production resilience, bounded concurrency, rate limits, and observability.
+1. hosted identity, login/logout/session lifecycle, and account-scoped data;
+2. demo shell, public loading, native discovery, and anonymous state;
+3. personalization, ranking, comparison, provenance, and one-time apply;
+4. save/forget memory and reload behavior, including explicit local-memory
+   import;
+5. deal-watch stage/confirm/replay/concurrency behavior and account isolation;
+6. native aggregation spike with direct partner detail/action paths;
+7. production resilience, bounded concurrency, rate limits, and observability.
 
 Each slice must include its tests and user-visible failure states before the
 next slice begins.
@@ -182,6 +206,8 @@ Run clean headed Chrome acceptance without the ChatGPT extension in the
 evidence lane. Test both normal and degraded conditions:
 
 - anonymous and explicitly approved context;
+- login, logout, session expiry, relogin, and hosted personal persistence;
+- two isolated accounts plus anonymous-to-account separation;
 - apply once, save, forget, and reload;
 - all partner combinations and partial failures;
 - native tool discovery and execution;
@@ -207,6 +233,8 @@ The next session is complete only when all of the following are true:
 - A new user can complete the primary journey from the public URL without
   manual developer intervention.
 - The product works for anonymous users and explicitly approved demo context.
+- A real hosted login service provides an optional personal experience with
+  durable user-scoped data and no cross-user leakage.
 - All visible flows above work, including save/forget and the deal-watch write
   boundary.
 - Native WebMCP is the only partner capability transport.

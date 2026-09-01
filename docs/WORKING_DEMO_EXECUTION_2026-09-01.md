@@ -4,6 +4,9 @@ Date: 2026-09-01
 Release lineage: working-demo `v0.4.x` (documentation refresh over the deployed code)
 Decision: **CODE/DEPLOY PASS; BROWSER ACCEPTANCE HOLD**
 
+The release is not competition-ready for the expanded product contract until
+the hosted login and personal-experience slice is implemented and accepted.
+
 ## Review loop
 
 - GPT-5.6-Sol: architecture, native-only aggregation boundary, security
@@ -32,6 +35,9 @@ Decision: **CODE/DEPLOY PASS; BROWSER ACCEPTANCE HOLD**
 - Watch Co owns the D1-backed stage/confirm/commit boundary. The engine only
   hands off a selected Watch offer and canonical target price by navigation;
   it does not claim a local saved watch or call a Watch API.
+- No Jumping Beans identity or account-scoped persistence exists yet; current
+  profile and memory behavior is browser-local. This is an open P0 slice, not a
+  completed login service.
 
 ## Production checks
 
@@ -45,11 +51,15 @@ The Watch D1-backed summary read smoke returned a valid empty cohort.
 
 ## Release blockers
 
-1. Re-run the public journey in clean headed Chrome Stable and Canary without
+1. Implement and accept the hosted login service and personal experience:
+   optional anonymous access, established-provider login, secure revocable
+   sessions, user-scoped D1 records, explicit local-memory import, reload and
+   cross-device persistence, logout/expiry, and two-user isolation.
+2. Re-run the public journey in clean headed Chrome Stable and Canary without
    an extension. Record discovery, execution, anonymous/approved context,
    apply-once/save/forget, Watch stage/confirmation/replay, provenance, and a
    redacted receipt.
-2. Verify multiple-user isolation and production write smoke checks, then
-   reconcile the acceptance record with the deployed `v0.4.0` artifact.
+3. Verify multiple-user isolation and production write smoke checks, then
+   reconcile the acceptance record with the deployed release artifact.
 
 No competition or release success is claimed by this record.

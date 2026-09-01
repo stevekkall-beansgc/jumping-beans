@@ -1,7 +1,8 @@
 # Jumping Beans — next steps
 
 Status: working-demo code integrated; public/browser release gates remain open
-and the full network product remains in scope.
+and the full network product remains in scope. Hosted identity and personal
+account persistence are also required before the competition-ready claim.
 Last updated: 2026-09-01.
 
 ## Current baseline
@@ -25,6 +26,30 @@ Last updated: 2026-09-01.
 The competition is a validation gate, not the product boundary. The immediate
 job is to harden the network while expanding the offering and making the
 ambitious product legible.
+
+## New P0 — hosted identity and personal experience
+
+The current engine profile and offer memory are browser-local. They are not a
+login service and must not be described as a personal account. Add an optional
+hosted login path, preferably Google OIDC using the established Bean Labs auth
+pattern, with a dedicated Jumping Beans identity/session authority and
+user-scoped D1 records.
+
+The slice is complete only when it provides:
+
+- anonymous access remains intact;
+- validated state/nonce, safe redirects, revocable server-side sessions,
+  hashed session tokens, Secure/HttpOnly/SameSite cookies, CSRF protection, and
+  abuse limits;
+- durable profile and offer-memory persistence across browsers/devices;
+- explicit import consent before browser-local memory is uploaded;
+- inspect, edit, save, forget, logout, expiry, and relogin behavior;
+- two-account isolation for profiles, memory, watches, and receipts;
+- no account credentials or session material in WebMCP inputs or receipts.
+
+Watch Co remains the authority for its own D1-backed write path. Cross-site
+account linkage must be explicit normal web authentication and must not use a
+WebMCP bridge or an engine-supplied identity claim.
 
 ## 2026-08-31 P0 resolver slice completed locally
 
