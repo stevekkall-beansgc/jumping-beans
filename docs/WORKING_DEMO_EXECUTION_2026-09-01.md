@@ -1,8 +1,8 @@
 # Jumping Beans — working-demo execution record
 
 Date: 2026-09-01  
-Source checkpoint: `c46d9d7` (local `main`)  
-Decision: **CODE PASS; PUBLIC/BROWSER RELEASE HOLD**
+Release candidate: `v0.4.1` (documentation refresh over the deployed `v0.4.0` code)
+Decision: **CODE/DEPLOY PASS; BROWSER ACCEPTANCE HOLD**
 
 ## Review loop
 
@@ -35,24 +35,21 @@ Decision: **CODE PASS; PUBLIC/BROWSER RELEASE HOLD**
 
 ## Production checks
 
-The configured public engine and three partner URLs returned HTTP 200 with the
-required isolation headers, origin-trial headers, and engine tool allowlist.
-The live pages still serve the pre-`c46d9d7` artifact: the in-app browser showed
-the old Alex-only control, illustrative fallback, and local “Confirm and save”
-watch flow. This is stale-deployment evidence, not a WebMCP acceptance pass.
+The release-triggered Cloudflare workflow completed successfully from
+`51a28f9`. The configured public engine and three partner URLs returned HTTP
+200 with the required isolation headers, origin-trial headers, and engine tool
+allowlist. The live engine now shows the Alex/Jamie selector, honest no-result
+state, and Watch Co handoff; the live Watch page accepts the canonical decimal
+handoff and keeps confirmation disabled until the user reviews the exact action.
+The Watch D1-backed summary read smoke returned a valid empty cohort.
 
 ## Release blockers
 
-1. Push the reviewed source and obtain successful CI on the exact candidate
-   commit.
-2. Publish the versioned release so the repository-owned Cloudflare workflow
-   deploys all four units, including Watch Pages Functions and its existing D1
-   binding.
-3. Re-run the public journey in clean headed Chrome Stable and Canary without
+1. Re-run the public journey in clean headed Chrome Stable and Canary without
    an extension. Record discovery, execution, anonymous/approved context,
    apply-once/save/forget, Watch stage/confirmation/replay, provenance, and a
    redacted receipt.
-4. Verify multiple-user isolation and production write smoke checks, then
-   reconcile the acceptance and deployment records before tagging the release.
+2. Verify multiple-user isolation and production write smoke checks, then
+   reconcile the acceptance record with the deployed `v0.4.0` artifact.
 
 No competition or release success is claimed by this record.

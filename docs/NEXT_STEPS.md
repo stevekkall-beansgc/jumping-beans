@@ -49,10 +49,11 @@ ambitious product legible.
 
 Still required for the broader competition gate: a fresh 3/3 embedded run with
 exported receipts in clean Stable and Canary profiles, plus production
-multi-user/D1 smoke evidence. The engine delegates both `tools` and
+multi-user/D1 write smoke evidence. The engine delegates both `tools` and
 `cross-origin-isolated` to every partner frame and sends the required top-level
-`Permissions-Policy` allowlist. The reviewed hardening is integrated locally;
-the public deployment still needs the exact candidate release.
+`Permissions-Policy` allowlist. The reviewed hardening is deployed in
+`jumping-beans v0.4.0`; the browser acceptance gate remains open until the
+clean profiles are available.
 
 ## 2026-08-31 P0 Watch write-contract slice completed locally
 
