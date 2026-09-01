@@ -4,6 +4,18 @@
 const clonePreferences = (value) => ({ ...value, formats: Array.isArray(value?.formats) ? [...value.formats] : [] });
 const cloneMemory = (value) => Array.isArray(value) ? value.map((item) => ({ ...item })) : [];
 
+export function mergeAccountResponse(previous, response) {
+  const rotatedToken = typeof response?.csrfToken === "string" && response.csrfToken ? response.csrfToken : null;
+  return {
+    ...previous,
+    ...response,
+    // Account writes currently return the account payload without rotating the
+    // server-bound CSRF token. Keep the browser's current token only while the
+    // session remains signed in; logout always clears it.
+    csrfToken: rotatedToken || (response?.signedIn === false ? null : previous?.csrfToken || null),
+  };
+}
+
 export function accountJourneyHydration({ account, hasBrowserPersistence, requestDraftRevision, currentDraftRevision, preferences, memory }) {
   if (!account?.signedIn || hasBrowserPersistence || requestDraftRevision !== currentDraftRevision) return null;
   const hasPreferences = account.hasPreferences === true;

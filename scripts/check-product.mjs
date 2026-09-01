@@ -169,6 +169,7 @@ includesAll(engineApp, [
   "rerunAppliedJourney",
   "appliedJourneyRevision",
   "hydrateAccountJourney",
+  "mergeAccountResponse",
   "draftRevision",
   "hasBrowserPersistence",
 ], "engine WebMCP, provenance, and consent contract");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget } from "./personal-experience.js";
+import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
 
 const defaults = { formats: ["price-proof"], tone: "calm", maxPrice: null };
 const localNote = [{ key: "local", title: "Local note" }];
@@ -52,5 +52,15 @@ assert.deepEqual(loggedOut.memory, []);
 const browserDraftAfterLogout = accountJourneyAfterLogout({ preferenceSource: "browser", memorySource: "browser", preferences: { formats: ["testimonial"], maxPrice: 12 }, memory: localNote, anonymousPreferences: defaults, hasSavedPreferences: true });
 assert.equal(browserDraftAfterLogout.preferences.formats[0], "testimonial");
 assert.deepEqual(browserDraftAfterLogout.memory, localNote);
+
+// Regression: a successful preferences write returns csrfToken:null. Preserve
+// the current server-bound token so the immediately following explicit import
+// is still sent with it; no browser memory is imported until that request.
+const accountBeforeSave = { signedIn: true, csrfToken: "csrf_from_account_get", preferences: {}, memory: [] };
+const afterSaveResponse = mergeAccountResponse(accountBeforeSave, { signedIn: true, csrfToken: null, preferences: { formats: ["video"] } });
+assert.equal(afterSaveResponse.csrfToken, "csrf_from_account_get", "write response clears the CSRF token needed for explicit import");
+const explicitImportHeaders = { "x-jb-csrf": afterSaveResponse.csrfToken };
+assert.equal(explicitImportHeaders["x-jb-csrf"], "csrf_from_account_get", "sequential explicit import loses the CSRF token after save");
+assert.equal(mergeAccountResponse(afterSaveResponse, { signedIn: false }).csrfToken, null, "logout retains a revoked CSRF token");
 
 console.log("personal experience hydration contracts pass");

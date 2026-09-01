@@ -24,7 +24,7 @@ import {
   resolvePartnerTools,
   resolveOfferDeals,
 } from "./p0.js";
-import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget } from "./personal-experience.js";
+import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
 
 const els = {
   status: document.getElementById("status"),
@@ -811,7 +811,7 @@ async function accountRequest(path, payload) {
   });
   const next = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(next.error || "account-request-failed");
-  state.account = { ...state.account, ...next, error: "" };
+  state.account = { ...mergeAccountResponse(state.account, next), error: "" };
   renderAccount();
   return next;
 }
