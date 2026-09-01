@@ -5,10 +5,10 @@ Release lineage: working-demo `v0.5.1` (`ecaf973`)
 Decision: **CODE/DEPLOY PASS; COMPETITION ACCEPTANCE HOLD**
 
 The release is not competition-ready for the expanded product contract until
-the hosted login/personal-experience browser flow, clean native WebMCP browser
-evidence, two-user isolation, and production Watch write evidence are
-accepted. The identity slice is now implemented, configured, deployed, and
-accepted for one real account;
+the remaining account lifecycle checks and clean native WebMCP browser
+evidence are accepted. The identity slice is implemented, configured,
+deployed, and accepted for one real account, with a second-account hosted
+memory isolation check now passed;
 the remaining status is recorded in
 `docs/PRODUCTION_ACCEPTANCE_2026-09-01.md`.
 
@@ -30,7 +30,7 @@ the remaining status is recorded in
 
 ## Current code gates
 
-- `node scripts/check-product.mjs`: **477 assertions passed**.
+- `node scripts/check-product.mjs`: **517 assertions passed**.
 - JavaScript/JSON syntax, generated UI freshness, engine bundle freshness, and
   `git diff --check`: passed.
 - Anonymous discovery remains default; demo context is explicit, labeled,
@@ -48,7 +48,7 @@ the remaining status is recorded in
 ## Production checks
 
 The release-triggered Cloudflare workflow completed successfully from
-`51a28f9`. The configured public engine and three partner URLs returned HTTP
+`ecaf973`. The configured public engine and three partner URLs returned HTTP
 200 with the required isolation headers, origin-trial headers, and engine tool
 allowlist. The live engine now shows the Alex/Jamie selector, honest no-result
 state, and Watch Co handoff; the live Watch page accepts the canonical decimal
@@ -57,15 +57,21 @@ The Watch D1-backed summary read smoke returned a valid empty cohort.
 
 The dedicated `jumping-beans-engine-identity` D1 was provisioned and migration
 `engine/migrations/0001_identity.sql` was applied remotely. Google OIDC Worker
-secrets are now configured and the release deployment is live. Anonymous use
+secrets are configured and the release deployment is live. Anonymous use
 continues to fail safe; the public login route reaches Google's account
-chooser. A completed signed-in account journey is still pending headed-browser
-handoff and evidence.
+chooser. One account completed the signed-in journey and a separate second
+identity reported no hosted notes while the first account's browser-local notes
+remained visible.
+
+The approved production Watch smoke also passed: one concurrent commit was
+committed, the duplicate was replayed, a same-payload replay returned the
+original receipt, and a changed-payload replay was rejected with HTTP 409.
 
 ## Release blockers
 
-1. Complete the hosted login/personal-experience smoke for a second
-   authenticated identity, including cross-user isolation and account forget.
+1. Complete the remaining hosted account lifecycle checks, including account
+   forget, expiry, reload/cross-device persistence, and production isolation
+   for Watch records, receipts, and sessions.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.

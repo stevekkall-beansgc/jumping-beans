@@ -20,7 +20,7 @@ that the competition gate is complete.
 
 | Check | Result | Evidence |
 |---|---|---|
-| Product gate | PASS | `516 assertions passed` on main |
+| Product gate | PASS | `517 assertions passed` on main |
 | CI | PASS | Gate and Jumping Beans checks passed for `9b756fc` |
 | Public deployment | PASS | All four surfaces deployed by the release workflow |
 | Anonymous account behavior | PASS | `GET /api/account` → `{"signedIn":false}` |
@@ -31,7 +31,7 @@ that the competition gate is complete.
 | Watch session controls | PASS | Bootstrap response includes redacted `HttpOnly; SameSite=Strict; Secure` cookie |
 | Watch commit/replay/concurrency | PASS for approved smoke | One concurrent request committed, the other replayed; same-payload replay returned the original receipt; changed-payload replay returned HTTP 409; summary showed one `$123.45` record |
 | Signed-in personal experience | PASS for one account | Google sign-in, hosted preference save, explicit two-note import, logout, relogin, and hosted-note restoration passed in the headed browser |
-| Two-user isolation | OPEN | Requires two authenticated test identities in clean headed sessions |
+| Two-user isolation | PASS for hosted memory boundary | First account restored two hosted notes; second authenticated identity reported no hosted product notes while the same browser retained only local notes |
 | Stable/Canary native WebMCP | OPEN | Current Codex browser surfaces are not admissible clean extension-free evidence |
 
 No secret, raw session token, OAuth state, nonce, code verifier, CSRF token,
@@ -58,13 +58,21 @@ that defect in `7f9f95b`; Luna reviewed it; main integrated it as `ecaf973`;
 CI passed at 517 assertions; and v0.5.1 redeployed it. No rejected import
 uploaded the notes.
 
+## Second-account isolation run
+
+The user completed Google sign-in for a separate test identity. The resulting
+headed session reported a signed-in account with no saved hosted product notes,
+while the browser still displayed the first account's two browser-local notes.
+This proves the hosted memory boundary is account-scoped and does not inherit
+the first account's imported notes. No profile payload, credential, token, or
+secret is included here.
+
 ## Remaining release gates
 
-1. Complete Google sign-in in a clean headed session and verify account-owned
-   profile, preferences, memory, explicit import, forget, logout, expiry, and
-   relogin behavior.
-2. Repeat with a second authenticated test identity and prove that profile,
-   memory, watches, receipts, and sessions cannot cross boundaries.
+1. Complete the remaining account-owned forget, expiry, reload/cross-device,
+   and relogin checks; the two-account hosted-memory boundary is now proven.
+2. Repeat production isolation for watches, receipts, and sessions, not only
+   hosted memory.
 3. Run the full public journey in clean Chrome Stable and Canary without the
    Codex/ChatGPT extension: native discovery, three partner invocations,
    personalization, apply-once/save/forget, provenance, partial/no-match

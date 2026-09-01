@@ -46,13 +46,15 @@ The slice is complete for release only when it provides:
 - two-account isolation for profiles, memory, watches, and receipts;
 - no account credentials or session material in WebMCP inputs or receipts.
 
-Current implementation: product gate **516 assertions passed**; remote
+Current implementation: product gate **517 assertions passed**; remote
 `jumping-beans-engine-identity` D1 is provisioned and migrated; release
 `v0.5.1` is deployed from `ecaf973`; public anonymous/login-route/Watch-stage
-smokes pass, and one real signed-in account completed preference save, explicit
-memory import, logout, relogin, and hosted-memory restoration. Remaining
-external work is two-user headed-browser evidence, production Watch commit
-proof, and clean extension-free Stable/Canary WebMCP evidence.
+smokes pass, one real signed-in account completed preference save, explicit
+memory import, logout, relogin, and hosted-memory restoration, and a second
+authenticated identity was confirmed isolated from those hosted notes.
+Remaining external work is production isolation for Watch records/receipts and
+sessions, account forget/expiry/cross-device checks, and clean extension-free
+Stable/Canary WebMCP evidence.
 
 Watch Co remains the authority for its own D1-backed write path. Cross-site
 account linkage must be explicit normal web authentication and must not use a
