@@ -53,9 +53,10 @@ smokes pass, one real signed-in account completed preference save, explicit
 memory import, logout, relogin, and hosted-memory restoration, and a second
 authenticated identity was confirmed isolated from those hosted notes.
 Remaining external work is production isolation for Watch records/receipts and
-sessions, account forget/expiry/cross-device checks, the full explicit-apply
-journey receipt, and clean Stable WebMCP evidence. Canary's native capability
-and three-partner invocation lane is now recorded as passed.
+sessions, account forget/expiry/cross-device checks, and clean Stable WebMCP
+evidence. Canary's native capability, three-partner invocation, explicit
+personalization, apply-once, provenance, and redacted receipt lane is now
+recorded as passed.
 
 Watch Co remains the authority for its own D1-backed write path. Cross-site
 account linkage must be explicit normal web authentication and must not use a

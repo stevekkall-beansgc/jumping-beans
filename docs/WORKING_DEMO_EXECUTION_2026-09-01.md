@@ -76,9 +76,8 @@ original receipt, and a changed-payload replay was rejected with HTTP 409.
 2. Accept the hosted personal experience in clean headed browsers: relogin,
    expiry, reload/cross-device persistence, explicit local-memory import,
    logout, and two-user isolation.
-3. Complete the explicit-apply native journey receipt in Canary and re-run the
-   public journey in clean headed Chrome Stable without an extension. Record
-   discovery, execution, anonymous/approved context,
+3. Re-run the public journey in clean headed Chrome Stable without an
+   extension. Record discovery, execution, anonymous/approved context,
    apply-once/save/forget, Watch stage/confirmation/replay, provenance, and a
    redacted receipt.
 4. Verify production multi-user/D1 write smoke checks, then

@@ -67,10 +67,10 @@ Native `getTools({ fromOrigins })` returned the engine tools plus exactly one
 `get_matching_deals` tool for each of Petsupply, Coffee Co, and Watch Co. Native
 `executeTool()` calls (serialized input, as required by this Chromium build)
 returned bounded results from all three origins: 1, 9, and 24 offers
-respectively. A redacted native `get_journey_receipt()` call also returned the
-journey/capability receipt with the three connected origins. Because this
-console run did not complete the page's explicit apply action, its receipt had
-zero exposed offers and is not counted as the full public-journey acceptance.
+respectively. The page's explicit Alex-context/apply-once journey then returned
+a redacted native `get_journey_receipt()` with 37 considered, 24
+eligible/relevant, 12 exposed, and the three connected origins. The visible
+page reported the applied-once outcome and an opted-in partner result.
 
 ## Second-account isolation run
 
