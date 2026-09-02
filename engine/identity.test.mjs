@@ -27,7 +27,16 @@ assert.equal(JSON.stringify(hostedPreferences).includes("secret"), false);
 
 const anonymous = await handleIdentity(new Request("https://engine.invalid/api/account"), {});
 assert.equal(anonymous.status, 200);
-assert.deepEqual(await anonymous.json(), { signedIn: false });
+assert.deepEqual(await anonymous.json(), { signedIn: false, signInAvailable: false });
+const configured = { ENGINE_DB: {}, GOOGLE_OIDC_CLIENT_ID: "fixture-client", GOOGLE_OIDC_CLIENT_SECRET: "fixture-secret", ENGINE_PUBLIC_ORIGIN: "https://engine.invalid" };
+const ready = await handleIdentity(new Request("https://engine.invalid/api/account"), configured);
+assert.deepEqual(await ready.json(), { signedIn: false, signInAvailable: true });
+for (const missing of Object.keys(configured)) {
+  const incomplete = { ...configured }; delete incomplete[missing];
+  const response = await handleIdentity(new Request("https://engine.invalid/api/account"), incomplete);
+  assert.deepEqual(await response.json(), { signedIn: false, signInAvailable: false });
+}
+assert.equal(safeReturnPath("/#account"), "/#account");
 const unavailable = await handleIdentity(new Request("https://engine.invalid/api/account", { headers: { cookie: "__Host-jb-session=forged" } }), {});
 assert.equal(unavailable.status, 503);
 assert.deepEqual(await unavailable.json(), { error: "storage-unavailable" });

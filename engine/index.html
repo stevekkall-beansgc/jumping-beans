@@ -18,11 +18,14 @@
         <a class="bl-brand" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
         <p class="bl-muted product-note">User-controlled offer memory</p>
       </div>
-      <nav class="engine-nav" aria-label="Jumping Beans views" role="tablist">
-        <button class="engine-tab" id="tab-product" type="button" role="tab" aria-selected="true" aria-controls="product-view" data-engine-tab="product">What you want to see</button>
-        <button class="engine-tab" id="tab-network" type="button" role="tab" aria-selected="false" aria-controls="network-view" data-engine-tab="network" tabindex="-1">Your network</button>
-        <button class="engine-tab" id="tab-demo" type="button" role="tab" aria-selected="false" aria-controls="demo-view" data-engine-tab="demo" tabindex="-1">Demo / WebMCP details</button>
-      </nav>
+      <a class="bl-button header-account" data-variant="secondary" id="header-account" href="#account">Sign in</a>
+      <details class="bl-disclosure engine-details">
+        <summary class="bl-disclosure__summary">How this works</summary>
+        <div class="bl-disclosure__body bl-stack" data-space="compact">
+          <p>Jumping Beans keeps setup in one workspace. Technical protocol details and the original demonstration remain available separately.</p>
+          <a class="bl-button" data-variant="quiet" href="#demo" data-engine-link="demo">Open demo and WebMCP details</a>
+        </div>
+      </details>
       <p class="bl-muted connection-status" role="status" aria-live="polite">
         <span class="status-dot" id="status-dot" data-on="0" aria-hidden="true"></span>
         <span id="status">Open inventory ready. Checking opted-in partner sites.</span>
@@ -31,95 +34,153 @@
   </header>
 
   <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
-    <section class="product-view bl-stack" id="product-view" role="tabpanel" aria-labelledby="tab-product">
+    <section class="product-view bl-stack" id="product-view" aria-labelledby="product-title">
       <div class="product-hero bl-measure">
         <p class="eyebrow">Your preference layer</p>
-        <h1>What do you want to see?</h1>
+        <h1 id="product-title" tabindex="-1">What do you want to see?</h1>
         <p class="lede">Tell Jumping Beans what matters to you. We’ll turn it into clear preferences you can use across your network.</p>
       </div>
 
-      <section class="bl-card product-card" id="product-chooser" aria-labelledby="chooser-title">
-        <p class="section-label">Start with a style</p>
-        <h2 id="chooser-title">How should your network feel?</h2>
-        <p class="field-hint">Choose one starting point. You can change it before anything is saved or shared.</p>
-        <div class="style-grid">
-          <button class="style-option" type="button" data-starter-style="visual"><strong>Visual</strong><span>Let images and product stories lead.</span></button>
-          <button class="style-option" type="button" data-starter-style="balanced"><strong>Balanced</strong><span>Show useful facts without extra work.</span></button>
-          <button class="style-option" type="button" data-starter-style="compare"><strong>Compare</strong><span>Make price and evidence easy to scan.</span></button>
-          <button class="style-option" type="button" data-starter-style="custom"><strong>Start with my own words</strong><span>Describe what matters in your own words.</span></button>
-        </div>
-      </section>
-
-      <section class="bl-card product-card" aria-labelledby="builder-title">
-        <div class="product-card-heading">
-          <div>
-            <p class="section-label">Make it yours</p>
-            <h2 id="builder-title">Shape your preferences</h2>
-          </div>
-          <span class="bl-badge source-pill source-user" data-status="success">Draft only</span>
-        </div>
-        <p class="field-hint">These choices stay here until you review and choose what to do with them.</p>
-        <form id="product-preferences-form" class="product-form">
-          <label for="product-category">What are you shopping for?</label>
-          <input id="product-category" name="category" type="text" maxlength="80" placeholder="For example, watches or dog gear" autocomplete="off">
-          <label for="product-style">Feed style</label>
-          <select id="product-style" name="style">
-            <option value="visual">Visual</option>
-            <option value="balanced" selected>Balanced</option>
-            <option value="compare">Compare</option>
-            <option value="custom">My own words</option>
-          </select>
-          <label for="product-max-price">Price ceiling <span>(optional)</span></label>
-          <div class="money-input"><span aria-hidden="true">$</span><input id="product-max-price" name="maxPrice" type="number" min="0" max="10000000" step="0.01" placeholder="No limit" inputmode="decimal"></div>
-          <button class="bl-button" type="submit">Review my preferences</button>
-        </form>
-        <form id="product-prompt" class="product-prompt">
-          <label for="product-prompt-input">Or say it in your own words</label>
-          <div class="compose-row"><input id="product-prompt-input" name="prompt" type="text" placeholder="Show me proof, not pressure" autocomplete="off"><button class="bl-button" data-variant="secondary" type="submit">Add preference</button></div>
-        </form>
-        <section class="product-rule-manager" aria-labelledby="product-rules-title">
+      <div class="product-workspace bl-stack">
+        <section class="bl-card product-card product-entry" id="product-entry" aria-labelledby="product-entry-title">
           <div class="product-card-heading">
             <div>
-              <p class="section-label">Your words</p>
-              <h3 id="product-rules-title">Preference rules</h3>
+              <p class="section-label" id="product-entry-label">Set up your preferences</p>
+              <h2 id="product-entry-title" tabindex="-1">Choose how to begin</h2>
             </div>
-            <span class="field-hint">Add as many as you need.</span>
+            <span class="bl-badge" id="product-entry-badge">Not set up</span>
           </div>
-          <p class="field-hint">Use a rule everywhere, or for the category above. When a category has its own rule, that is the one your network sees there.</p>
-          <form class="product-rule-form" id="product-rule-form">
-            <label for="product-rule-text">What should your network keep in mind?</label>
-            <div class="product-rule-entry">
-              <input id="product-rule-text" name="ruleText" type="text" maxlength="240" placeholder="For example, show repair options first" autocomplete="off">
-              <label class="product-rule-scope-label" for="product-rule-scope">Where</label>
-              <select id="product-rule-scope" name="ruleScope">
-                <option value="everywhere">Everywhere</option>
-                <option value="category">For this category</option>
-              </select>
-              <button class="bl-button" data-variant="secondary" type="submit">Add rule</button>
-            </div>
-          </form>
-          <div class="product-rule-list" id="product-rule-list" aria-live="polite"></div>
+          <p id="product-entry-copy">Nothing is saved yet. Pick a comfortable starting point; you’ll review the draft before it can be saved or used.</p>
+          <div class="setup-paths bl-actions" id="product-setup-paths" aria-label="Preference setup paths">
+            <button class="bl-button setup-path" type="button" data-setup-path="style" aria-pressed="false">Start with a style</button>
+            <button class="bl-button setup-path" data-variant="secondary" type="button" data-setup-path="words" aria-pressed="false">Describe it in your own words</button>
+            <button class="bl-button setup-path" data-variant="secondary" type="button" data-setup-path="manual" aria-pressed="false">Set up manually</button>
+          </div>
+          <div class="saved-preference-actions bl-actions" id="saved-preference-actions" hidden>
+            <button class="bl-button" id="product-review-saved" type="button">Review saved preferences</button>
+            <button class="bl-button" data-variant="secondary" id="product-start-fresh" type="button">Start fresh</button>
+          </div>
+          <p class="field-hint" id="saved-preference-note" hidden>Starting fresh creates a new draft. Your saved preferences stay unchanged until you save a replacement or use Forget.</p>
         </section>
-      </section>
 
-      <section class="bl-card product-card product-review" id="product-review" aria-labelledby="product-review-title" hidden>
-        <p class="section-label">Before anything changes</p>
-        <h2 id="product-review-title">Here’s what we’ll use</h2>
-        <ul class="product-review-list" id="product-review-rules"></ul>
-        <p class="product-review-sharing" id="product-review-sharing"></p>
-        <div class="product-review-actions">
-          <button class="bl-button" id="product-save" type="button">Use these preferences and save</button>
-          <button class="bl-button" data-variant="secondary" id="product-use-once" type="button">Use this time only</button>
-        </div>
-      </section>
+        <section class="bl-card product-card product-preview" id="product-preview" aria-labelledby="product-preview-title" hidden>
+          <div class="product-card-heading">
+            <div>
+              <p class="section-label">Preference preview</p>
+              <h2 id="product-preview-title" tabindex="-1">Here’s what we’ll use</h2>
+            </div>
+            <span class="bl-badge" id="product-preview-badge" data-status="info">Draft</span>
+          </div>
 
-      <button class="product-network-link" id="product-network-link" type="button">See your network</button>
+          <div class="preview-path-controls bl-stack" id="preview-style-controls" data-space="compact" hidden>
+            <p class="field-hint">Choose a starting style. The selected style updates the preview but remains a draft.</p>
+            <div class="style-grid" aria-label="Starting style">
+              <button class="style-option" type="button" data-starter-style="visual" aria-pressed="false"><strong>Visual</strong><span>Let images and product stories lead.</span></button>
+              <button class="style-option" type="button" data-starter-style="balanced" aria-pressed="true"><strong>Balanced</strong><span>Show useful facts without extra work.</span></button>
+              <button class="style-option" type="button" data-starter-style="compare" aria-pressed="false"><strong>Compare</strong><span>Make price and evidence easy to scan.</span></button>
+            </div>
+          </div>
+
+          <section class="preference-chat preview-path-controls" id="preview-words-chat" aria-labelledby="preview-words-title" hidden>
+            <h3 id="preview-words-title">Describe it in your own words</h3>
+            <ol class="preference-chat-log" id="preview-words-log" role="log" aria-live="polite" aria-relevant="additions text"></ol>
+            <form class="product-prompt" id="preview-words-form">
+              <label for="preview-words-input">What matters to you?</label>
+              <p class="field-hint" id="preview-words-hint">Use one short sentence. Jumping Beans will turn it into a visible draft rule.</p>
+              <div class="compose-row"><input id="preview-words-input" name="prompt" type="text" maxlength="240" placeholder="For example, show proof, not pressure" autocomplete="off" aria-describedby="preview-words-hint"><button class="bl-button" type="submit">Update preview</button></div>
+            </form>
+          </section>
+
+          <p class="product-review-status" id="product-review-status" role="status" aria-live="polite">Draft ready. Nothing is saved or shared until you choose an option below.</p>
+          <ul class="product-review-list" id="product-review-rules"></ul>
+          <dl class="product-preview-facts">
+            <div><dt>Scope</dt><dd>Jumping Beans product; approved preferences may be shared with opted-in member sites through native WebMCP.</dd></div>
+            <div><dt>Retention</dt><dd id="product-preview-retention">Draft only. Not saved yet.</dd></div>
+            <div><dt>Outcome</dt><dd>No order, payment, message, or automatic Network transition is created.</dd></div>
+          </dl>
+
+          <div class="preview-edit-actions bl-actions">
+            <button class="bl-button" data-variant="secondary" id="product-fine-tune" type="button" aria-expanded="false" aria-controls="product-builder">Fine-tune preferences</button>
+            <button class="bl-button" data-variant="quiet" id="product-back-to-paths" type="button">Back to setup options</button>
+            <button class="bl-button" data-variant="quiet" id="product-start-over" type="button">Start over with a blank draft</button>
+          </div>
+
+          <section class="product-builder" id="product-builder" aria-labelledby="builder-title" hidden>
+            <div class="product-card-heading">
+              <div>
+                <p class="section-label">Fine-tune</p>
+                <h3 id="builder-title" tabindex="-1">Shape your preferences</h3>
+              </div>
+              <span class="bl-badge source-pill source-user" data-status="info">Draft only</span>
+            </div>
+            <p class="field-hint">These choices stay here until you review and choose what to do with them.</p>
+            <form id="product-preferences-form" class="product-form">
+              <label for="product-category">What are you shopping for?</label>
+              <input id="product-category" name="category" type="text" maxlength="80" placeholder="For example, watches or dog gear" autocomplete="off">
+              <label for="product-style">Feed style</label>
+              <select id="product-style" name="style">
+                <option value="visual">Visual</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="compare">Compare</option>
+                <option value="custom">My own words</option>
+              </select>
+              <label for="product-max-price">Price ceiling <span>(optional)</span></label>
+              <div class="money-input"><span aria-hidden="true">$</span><input id="product-max-price" name="maxPrice" type="number" min="0" max="10000000" step="0.01" placeholder="No limit" inputmode="decimal"></div>
+              <button class="bl-button" type="submit">Update preview</button>
+            </form>
+            <form id="product-prompt" class="product-prompt">
+              <label for="product-prompt-input">Add another preference in your own words</label>
+              <div class="compose-row"><input id="product-prompt-input" name="prompt" type="text" maxlength="240" placeholder="Show me proof, not pressure" autocomplete="off"><button class="bl-button" data-variant="secondary" type="submit">Add preference</button></div>
+            </form>
+            <section class="product-rule-manager" aria-labelledby="product-rules-title">
+              <div class="product-card-heading">
+                <div>
+                  <p class="section-label">Your words</p>
+                  <h3 id="product-rules-title">Preference rules</h3>
+                </div>
+                <span class="field-hint">Add as many as you need.</span>
+              </div>
+              <p class="field-hint">Use a rule everywhere, or for the category above. When a category has its own rule, that is the one your network sees there.</p>
+              <form class="product-rule-form" id="product-rule-form">
+                <label for="product-rule-text">What should your network keep in mind?</label>
+                <div class="product-rule-entry">
+                  <input id="product-rule-text" name="ruleText" type="text" maxlength="240" placeholder="For example, show repair options first" autocomplete="off">
+                  <label class="product-rule-scope-label" for="product-rule-scope">Where</label>
+                  <select id="product-rule-scope" name="ruleScope">
+                    <option value="everywhere">Everywhere</option>
+                    <option value="category">For this category</option>
+                  </select>
+                  <button class="bl-button" data-variant="secondary" type="submit">Add rule</button>
+                </div>
+              </form>
+              <div class="product-rule-list" id="product-rule-list" aria-live="polite"></div>
+            </section>
+          </section>
+
+          <aside class="bl-callout bl-stack product-consent" data-tone="info" data-space="compact" aria-labelledby="product-consent-title">
+            <h3 class="bl-callout__title" id="product-consent-title">Choose what happens to this draft</h3>
+            <p id="product-review-sharing"></p>
+            <div class="bl-actions" id="product-review-actions">
+              <button class="bl-button" id="product-save" type="button">Save and apply</button>
+              <button class="bl-button" data-variant="secondary" id="product-use-once" type="button">Apply once without saving</button>
+            </div>
+          </aside>
+
+          <div class="bl-actions"><button class="bl-button" data-variant="quiet" id="product-account-save" data-account-intent="save" type="button">Save to account for sync</button></div>
+
+          <div class="product-applied-actions bl-actions" id="product-applied-actions" hidden>
+            <button class="bl-button" id="product-network-link" type="button">See your results</button>
+            <button class="bl-button" data-variant="secondary" id="product-keep-editing" type="button">Keep editing</button>
+          </div>
+        </section>
+      </div>
     </section>
 
-    <section class="network-view bl-stack" id="network-view" role="tabpanel" aria-labelledby="tab-network" hidden>
+    <section class="network-view bl-stack" id="network-view" aria-labelledby="network-title" hidden>
+      <button class="bl-button view-back" data-variant="quiet" type="button" data-engine-view="product">Back to preferences</button>
       <div class="product-hero bl-measure">
         <p class="eyebrow">Your network</p>
-        <h1>A feed shaped around what matters to you.</h1>
+        <h1 id="network-title" tabindex="-1">A feed shaped around what matters to you.</h1>
         <p class="lede" id="network-status">Use your preferences to see a network shaped around them.</p>
       </div>
       <div class="network-toolbar bl-card">
@@ -129,10 +190,11 @@
       <section class="product-feed" id="network-feed" aria-label="Personalized network feed"></section>
     </section>
 
-    <section class="demo-view" id="demo-view" role="tabpanel" aria-labelledby="tab-demo" hidden>
+    <section class="demo-view" id="demo-view" aria-labelledby="page-title" hidden>
+    <button class="bl-button view-back" data-variant="quiet" type="button" data-engine-view="product">Back to preferences</button>
     <section class="bl-stack bl-measure intro" data-space="compact" aria-labelledby="page-title">
       <p class="eyebrow">Agent-led offer journey</p>
-      <h1 id="page-title">Let the next offer remember what you chose.</h1>
+      <h1 id="page-title" tabindex="-1">Let the next offer remember what you chose.</h1>
       <p class="lede">Concierge starts with an open catalog offer. Partner calls begin without persona data; you may explicitly approve a labeled demo profile for one request. Approved context can affect eligibility and ranking.</p>
       <dl class="source-key" aria-label="Inventory source types">
         <div>
@@ -291,30 +353,72 @@
           <button class="bl-button text-button" data-variant="danger" id="forget-all" type="button" hidden>Forget all saved notes</button>
         </section>
 
-        <section class="memory-section account-section" aria-labelledby="account-title">
-          <h3 id="account-title">Hosted personal experience</h3>
-          <p id="account-status" class="field-hint">Continue anonymously, or sign in to keep a separate account-owned copy of choices you explicitly save.</p>
-          <a class="bl-button" data-variant="secondary" id="account-login" href="/auth/login?returnTo=/">Sign in with Google</a>
-          <div id="account-details" hidden>
-            <label for="account-display-name">Account display name</label>
-            <input id="account-display-name" name="accountDisplayName" type="text" maxlength="120" autocomplete="name">
-            <div class="bl-actions account-actions">
-              <button class="bl-button" data-variant="secondary" id="account-save-profile" type="button">Save profile</button>
-              <button class="bl-button" data-variant="quiet" id="account-save-preferences" type="button">Save current display rules</button>
-            </div>
-            <label class="demo-context-choice"><input id="account-import-confirm" type="checkbox"><span>Import this browser’s saved rules and product notes to my account</span></label>
-            <p class="field-hint">This is optional and never happens automatically. It uploads only the local rules and notes currently shown here; partner data, receipts, and session credentials are excluded.</p>
-            <button class="bl-button" data-variant="secondary" id="account-import" type="button">Import selected browser memory</button>
-            <p id="account-memory-summary" class="field-hint"></p>
-            <div class="bl-actions account-actions">
-              <button class="bl-button" data-variant="danger" id="account-forget-memory" type="button">Forget account product notes</button>
-              <button class="bl-button" data-variant="danger" id="account-forget-profile" type="button">Clear account profile</button>
-              <button class="bl-button" data-variant="quiet" id="account-logout" type="button">Log out</button>
-            </div>
-          </div>
-        </section>
+
       </aside>
     </div>
+    </section>
+
+    <section class="account-view bl-stack" id="account-view" aria-labelledby="account-title" hidden>
+      <a class="bl-button view-back" data-variant="quiet" id="account-back" href="#product">Back to preferences</a>
+      <section class="bl-card product-card account-section bl-stack">
+        <div class="product-card-heading">
+          <div><p class="section-label">Your account</p><h1 id="account-title" tabindex="-1">Save across devices, when you’re ready.</h1></div>
+          <span class="bl-badge" id="account-badge">Not signed in</span>
+        </div>
+        <p id="account-status" role="status" aria-live="polite">Continue anonymously, or sign in to save a separate account copy.</p>
+        <aside class="bl-callout bl-stack" data-tone="info" aria-labelledby="account-gate-title">
+          <h2 class="bl-callout__title" id="account-gate-title" tabindex="-1">Sign in to sync</h2>
+          <p id="account-gate-copy">Sign in to save preferences across devices. Browsing, setup, local drafts, Save and apply in this browser, and Apply once without saving remain available without an account.</p>
+          <p id="account-draft-notice" class="field-hint">When you sign in, your draft is kept temporarily in this tab for up to 30 minutes and restored when you return. Signing in does not save or import it to your account.</p>
+          <div class="bl-actions">
+            <a class="bl-button" id="account-login" href="/auth/login?returnTo=%2F%23account">Sign in with Google</a>
+            <button class="bl-button" data-variant="secondary" id="account-retry" type="button" hidden>Check account service again</button>
+            <a class="bl-button" data-variant="quiet" id="account-continue" href="#product">Continue without signing in</a>
+          </div>
+        </aside>
+        <div class="bl-actions" aria-label="Account features">
+          <button class="bl-button" data-variant="secondary" type="button" data-account-intent="save">Save to account for sync</button>
+          <button class="bl-button" data-variant="secondary" type="button" data-account-intent="import">Import browser memory</button>
+          <button class="bl-button" data-variant="secondary" type="button" data-account-intent="profile">Edit account profile</button>
+        </div>
+        <div id="account-details" class="bl-stack" hidden>
+          <div id="account-draft-review" class="bl-stack">
+            <h2>Current draft rules</h2>
+            <ul class="product-review-list" id="account-preference-preview"></ul>
+          </div>
+          <section class="bl-stack" aria-labelledby="account-save-title">
+            <h2 id="account-save-title" tabindex="-1">Save preferences to your account</h2>
+            <p>This saves the current draft as your account’s display rules until you replace them. It does not apply the draft to partners.</p>
+            <div class="bl-actions"><button class="bl-button" id="account-save-preferences" type="button">Save current display rules</button></div>
+          </section>
+          <section class="bl-stack" aria-labelledby="account-import-title">
+            <h2 id="account-import-title" tabindex="-1">Import browser memory</h2>
+            <p id="account-import-scope">Upload the current draft rules, account display name, and this browser’s product notes. They stay in your account until you clear or replace them. Partner data, receipts, and session credentials are excluded.</p>
+            <p id="account-import-profile" class="field-hint"></p>
+            <ul class="memory-list" id="account-import-preview"></ul>
+            <label class="demo-context-choice"><input id="account-import-confirm" type="checkbox" aria-describedby="account-import-scope"><span>Import these rules and browser product notes to my account</span></label>
+            <div class="bl-actions"><button class="bl-button" data-variant="secondary" id="account-import" type="button">Import selected browser memory</button></div>
+          </section>
+          <section class="bl-stack" aria-labelledby="account-profile-title">
+            <h2 id="account-profile-title" tabindex="-1">Account profile</h2>
+            <label for="account-display-name">Account display name</label>
+            <input id="account-display-name" name="accountDisplayName" type="text" maxlength="120" autocomplete="nickname">
+            <div class="bl-actions account-actions"><button class="bl-button" data-variant="secondary" id="account-save-profile" type="button">Save profile</button></div>
+          </section>
+          <p id="account-action-status" role="status" aria-live="polite"></p>
+          <details class="bl-disclosure">
+            <summary class="bl-disclosure__summary">Manage saved account data</summary>
+            <div class="bl-disclosure__body bl-stack">
+              <p id="account-memory-summary" class="field-hint"></p>
+              <div class="bl-actions account-actions">
+                <button class="bl-button" data-variant="danger" id="account-forget-memory" type="button">Forget account product notes</button>
+                <button class="bl-button" data-variant="danger" id="account-forget-profile" type="button">Clear account profile</button>
+              </div>
+            </div>
+          </details>
+          <div class="bl-actions"><button class="bl-button" data-variant="quiet" id="account-logout" type="button">Log out</button></div>
+        </div>
+      </section>
     </section>
   </main>
 

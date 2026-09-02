@@ -72,6 +72,7 @@ runNode("generated UI freshness", ["scripts/sync-static-ui.mjs", "--check"]);
 runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
 runNode("engine identity contracts", ["engine/identity.test.mjs"]);
 runNode("personal experience hydration contracts", ["engine/personal-experience.test.mjs"]);
+runNode("account access contracts", ["scripts/account-access.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -175,6 +176,158 @@ includesAll(engineApp, [
   "hasMerchantListPrice",
   "% below merchant comparison price",
 ], "engine WebMCP, provenance, and consent contract");
+includesAll(engineHtml, [
+  'class="product-workspace bl-stack"',
+  'class="bl-disclosure engine-details"',
+  "How this works",
+  'data-engine-link="demo"',
+  'id="product-entry"',
+  'id="product-entry-title" tabindex="-1"',
+  'id="product-setup-paths"',
+  'data-setup-path="style" aria-pressed="false"',
+  'data-setup-path="words" aria-pressed="false"',
+  'data-setup-path="manual" aria-pressed="false"',
+  "Start with a style",
+  "Describe it in your own words",
+  "Set up manually",
+  'id="saved-preference-actions" hidden',
+  'id="product-review-saved"',
+  "Review saved preferences",
+  'id="product-start-fresh"',
+  "Start fresh",
+  'id="product-preview" aria-labelledby="product-preview-title" hidden',
+  'id="product-preview-title" tabindex="-1"',
+  'id="preview-words-chat" aria-labelledby="preview-words-title" hidden',
+  'id="preview-words-log" role="log" aria-live="polite"',
+  "Use one short sentence.",
+  'id="product-review-status" role="status" aria-live="polite"',
+  'id="product-preview-retention"',
+  "Scope",
+  "Retention",
+  "Outcome",
+  'id="product-fine-tune" type="button" aria-expanded="false" aria-controls="product-builder"',
+  "Fine-tune preferences",
+  'id="product-back-to-paths"',
+  "Back to setup options",
+  'id="product-start-over"',
+  "Start over with a blank draft",
+  'class="product-builder" id="product-builder" aria-labelledby="builder-title" hidden',
+  'id="builder-title" tabindex="-1"',
+  "Save and apply",
+  "Apply once without saving",
+  'id="product-applied-actions"',
+  'id="product-network-link"',
+  "See your results",
+  'id="product-keep-editing"',
+  "Keep editing",
+  'id="network-title" tabindex="-1"',
+  'data-engine-view="product"',
+  "Back to preferences",
+], "Product onboarding, preview, and fine-tune workspace");
+check(!engineHtml.includes('role="tablist"') && !engineHtml.includes("data-engine-tab"), "Primary path still exposes competing top-level tabs");
+check((engineHtml.match(/id="product-network-link"/g) || []).length === 1, "Primary path has more than one results entry action");
+includesAll(engineApp, [
+  'productStage: hasStored(STORAGE.preferences) ? "saved" : "empty"',
+  'networkSharingPaused: readStored(STORAGE.networkSharing, true) === false',
+  "savedPreferences,",
+  'function chooseProductSetupPath(path)',
+  'state.productStage = "preview"',
+  'function reviewSavedProductPreferences()',
+  'function startFreshProductDraft()',
+  'function returnToProductEntry()',
+  'state.productBuilderVisible = true',
+  'state.productStage = state.productReturnStage',
+  'focus({ preventScroll: true })',
+  'Your current draft has been kept.',
+  'Your saved preferences are unchanged.',
+  'productReviewState: "idle"',
+  'state.productReviewState = "applying"',
+  'state.productReviewState = "applied"',
+  'state.productReviewState = "review"',
+  'setAttribute("aria-busy", String(isApplying))',
+  'setAttribute("aria-disabled", String(isApplying))',
+  'els.productEntry.hidden = state.productStage === "preview"',
+  'els.productReviewSaved.dataset.variant = "secondary"',
+  "els.productConsent.hidden = isApplied",
+  "els.previewEditActions.hidden = isApplied",
+  "function renderProductWordChat()",
+  "function addWordsPreference(value)",
+  "state.productWordTurns.push",
+  "Added an everywhere rule",
+  'switchView("network", { focusHeading: true })',
+  "Your latest changes are not applied yet.",
+  "You’re still in this workspace",
+  "This visit only. Nothing was saved.",
+  "Saved in this browser until you use Forget.",
+], "Product onboarding state and explicit Network navigation");
+check(engineApp.includes("writeStored(STORAGE.networkSharing, !state.networkSharingPaused)"), "Network sharing pause/resume persistence no longer stores the enabled state");
+const onboardingTransitions = engineApp.slice(
+  engineApp.indexOf("function chooseProductSetupPath(path)"),
+  engineApp.indexOf("function renderProductNetwork()"),
+);
+includesAll(onboardingTransitions, [
+  'state.productReturnStage = "empty"',
+  'state.productReviewState = "review"',
+  'state.productSetupPath = "saved"',
+  'state.productStage = state.productReturnStage',
+], "Product setup-path-to-preview transitions");
+check(!onboardingTransitions.includes("removeStored(") && !onboardingTransitions.includes("localStorage"), "Start fresh or back unexpectedly removes saved preferences");
+check(!onboardingTransitions.includes(".focus()") && !onboardingTransitions.includes("scrollIntoView"), "Product setup transitions can scroll programmatically");
+check((onboardingTransitions.match(/focus\(\{ preventScroll: true \}\)/g) || []).length === 4, "Product setup transitions do not use labelled, scroll-stable focus targets");
+check(!engineApp.includes("productReviewStatus.focus") && !engineApp.includes("scrollIntoView"), "Product review flow moves focus or scrolls after applying");
+const applyTransition = engineApp.slice(
+  engineApp.indexOf("async function applyPreferences"),
+  engineApp.indexOf("function invalidateAppliedJourney"),
+);
+check(!applyTransition.includes(".focus()") && !applyTransition.includes("scrollIntoView"), "Apply transition can scroll programmatically");
+check(applyTransition.includes("els.productReviewTitle.focus({ preventScroll: true })"), "Apply transition does not focus its labelled result without scrolling");
+includesAll(engineHtml, [
+  'class="bl-card product-card product-entry"',
+  'class="bl-card product-card product-preview"',
+  'class="bl-callout bl-stack product-consent"',
+  'class="bl-badge" id="product-preview-badge"',
+  'class="product-workspace bl-stack"',
+  'class="preview-edit-actions bl-actions"',
+  'class="preference-chat preview-path-controls"',
+], "Product native Bean Labs design-system anchors");
+includesAll(await readFile(path.join(root, "engine/app.css"), "utf8"), [
+  ":where([hidden])",
+  "display: none !important",
+  ".preference-chat-log",
+  ".engine-details",
+  "@media (prefers-reduced-motion: reduce)",
+], "Product hidden-state, contained-chat, disclosure, and reduced-motion CSS");
+includesAll(engineHtml, [
+  'id="header-account" href="#account">Sign in</a>',
+  'id="account-view" aria-labelledby="account-title" hidden',
+  'id="account-back" href="#product"',
+  'id="account-title" tabindex="-1"',
+  'id="account-status" role="status" aria-live="polite"',
+  'id="account-gate-title" tabindex="-1"',
+  'id="account-continue" href="#product"',
+  'id="account-retry" type="button" hidden',
+  'href="/auth/login?returnTo=%2F%23account"',
+  'data-account-intent="save"', 'data-account-intent="import"', 'data-account-intent="profile"',
+  'id="account-preference-preview"', 'id="account-import-preview"',
+  'class="bl-badge" id="account-badge"',
+  'id="account-import-confirm" type="checkbox" aria-describedby="account-import-scope"',
+  'Signing in does not save or import it to your account.',
+], "Focused account view, native controls, consent, and return anchors");
+const accountUi = engineApp.slice(engineApp.indexOf("function renderAccount()"), engineApp.indexOf("function addMemory("));
+includesAll(accountUi, [
+  'signedIn ? "Account" : "Sign in"',
+  'accountGateCopy(state.accountIntent, signedIn)',
+  'els.accountLogin.setAttribute("aria-disabled", String(!ready))',
+  'state.accountAvailability !== "ready"',
+  'state.accountDraftRestored || hasStored(STORAGE.preferences)',
+  'account.signInAvailable !== true',
+  'state.accountReturnScroll = window.scrollY',
+  'state.accountReturnFocus.focus({ preventScroll: true })',
+  'restoreAccountDraftFields()',
+], "Account availability, privacy, draft protection, and stable return");
+check(!/account\.user|error\.message|console\./.test(accountUi), "Account UI exposes identity or raw errors/logs");
+check(engineHtml.indexOf('id="header-account"') < engineHtml.indexOf("</header>"), "Account entry is missing from the global header");
+check(!engineHtml.slice(engineHtml.indexOf('id="demo-view"'), engineHtml.indexOf('id="account-view"')).includes('id="account-login"'), "Account controls remain buried in Demo");
 check(!engineApp.includes("% below list") && !engineApp.includes("Listed price"), "Engine renders an unsupported generic list-price claim");
 check(!engineApp.includes("jb_presentation") && !engineApp.includes("jb_memory"), "Engine does not pass preference state through partner URL parameters");
 const petsupplyTool = await readFile(path.join(root, "partners/petsupply/tool.js"), "utf8");

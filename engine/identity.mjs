@@ -189,7 +189,9 @@ export async function handleIdentity(request, env) {
       return redirect(safeReturnPath(transaction.return_path), [setCookie(env, "session", session.token, Math.floor(SESSION_TTL_MS / 1000)), clearCookie(env, "oidc")]);
     }
     if (path === "/api/account" && request.method === "GET") {
-      const session = await accountSession(request, env); if (!session) return json({ signedIn: false });
+      const session = await accountSession(request, env);
+      // Public readiness metadata only. Never expose binding or secret values.
+      if (!session) return json({ signedIn: false, signInAvailable: Boolean(env.ENGINE_DB && env.GOOGLE_OIDC_CLIENT_ID && env.GOOGLE_OIDC_CLIENT_SECRET && env.ENGINE_PUBLIC_ORIGIN) });
       // A CSRF token is readable only by the authenticated same-origin page; its hash remains server-side.
       const csrfToken = b64url(crypto.getRandomValues(new Uint8Array(24)));
       await db(env).prepare("/* engine:csrf-rotate */ UPDATE engine_sessions SET csrf_digest = ? WHERE id = ?").bind(await sha256(`engine-csrf:${csrfToken}`), session.id).run();

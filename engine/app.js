@@ -27,7 +27,22 @@ import {
 import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
 import { normalizePreferencePlane, reviewPreferencePlane, selectStarterStyle, STARTER_STYLES } from "./preference-plane.mjs";
 
+import { ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView } from "./account-access.js";
+
 const els = {
+  headerAccount: document.getElementById("header-account"),
+  accountView: document.getElementById("account-view"),
+  accountTitle: document.getElementById("account-title"),
+  accountBack: document.getElementById("account-back"),
+  accountContinue: document.getElementById("account-continue"),
+  accountBadge: document.getElementById("account-badge"),
+  accountGateTitle: document.getElementById("account-gate-title"),
+  accountGateCopy: document.getElementById("account-gate-copy"),
+  accountDraftNotice: document.getElementById("account-draft-notice"),
+  accountRetry: document.getElementById("account-retry"),
+  accountPreferencePreview: document.getElementById("account-preference-preview"),
+  accountImportPreview: document.getElementById("account-import-preview"),
+  accountImportProfile: document.getElementById("account-import-profile"),
   status: document.getElementById("status"),
   statusDot: document.getElementById("status-dot"),
   protocol: document.getElementById("protocol-badge"),
@@ -53,6 +68,7 @@ const els = {
   demoContext: document.getElementById("demo-context"),
   demoProfile: document.getElementById("demo-profile"),
   accountStatus: document.getElementById("account-status"),
+  accountActionStatus: document.getElementById("account-action-status"),
   accountLogin: document.getElementById("account-login"),
   accountDetails: document.getElementById("account-details"),
   accountDisplayName: document.getElementById("account-display-name"),
@@ -68,7 +84,28 @@ const els = {
   productView: document.getElementById("product-view"),
   networkView: document.getElementById("network-view"),
   demoView: document.getElementById("demo-view"),
-  productChooser: document.getElementById("product-chooser"),
+  productEntry: document.getElementById("product-entry"),
+  productEntryLabel: document.getElementById("product-entry-label"),
+  productEntryTitle: document.getElementById("product-entry-title"),
+  productEntryBadge: document.getElementById("product-entry-badge"),
+  productEntryCopy: document.getElementById("product-entry-copy"),
+  productSetupPaths: document.getElementById("product-setup-paths"),
+  savedPreferenceActions: document.getElementById("saved-preference-actions"),
+  savedPreferenceNote: document.getElementById("saved-preference-note"),
+  productReviewSaved: document.getElementById("product-review-saved"),
+  productStartFresh: document.getElementById("product-start-fresh"),
+  productBuilderTitle: document.getElementById("builder-title"),
+  productPreview: document.getElementById("product-preview"),
+  productPreviewRetention: document.getElementById("product-preview-retention"),
+  previewStyleControls: document.getElementById("preview-style-controls"),
+  previewWordsChat: document.getElementById("preview-words-chat"),
+  previewWordsLog: document.getElementById("preview-words-log"),
+  previewWordsForm: document.getElementById("preview-words-form"),
+  previewEditActions: document.querySelector(".preview-edit-actions"),
+  productFineTune: document.getElementById("product-fine-tune"),
+  productBackToPaths: document.getElementById("product-back-to-paths"),
+  productStartOver: document.getElementById("product-start-over"),
+  productBuilder: document.getElementById("product-builder"),
   productForm: document.getElementById("product-preferences-form"),
   productCategory: document.getElementById("product-category"),
   productMaxPrice: document.getElementById("product-max-price"),
@@ -78,14 +115,23 @@ const els = {
   productRuleText: document.getElementById("product-rule-text"),
   productRuleScope: document.getElementById("product-rule-scope"),
   productRuleList: document.getElementById("product-rule-list"),
-  productReview: document.getElementById("product-review"),
+  productReview: document.getElementById("product-preview"),
+  productReviewTitle: document.getElementById("product-preview-title"),
+  productReviewStateLabel: document.getElementById("product-preview-badge"),
+  productReviewStatus: document.getElementById("product-review-status"),
   productReviewRules: document.getElementById("product-review-rules"),
   productReviewSharing: document.getElementById("product-review-sharing"),
+  productConsent: document.querySelector(".product-consent"),
+  productReviewActions: document.getElementById("product-review-actions"),
+  productAppliedActions: document.getElementById("product-applied-actions"),
   productUseOnce: document.getElementById("product-use-once"),
   productSave: document.getElementById("product-save"),
   productNetworkLink: document.getElementById("product-network-link"),
+  productKeepEditing: document.getElementById("product-keep-editing"),
+  productTitle: document.getElementById("product-title"),
   networkFeed: document.getElementById("network-feed"),
   networkStatus: document.getElementById("network-status"),
+  networkTitle: document.getElementById("network-title"),
   pauseSharing: document.getElementById("pause-network-sharing"),
   connectionStatus: document.querySelector(".connection-status"),
 };
@@ -164,6 +210,9 @@ const initialPreferences = normalizePreferencePlane({
     : [...DEFAULT_PREFERENCES.formats],
 });
 const storedMemory = readStored(STORAGE.memory, []);
+const savedPreferences = hasStored(STORAGE.preferences)
+  ? normalizePreferencePlane(initialPreferences)
+  : null;
 const state = {
   profile: PERSONAS[0],
   preferences: { ...initialPreferences, formats: [...initialPreferences.formats] },
@@ -179,6 +228,7 @@ const state = {
   pendingRemember: false,
   discoveryComplete: false,
   hasSavedPreferences: hasStored(STORAGE.preferences),
+  savedPreferences,
   journey: createJourney({ intentType: "offer_discovery", surface: "web", protocol: "webmcp" }),
   contextSnapshot: null,
   events: [],
@@ -190,12 +240,27 @@ const state = {
   appliedJourneyRevision: 0,
   selectedWatchOfferId: null,
   account: { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" },
+  accountAvailability: "loading",
+  accountIntent: "save",
+  accountReturnView: "product",
+  accountReturnFocus: null,
+  accountReturnScroll: 0,
+  accountDraftRestored: false,
+  accountDraftFields: null,
+  accountBusy: false,
   draftRevision: 0,
   preferenceSource: "browser",
   memorySource: "browser",
-  networkSharingPaused: readStored(STORAGE.networkSharing, false) === true,
+  networkSharingPaused: readStored(STORAGE.networkSharing, true) === false,
   currentView: "product",
-  productReviewVisible: false,
+  productStage: hasStored(STORAGE.preferences) ? "saved" : "empty",
+  productReturnStage: hasStored(STORAGE.preferences) ? "saved" : "empty",
+  productSetupPath: null,
+  productBuilderVisible: false,
+  productReviewState: "idle",
+  productApplyMode: null,
+  productWordTurns: [],
+  productDraftDirty: false,
   editingRuleId: null,
 };
 
@@ -594,34 +659,72 @@ function renderMemoryStep() {
   );
 }
 
-function switchView(view) {
-  const nextView = ["product", "network", "demo"].includes(view) ? view : "product";
+function switchView(view, { focusHeading = false } = {}) {
+  const nextView = ["product", "network", "demo", "account"].includes(view) ? view : "product";
   state.currentView = nextView;
-  els.connectionStatus?.toggleAttribute("hidden", nextView === "product");
-  document.querySelectorAll("[data-engine-tab]").forEach((tab) => {
-    const selected = tab.dataset.engineTab === nextView;
-    tab.setAttribute("aria-selected", String(selected));
-    tab.tabIndex = selected ? 0 : -1;
-  });
-  for (const [name, panel] of Object.entries({ product: els.productView, network: els.networkView, demo: els.demoView })) {
+  els.headerAccount.toggleAttribute("aria-current", nextView === "account");
+  if (nextView === "account") els.headerAccount.setAttribute("aria-current", "page");
+  els.connectionStatus?.toggleAttribute("hidden", ["product", "account"].includes(nextView));
+  for (const [name, panel] of Object.entries({ product: els.productView, network: els.networkView, demo: els.demoView, account: els.accountView })) {
     if (!panel) continue;
     panel.hidden = name !== nextView;
   }
+  if (nextView === "account") renderAccount();
   if (nextView === "network") renderProductNetwork();
   if (nextView === "product") renderProductShell();
   const hash = nextView === "product" ? "" : `#${nextView}`;
   if (location.hash !== hash) history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
+  if (focusHeading) {
+    const heading = nextView === "network"
+      ? els.networkTitle
+      : nextView === "product"
+        ? els.productTitle
+        : nextView === "account" ? els.accountTitle : document.getElementById("page-title");
+    heading?.focus({ preventScroll: true });
+  }
 }
 
-function renderProductShell() {
+function renderProductReview(active = normalizePreferencePlane(state.preferences)) {
   if (!els.productReviewRules) return;
-  const active = normalizePreferencePlane(state.preferences);
-  els.productCategory.value = active.category;
-  els.productMaxPrice.value = active.maxPrice == null ? "" : String(active.maxPrice);
-  els.productStyle.value = active.feedStyle;
-  els.productChooser.hidden = state.hasSavedPreferences || state.preferences.category.length > 0;
-  els.productReview.hidden = !state.productReviewVisible;
-  renderProductRules(active);
+  const reviewState = state.productReviewState;
+  const isApplying = reviewState === "applying";
+  const isApplied = reviewState === "applied";
+  els.productReview.dataset.reviewState = reviewState;
+  els.productReview.setAttribute("aria-busy", String(isApplying));
+  const labels = {
+    idle: ["Draft", "info"],
+    review: [state.applied ? "Changes ready" : "Ready to apply", "info"],
+    applying: ["Applying", "info"],
+    applied: ["Applied", "success"],
+  };
+  const [stateLabel, stateTone] = labels[reviewState] || labels.idle;
+  els.productReviewStateLabel.textContent = stateLabel;
+  els.productReviewStateLabel.dataset.status = stateTone;
+  els.productReviewTitle.textContent = isApplied
+    ? "Preferences applied"
+    : isApplying
+      ? "Applying your preferences"
+      : reviewState === "review"
+        ? state.productSetupPath === "saved" ? "Review saved preferences" : "Here’s what we’ll use"
+        : "Here’s what we’ll use";
+  const statusMessage = isApplied
+    ? state.appliedMode === "saved"
+      ? "Saved in this browser and applied. You’re still in this workspace; keep editing or see your results when you’re ready."
+      : "Applied for this visit only without saving. You’re still in this workspace; keep editing or see your results when you’re ready."
+    : isApplying
+      ? state.productApplyMode === "saved"
+        ? "Saving and applying your approved preferences…"
+        : "Applying your approved preferences for this visit…"
+      : reviewState === "review"
+        ? state.applied
+          ? state.productDraftDirty
+            ? "Your latest changes are not applied yet. Your results keep using the last preferences you approved."
+            : "These are the preferences currently applied. Fine-tune them to create a new draft."
+          : "Draft ready. Nothing is saved or shared until you choose an option below."
+        : "Draft ready. Nothing is saved or shared until you choose an option below.";
+  if (els.productReviewStatus.textContent !== statusMessage) {
+    els.productReviewStatus.textContent = statusMessage;
+  }
   els.productReviewRules.replaceChildren();
   const review = reviewPreferencePlane(active, { save: false });
   const rules = [
@@ -637,7 +740,125 @@ function renderProductShell() {
     item.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span>`;
     els.productReviewRules.append(item);
   }
-  els.productReviewSharing.textContent = `Choose how long to use these preferences. ${review.sharing}. “Use these preferences and save” keeps them for next time.`;
+  els.productReviewSharing.textContent = isApplied
+    ? state.appliedMode === "saved"
+      ? `Outcome: applied to your network. Retention: saved in this browser until you use Forget. ${review.sharing}.`
+      : `Outcome: applied to your network. Retention: this visit only; nothing was saved. ${review.sharing}.`
+    : `Choose how long to use these preferences. ${review.sharing}. “Save and apply” keeps them for next time; “Apply once without saving” lasts only for this visit.`;
+  els.productPreviewRetention.textContent = isApplied
+    ? state.appliedMode === "saved"
+      ? "Saved in this browser until you use Forget."
+      : "This visit only. Nothing was saved."
+    : state.productSetupPath === "saved"
+      ? "Saved in this browser until you use Forget. Any edits remain a draft until you save again."
+      : "Draft only. Not saved yet.";
+  els.productConsent.hidden = isApplied;
+  els.productReviewActions.hidden = isApplied;
+  els.productAppliedActions.hidden = !isApplied;
+  els.previewEditActions.hidden = isApplied;
+  els.productSave.setAttribute("aria-disabled", String(isApplying));
+  els.productUseOnce.setAttribute("aria-disabled", String(isApplying));
+}
+
+function renderProductShell() {
+  if (!els.productReviewRules) return;
+  const active = normalizePreferencePlane(state.preferences);
+  els.productCategory.value = active.category;
+  els.productMaxPrice.value = active.maxPrice == null ? "" : String(active.maxPrice);
+  els.productStyle.value = active.feedStyle;
+  const savedEntry = state.productStage === "saved" || (state.productStage === "preview" && state.productSetupPath === "saved");
+  els.productEntry.hidden = state.productStage === "preview";
+  els.productPreview.hidden = state.productStage !== "preview";
+  els.productBuilder.hidden = state.productStage !== "preview" || !state.productBuilderVisible;
+  els.productFineTune.setAttribute("aria-expanded", String(state.productBuilderVisible));
+  els.productFineTune.textContent = state.productBuilderVisible ? "Hide detailed editor" : "Fine-tune preferences";
+
+  els.productEntryLabel.textContent = savedEntry ? "Saved preferences found" : "Set up your preferences";
+  els.productEntryTitle.textContent = savedEntry ? "Your preferences are ready to review" : state.hasSavedPreferences ? "Start a fresh draft" : "Choose how to begin";
+  els.productEntryBadge.textContent = savedEntry ? "Saved" : state.hasSavedPreferences ? "Saved copy unchanged" : "Not set up";
+  if (savedEntry) els.productEntryBadge.dataset.status = "success";
+  else delete els.productEntryBadge.dataset.status;
+  const saved = state.savedPreferences || active;
+  els.productEntryCopy.textContent = savedEntry
+    ? `Currently saved: ${saved.feedStyle} style${saved.category ? ` for ${saved.category}` : ""}. Review the exact scope and retention before using or changing it.`
+    : state.hasSavedPreferences
+      ? "Choose a new starting point. Your saved preferences stay unchanged unless you explicitly save this replacement or use Forget."
+      : "Nothing is saved yet. Pick a comfortable starting point; you’ll review the draft before it can be saved or used.";
+  els.productSetupPaths.hidden = savedEntry;
+  els.savedPreferenceActions.hidden = !state.hasSavedPreferences;
+  if (savedEntry) delete els.productReviewSaved.dataset.variant;
+  else els.productReviewSaved.dataset.variant = "secondary";
+  els.productStartFresh.hidden = !savedEntry;
+  els.savedPreferenceNote.hidden = !state.hasSavedPreferences;
+
+  document.querySelectorAll("[data-setup-path]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.setupPath === state.productSetupPath));
+  });
+  document.querySelectorAll("[data-starter-style]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.starterStyle === active.feedStyle));
+  });
+  els.previewStyleControls.hidden = state.productSetupPath !== "style";
+  els.previewWordsChat.hidden = state.productSetupPath !== "words";
+  renderProductWordChat();
+  renderProductRules(active);
+  renderProductReview(active);
+}
+
+function renderProductWordChat() {
+  if (!els.previewWordsLog) return;
+  els.previewWordsLog.replaceChildren();
+  const messages = [
+    { speaker: "Jumping Beans", text: "Tell us what should stand out or what you want to avoid. We’ll show the exact rule in the preview." },
+    ...state.productWordTurns.flatMap((turn) => [
+      { speaker: "You", text: turn.input },
+      { speaker: "Jumping Beans", text: turn.response },
+    ]),
+  ];
+  for (const message of messages) {
+    const item = document.createElement("li");
+    item.dataset.speaker = message.speaker === "You" ? "user" : "product";
+    const speaker = document.createElement("strong");
+    const text = document.createElement("p");
+    speaker.textContent = message.speaker;
+    text.textContent = message.text;
+    item.append(speaker, text);
+    els.previewWordsLog.append(item);
+  }
+}
+
+function addWordsPreference(value) {
+  const input = value.trim().slice(0, 240);
+  if (!input) return false;
+  const text = input.toLowerCase();
+  const draft = productPreferenceDraft();
+  const formats = [...draft.formats];
+  if (text.includes("proof") || text.includes("testimonial")) formats.push("testimonial", "price-proof");
+  if (text.includes("video")) formats.push("video");
+  if (text.includes("pressure") || text.includes("urgency")) formats.push("no-urgency");
+  const budgetMatch = text.match(/(?:under|below|up to)\s*\$?([0-9]+(?:\.[0-9]{1,2})?)/);
+  const maxPrice = budgetMatch ? Number(budgetMatch[1]) : draft.maxPrice;
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({
+    ...draft,
+    formats: [...new Set(formats)],
+    maxPrice,
+    rules: [...draft.rules, { id: opaqueId("rule"), text: input, scope: "everywhere", category: "", active: true }],
+  });
+  const recognized = [
+    ...(budgetMatch ? [`a ${money(maxPrice)} price ceiling`] : []),
+    ...(text.includes("proof") || text.includes("testimonial") ? ["proof and testimonials"] : []),
+    ...(text.includes("video") ? ["short video"] : []),
+    ...(text.includes("pressure") || text.includes("urgency") ? ["no urgency"] : []),
+  ];
+  state.productWordTurns.push({
+    input,
+    response: recognized.length
+      ? `Added an everywhere rule and updated ${recognized.join(", ")}. Review the draft below before applying it.`
+      : "Added that sentence as an everywhere rule. Review the exact draft below before applying it.",
+  });
+  setAgent("Your words are in the draft. Nothing is saved or shared yet.");
+  renderProductShell();
+  return true;
 }
 
 function ruleScopeLabel(rule) {
@@ -701,7 +922,6 @@ function addDraftRule({ text, scope = "everywhere", category = currentProductCat
     ...draft,
     rules: [...draft.rules, { id: opaqueId("rule"), text: ruleText, scope, category, active: true }],
   });
-  state.productReviewVisible = true;
   setAgent(`Added “${ruleText}” to your draft. Review what we’ll use before sharing it.`);
   renderProductShell();
   return true;
@@ -724,7 +944,6 @@ function updateDraftRule(id, changes) {
     rules: current.rules.map((rule) => rule.id === id ? { ...rule, ...changes, scope, category } : rule),
   });
   state.editingRuleId = null;
-  state.productReviewVisible = true;
   renderProductShell();
 }
 
@@ -737,7 +956,6 @@ function pauseDraftRule(id) {
     ...current,
     rules: current.rules.map((rule) => rule.id === id ? { ...rule, active: !rule.active } : rule),
   });
-  state.productReviewVisible = true;
   setAgent(existing.active ? "That preference is paused. It will not be used until you turn it back on." : "That preference is active again.");
   renderProductShell();
 }
@@ -749,7 +967,6 @@ function forgetDraftRule(id) {
   markDraftEdited({ preferences: true });
   state.preferences = normalizePreferencePlane({ ...current, rules: current.rules.filter((rule) => rule.id !== id) });
   state.editingRuleId = null;
-  state.productReviewVisible = true;
   setAgent(`Forgot “${existing.text}” from this draft.`);
   renderProductShell();
 }
@@ -770,20 +987,81 @@ function stageProductPreferences() {
   const next = productPreferenceDraft();
   markDraftEdited({ preferences: true });
   state.preferences = next;
-  state.productReviewVisible = true;
+  state.productStage = "preview";
   setAgent("Your draft is ready to review. Nothing has been saved or shared.");
   renderProductShell();
-  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function applyStarterStyle(style) {
   const selected = selectStarterStyle(style);
   markDraftEdited({ preferences: true });
   state.preferences = normalizePreferencePlane({ ...state.preferences, ...selected });
-  state.productReviewVisible = true;
+  state.productStage = "preview";
+  state.productSetupPath = "style";
   setAgent("Your style is ready. Review what we’ll use before you choose this time only or save for next time.");
   renderProductShell();
-  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function chooseProductSetupPath(path) {
+  if (!["style", "words", "manual"].includes(path)) return;
+  state.productSetupPath = path;
+  state.productReturnStage = "empty";
+  state.productStage = "preview";
+  state.productBuilderVisible = false;
+  state.productReviewState = "review";
+  if (path === "words") state.productWordTurns = [];
+  if (path === "style") {
+    const selected = selectStarterStyle("balanced");
+    markDraftEdited({ preferences: true });
+    state.preferences = normalizePreferencePlane({ ...state.preferences, ...selected });
+  }
+  setAgent("Your preference preview is ready. Nothing is saved or shared yet.");
+  renderProductShell();
+  els.productReviewTitle.focus({ preventScroll: true });
+}
+
+function reviewSavedProductPreferences() {
+  if (state.savedPreferences) {
+    state.preferences = normalizePreferencePlane(state.savedPreferences);
+  }
+  state.productSetupPath = "saved";
+  state.productReturnStage = "saved";
+  state.productStage = "preview";
+  state.productBuilderVisible = false;
+  state.productReviewState = "review";
+  state.productDraftDirty = false;
+  setAgent("Reviewing your saved preferences. Changes remain a draft until you explicitly save again.");
+  renderProductShell();
+  els.productReviewTitle.focus({ preventScroll: true });
+}
+
+function startFreshProductDraft() {
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({ ...DEFAULT_PREFERENCES, formats: [...DEFAULT_PREFERENCES.formats] });
+  state.productSetupPath = null;
+  state.productReturnStage = "empty";
+  state.productStage = "empty";
+  state.productBuilderVisible = false;
+  state.productReviewState = "idle";
+  state.productWordTurns = [];
+  state.productDraftDirty = true;
+  state.editingRuleId = null;
+  setAgent(state.hasSavedPreferences
+    ? "Started a blank draft. Your saved preferences are unchanged."
+    : "Started a blank draft. Nothing is saved or shared.");
+  renderProductShell();
+  els.productEntryTitle.focus({ preventScroll: true });
+}
+
+function returnToProductEntry() {
+  state.productStage = state.productReturnStage;
+  state.productBuilderVisible = false;
+  state.productReviewState = "idle";
+  setAgent(state.productReturnStage === "saved"
+    ? "Back at your saved-preference entry point. Your current draft has been kept."
+    : "Back at the setup options. Your current draft has been kept.");
+  renderProductShell();
+  els.productEntryTitle.focus({ preventScroll: true });
 }
 
 function renderProductNetwork() {
@@ -804,8 +1082,10 @@ function renderProductNetwork() {
     ? `${openCard}${partnerCards.join("")}`
     : `${openCard}<section class="bl-callout network-empty" data-tone="info"><h3>No connected member selections yet</h3><p>${state.networkSharingPaused ? "Resume network sharing when you want connected member sites to use your preferences." : "Use these preferences to check the opted-in member experiences in your network."}</p><button class="bl-button" id="network-use-preferences" type="button">Use these preferences</button></section>`;
   document.getElementById("network-use-preferences")?.addEventListener("click", () => {
-    state.productReviewVisible = true;
-    switchView("product");
+    state.productReviewState = "review";
+    state.productStage = "preview";
+    state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
+    switchView("product", { focusHeading: true });
     renderProductShell();
   });
 }
@@ -1009,7 +1289,12 @@ function renderMemory() {
 
 function markDraftEdited({ preferences = false } = {}) {
   state.draftRevision += 1;
-  if (preferences) state.preferenceSource = "browser";
+  if (preferences) {
+    state.preferenceSource = "browser";
+    state.productReviewState = "review";
+    state.productApplyMode = null;
+    state.productDraftDirty = true;
+  }
 }
 
 function hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersistence) {
@@ -1028,58 +1313,217 @@ function hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersiste
   state.preferenceSource = hydrated.preferenceSource;
   state.memorySource = hydrated.memorySource;
   state.hasSavedPreferences = hydrated.hasSavedPreferences;
+  state.savedPreferences = hydrated.hasSavedPreferences
+    ? normalizePreferencePlane(hydrated.preferences)
+    : null;
+  state.productDraftDirty = false;
+  if (hydrated.hasSavedPreferences && state.productStage === "empty") {
+    state.productStage = "saved";
+    state.productReturnStage = "saved";
+  }
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: false, demoContextGranted: state.demoContextGranted });
   renderJourney();
   return true;
 }
 
 function renderAccount() {
-  const account = state.account;
-  const signedIn = Boolean(account.signedIn);
-  els.accountLogin.hidden = signedIn;
-  els.accountDetails.hidden = !signedIn;
-  if (!signedIn) {
-    els.accountStatus.textContent = account.error || "Continue anonymously, or sign in to keep a separate account-owned copy of choices you explicitly save.";
-    return;
+  const scrollPosition = window.scrollY;
+  try {
+    const signedIn = state.account.signedIn === true;
+    const ready = state.accountAvailability === "ready";
+    els.headerAccount.textContent = signedIn ? "Account" : "Sign in";
+    els.headerAccount.setAttribute("aria-label", signedIn ? "Account, signed in" : "Sign in");
+    els.headerAccount.toggleAttribute("aria-current", state.currentView === "account");
+    if (state.currentView === "account") els.headerAccount.setAttribute("aria-current", "page");
+    els.accountBadge.textContent = signedIn ? "Signed in" : "Not signed in";
+    els.accountBadge.dataset.status = signedIn ? "success" : "info";
+    els.accountLogin.hidden = signedIn;
+    els.accountLogin.setAttribute("aria-disabled", String(!ready));
+    els.accountDetails.hidden = !signedIn;
+    els.accountRetry.hidden = ready || state.accountAvailability === "loading";
+    els.accountRetry.setAttribute("aria-disabled", String(state.accountAvailability === "loading"));
+    els.accountDraftNotice.hidden = signedIn;
+    els.accountContinue.textContent = signedIn ? "Return to your workspace" : "Continue without signing in";
+    const backView = accountReturnView(state.accountReturnView);
+    const backLabel = { product: "preferences", network: "your results", demo: "Demo" }[backView];
+    els.accountBack.textContent = `Back to ${backLabel}`;
+    els.accountBack.href = els.accountContinue.href = backView === "product" ? "#product" : `#${backView}`;
+    els.accountGateTitle.textContent = signedIn ? "Choose your account action" : { save: "Sign in to sync", import: "Sign in to import memory", profile: "Sign in to edit your profile" }[accountIntent(state.accountIntent)];
+    els.accountGateCopy.textContent = accountGateCopy(state.accountIntent, signedIn);
+    for (const button of document.querySelectorAll(".account-view [data-account-intent]")) button.setAttribute("aria-pressed", String(button.dataset.accountIntent === state.accountIntent));
+    els.accountStatus.textContent = (!signedIn ? state.account.error : "") || (state.accountAvailability === "loading"
+      ? "Checking account access. You can keep using this browser’s workspace."
+      : signedIn ? "Signed in. Account data stays separate from your local draft and is never sent to partners."
+        : "You’re using this browser without an account. Sign in only when you want account features.");
+    for (const button of els.accountDetails.querySelectorAll("button")) button.setAttribute("aria-disabled", String(!ready || state.accountBusy));
+    els.accountDetails.setAttribute("aria-busy", String(state.accountBusy));
+    if (!signedIn) {
+      els.accountDisplayName.value = "";
+      els.accountImportConfirm.checked = false;
+      els.accountPreferencePreview.replaceChildren();
+      els.accountImportPreview.replaceChildren();
+      els.accountImportProfile.textContent = "";
+      els.accountMemorySummary.textContent = "";
+      els.accountActionStatus.textContent = "";
+      return;
+    }
+    for (const intent of ["save", "import", "profile"]) {
+      document.getElementById(`account-${intent}-title`).parentElement.hidden = state.accountIntent !== intent;
+    }
+    document.getElementById("account-draft-review").hidden = state.accountIntent === "profile";
+    if (state.account.error) els.accountActionStatus.textContent = state.account.error;
+    // Keep a typed nickname through background status refreshes and failures.
+    if (!els.accountDisplayName.dataset.edited) els.accountDisplayName.value = accountDisplayName(state.account.profile?.displayName);
+    const importName = accountDisplayName(els.accountDisplayName.value);
+    els.accountImportProfile.textContent = importName ? `Account display name to import: ${importName}` : "No account display name entered.";
+    const count = Array.isArray(state.account.memory) ? state.account.memory.length : 0;
+    els.accountMemorySummary.textContent = count ? `Your account has ${count} saved product note${count === 1 ? "" : "s"}.` : "Your account has no saved product notes.";
+    els.accountPreferencePreview.replaceChildren();
+    const active = normalizePreferencePlane(state.preferences);
+    const preview = [`${active.feedStyle} style${active.category ? ` for ${active.category}` : " everywhere"}`, ...(active.maxPrice == null ? [] : [`Price ceiling: ${money(active.maxPrice)}`]), ...active.rules.map((rule) => `${rule.active ? "Active" : "Paused"} · ${rule.scope === "category" ? rule.category : "Everywhere"}: ${rule.text}`)];
+    for (const text of preview) {
+      const item = document.createElement("li");
+      item.textContent = text;
+      els.accountPreferencePreview.append(item);
+    }
+    els.accountImportPreview.replaceChildren();
+    const browserNotes = accountBrowserMemory();
+    for (const note of browserNotes) {
+      const item = document.createElement("li");
+      item.textContent = `${note.title || "Product note"}: ${note.detail || ""}`;
+      els.accountImportPreview.append(item);
+    }
+    if (!browserNotes.length) {
+      const item = document.createElement("li");
+      item.textContent = "No browser product notes to import. Only the rules above and your account display name will be uploaded.";
+      els.accountImportPreview.append(item);
+    }
+  } finally {
+    // Account status and retry controls can grow during a request. Keep the
+    // current page position; only an explicit navigation changes it.
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
-  const name = account.profile?.displayName || account.user?.displayName || account.user?.email || "your account";
-  els.accountStatus.textContent = `Signed in as ${name}. Hosted account data is separate from this browser’s local draft and is never sent to partners.`;
-  els.accountDisplayName.value = account.profile?.displayName || "";
-  const count = Array.isArray(account.memory) ? account.memory.length : 0;
-  els.accountMemorySummary.textContent = count
-    ? `Your account has ${count} saved product note${count === 1 ? "" : "s"}.`
-    : "Your account has no saved product notes.";
+}
+
+function accountBrowserMemory() {
+  const notes = readStored(STORAGE.memory, []);
+  return Array.isArray(notes) ? notes.filter((note) => note && typeof note === "object").slice(0, 30).map(({ key, title, detail, observedAt }) => ({ key, title, detail, observedAt })) : [];
+}
+
+function openAccount(intent = "save", trigger = document.activeElement) {
+  const enteringAccount = state.currentView !== "account";
+  if (enteringAccount) {
+    state.accountReturnView = accountReturnView(state.currentView);
+    state.accountReturnFocus = trigger;
+    state.accountReturnScroll = window.scrollY;
+    state.accountDraftFields = captureAccountDraftFields();
+    history.pushState(null, "", `${location.pathname}${location.search}#account`);
+  }
+  state.accountIntent = accountIntent(intent);
+  switchView("account", { focusHeading: true });
+  if (enteringAccount) window.scrollTo({ top: 0, behavior: "instant" });
+  els.accountGateTitle.focus({ preventScroll: true });
+}
+
+function returnFromAccount(event) {
+  event?.preventDefault();
+  switchView(accountReturnView(state.accountReturnView));
+  restoreAccountDraftFields();
+  // Explicit Back restores the origin's position and focus, including a draft
+  // editor. Background account changes never navigate or move page position.
+  window.scrollTo({ top: state.accountReturnScroll, behavior: "instant" });
+  if (state.accountReturnFocus?.isConnected) state.accountReturnFocus.focus({ preventScroll: true });
+  else els.productTitle?.focus({ preventScroll: true });
+}
+
+function restoreAccountDraft() {
+  let draft;
+  try { draft = readAccountDraft(sessionStorage); } catch { return; }
+  if (!draft) return;
+  state.preferences = normalizePreferencePlane(draft.preferences);
+  state.draftRevision += 1;
+  state.preferenceSource = "browser";
+  state.accountDraftRestored = true;
+  state.accountDraftFields = draft.fields;
+  state.accountIntent = draft.intent;
+  state.accountReturnView = draft.returnView;
+  state.accountReturnScroll = draft.returnScroll;
+  state.accountReturnFocus = document.getElementById(draft.returnFocus);
+  state.productStage = draft.productStage;
+  state.productReturnStage = draft.productReturnStage;
+  state.productSetupPath = draft.productSetupPath;
+  state.productBuilderVisible = draft.productBuilderVisible;
+  state.editingRuleId = draft.editingRuleId;
+  state.productReviewState = draft.productStage === "preview" ? "review" : "idle";
+  state.productDraftDirty = true;
+  renderJourney();
+  restoreAccountDraftFields();
+}
+
+function captureAccountDraftFields() {
+  const fields = Object.fromEntries(["product-category", "product-max-price", "product-style", "product-prompt-input", "product-rule-text", "product-rule-scope", "preview-words-input"].map((id) => [id, document.getElementById(id)?.value || ""]));
+  fields["rule-edit-text"] = document.getElementById(`rule-edit-${state.editingRuleId}`)?.value || "";
+  fields["rule-edit-scope"] = document.getElementById(`rule-scope-${state.editingRuleId}`)?.value || "everywhere";
+  return fields;
+}
+
+function restoreAccountDraftFields() {
+  for (const [id, value] of Object.entries(state.accountDraftFields || {})) {
+    const targetId = id === "rule-edit-text" ? `rule-edit-${state.editingRuleId}` : id === "rule-edit-scope" ? `rule-scope-${state.editingRuleId}` : id;
+    const input = document.getElementById(targetId);
+    if (input) input.value = value;
+  }
+}
+
+function accountFailure() {
+  state.account.error = "The account action could not be completed. Your local draft is unchanged. Check account access again before retrying; browsing and browser-only actions remain available.";
+  state.accountAvailability = "unavailable";
+  renderAccount();
 }
 
 async function accountRequest(path, payload) {
   // This is only a same-origin account request. WebMCP partner discovery and
   // invocation stay native browser APIs and never receive account credentials.
-  const response = await fetch(path, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "content-type": "application/json", "x-jb-csrf": state.account.csrfToken || "" },
-    body: JSON.stringify(payload),
-  });
-  const next = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(next.error || "account-request-failed");
-  state.account = { ...mergeAccountResponse(state.account, next), error: "" };
+  if (state.accountBusy || state.accountAvailability !== "ready" || state.account.signedIn !== true || !state.account.csrfToken) throw new Error("account-unavailable");
+  state.accountBusy = true;
+  els.accountActionStatus.textContent = "Updating your account…";
   renderAccount();
-  return next;
+  try {
+    const response = await fetch(path, {
+      method: "POST", credentials: "same-origin", signal: AbortSignal.timeout(10000),
+      headers: { "content-type": "application/json", "x-jb-csrf": state.account.csrfToken },
+      body: JSON.stringify(payload),
+    });
+    const next = await response.json();
+    if (!response.ok || typeof next?.signedIn !== "boolean" || (path !== "/api/account/logout" && !next.signedIn)) {
+      if (response.status === 401 || response.status === 403 || next?.signedIn === false) state.account = { signedIn: false, csrfToken: null };
+      throw new Error("account-request-failed");
+    }
+    state.account = { ...mergeAccountResponse(state.account, next), error: "" };
+    return next;
+  } finally {
+    state.accountBusy = false;
+    renderAccount();
+  }
 }
 
 async function loadAccount() {
   const requestDraftRevision = state.draftRevision;
-  const hasBrowserPersistence = hasStored(STORAGE.preferences) || hasStored(STORAGE.memory);
+  const hasBrowserPersistence = state.accountDraftRestored || hasStored(STORAGE.preferences) || hasStored(STORAGE.memory);
+  state.accountAvailability = "loading";
+  state.account.error = "";
+  els.accountActionStatus.textContent = "";
+  renderAccount();
   try {
-    const response = await fetch("/api/account", { credentials: "same-origin", headers: { accept: "application/json" } });
-    const account = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(account.error || "Hosted account service is unavailable");
-    state.account = { ...state.account, ...account, error: "" };
+    const response = await fetch("/api/account", { credentials: "same-origin", signal: AbortSignal.timeout(10000), headers: { accept: "application/json" } });
+    const account = await response.json();
+    if (!response.ok || typeof account?.signedIn !== "boolean" || (!account.signedIn && account.signInAvailable !== true) || (account.signedIn && !account.csrfToken)) throw new Error("account-unavailable");
+    state.account = { ...account, error: "" };
+    state.accountAvailability = "ready";
     hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersistence);
   } catch {
-    // The public offer journey remains fully anonymous if the optional service
-    // is not provisioned or the browser is offline.
-    state.account = { ...state.account, signedIn: false, csrfToken: null, error: "Hosted account service is unavailable; you can continue anonymously." };
+    state.account = { signedIn: false, csrfToken: null, error: "Hosted account service is unavailable. Your draft is kept here; you can continue anonymously or check again." };
+    state.accountAvailability = "unavailable";
   }
   renderAccount();
 }
@@ -1111,6 +1555,9 @@ function forgetMemory(key) {
   if (item?.kind === "preference") {
     removeStored(STORAGE.preferences);
     state.hasSavedPreferences = false;
+    state.savedPreferences = null;
+    if (state.productStage === "saved") state.productStage = "empty";
+    state.productReturnStage = "empty";
   }
   recordEvent("memory.deleted", {
     capabilityId: "memory.forget",
@@ -1148,6 +1595,13 @@ function forgetAllMemory() {
   state.decisionReceipt = null;
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: false, demoContextGranted: false });
   state.hasSavedPreferences = false;
+  state.savedPreferences = null;
+  state.productStage = "empty";
+  state.productReturnStage = "empty";
+  state.productSetupPath = null;
+  state.productBuilderVisible = false;
+  state.productReviewState = "idle";
+  state.productDraftDirty = false;
   Object.values(STORAGE).forEach(removeStored);
   recordEvent("memory.deleted", {
     capabilityId: "memory.forget",
@@ -1187,7 +1641,10 @@ function renderJourney() {
 }
 
 async function applyPreferences({ persist }) {
-  markDraftEdited({ preferences: true });
+  state.productStage = "preview";
+  state.productReviewState = "applying";
+  state.productApplyMode = persist ? "saved" : "once";
+  renderProductReview();
   state.applied = true;
   state.appliedMode = persist ? "saved" : "once";
   state.appliedPreferences = {
@@ -1212,6 +1669,10 @@ async function applyPreferences({ persist }) {
     if (!sharingWasPaused) writeStored(STORAGE.networkSharing, true);
     state.networkSharingPaused = sharingWasPaused;
     state.hasSavedPreferences = preferencesSaved;
+    if (preferencesSaved) {
+      state.productReturnStage = "saved";
+      state.savedPreferences = normalizePreferencePlane(state.appliedPreferences);
+    }
     state.preferenceSource = "browser";
     const labels = state.appliedPreferences.formats
       .map((format) => formatLabels[format] || format)
@@ -1241,9 +1702,13 @@ async function applyPreferences({ persist }) {
     status: "user_confirmed",
     mode: state.appliedMode,
   });
+  state.productDraftDirty = false;
   renderJourney();
   await rerunAppliedJourney();
-  switchView("network");
+  state.productReviewState = "applied";
+  state.productApplyMode = null;
+  renderJourney();
+  els.productReviewTitle.focus({ preventScroll: true });
 }
 
 function invalidateAppliedJourney() {
@@ -1291,7 +1756,6 @@ function handlePrompt(value) {
     category: category || state.preferences.category,
     rules: [...state.preferences.rules, { id: opaqueId("rule"), text: value, scope: "everywhere", category, active: true }],
   });
-  state.productReviewVisible = true;
   setAgent(`I updated the draft choices from “${value}”. Review the exact fact and choose whether to save it or apply it once.`);
   renderJourney();
 }
@@ -1392,27 +1856,54 @@ function toggleNetworkSharing() {
   if (state.applied) void rerunAppliedJourney();
 }
 
-document.querySelectorAll("[data-engine-tab]").forEach((tab) => {
-  tab.addEventListener("click", () => switchView(tab.dataset.engineTab));
-  tab.addEventListener("keydown", (event) => {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    const tabs = [...document.querySelectorAll("[data-engine-tab]")];
-    const index = tabs.indexOf(tab);
-    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+document.querySelectorAll("[data-engine-link]").forEach((link) => {
+  link.addEventListener("click", (event) => {
     event.preventDefault();
-    tabs[next].focus();
-    switchView(tabs[next].dataset.engineTab);
+    link.closest("details")?.removeAttribute("open");
+    switchView(link.dataset.engineLink, { focusHeading: true });
   });
+});
+
+document.querySelectorAll("[data-engine-view]").forEach((button) => {
+  button.addEventListener("click", () => switchView(button.dataset.engineView, { focusHeading: true }));
 });
 
 document.querySelectorAll("[data-starter-style]").forEach((button) => {
   button.addEventListener("click", () => applyStarterStyle(button.dataset.starterStyle));
 });
 
+document.querySelectorAll("[data-setup-path]").forEach((button) => {
+  button.addEventListener("click", () => chooseProductSetupPath(button.dataset.setupPath));
+});
+
+els.productReviewSaved?.addEventListener("click", reviewSavedProductPreferences);
+els.productStartFresh?.addEventListener("click", startFreshProductDraft);
+els.productBackToPaths?.addEventListener("click", returnToProductEntry);
+els.productStartOver?.addEventListener("click", startFreshProductDraft);
+els.productFineTune?.addEventListener("click", () => {
+  state.productBuilderVisible = !state.productBuilderVisible;
+  renderProductShell();
+});
+
+els.previewWordsForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = event.currentTarget.elements.prompt;
+  if (!input.value.trim()) return;
+  if (addWordsPreference(input.value)) input.value = "";
+});
+
 els.productForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   stageProductPreferences();
 });
+
+for (const input of [els.productCategory, els.productMaxPrice, els.productStyle]) {
+  input?.addEventListener(input === els.productStyle ? "change" : "input", () => {
+    markDraftEdited({ preferences: true });
+    state.preferences = productPreferenceDraft();
+    renderProductReview(state.preferences);
+  });
+}
 
 els.productPrompt?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1462,23 +1953,33 @@ els.productRuleList?.addEventListener("submit", (event) => {
 });
 
 els.productUseOnce?.addEventListener("click", async () => {
-  state.productReviewVisible = false;
+  if (state.productReviewState === "applying") return;
   await applyPreferences({ persist: false });
 });
 
 els.productSave?.addEventListener("click", async () => {
-  state.productReviewVisible = false;
+  if (state.productReviewState === "applying") return;
   await applyPreferences({ persist: true });
 });
 
-els.productNetworkLink?.addEventListener("click", () => switchView("network"));
+els.productNetworkLink?.addEventListener("click", () => switchView("network", { focusHeading: true }));
+els.productKeepEditing?.addEventListener("click", () => {
+  state.productReviewState = "review";
+  state.productBuilderVisible = true;
+  renderProductShell();
+  els.productBuilderTitle.focus({ preventScroll: true });
+});
 els.pauseSharing?.addEventListener("click", toggleNetworkSharing);
 
 document.querySelectorAll("[data-open-engine-view]").forEach((button) => {
   button.addEventListener("click", () => switchView(button.dataset.openEngineView));
 });
 
-window.addEventListener("hashchange", () => switchView(location.hash.slice(1) || "product"));
+window.addEventListener("hashchange", () => {
+  const view = location.hash.slice(1) || "product";
+  if (state.currentView === "account" && view === state.accountReturnView) returnFromAccount();
+  else switchView(view);
+});
 
 els.controls.addEventListener("change", (event) => {
   const input = event.target.closest("[data-pref]");
@@ -1511,17 +2012,19 @@ els.demoProfile?.addEventListener("change", async () => {
 });
 
 document.getElementById("apply-preferences").addEventListener("click", async () => {
-  state.productReviewVisible = true;
+  state.productReviewState = "review";
+  state.productStage = "preview";
+  state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
   switchView("product");
   renderProductShell();
-  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("apply-once").addEventListener("click", async () => {
-  state.productReviewVisible = true;
+  state.productReviewState = "review";
+  state.productStage = "preview";
+  state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
   switchView("product");
   renderProductShell();
-  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
@@ -1565,8 +2068,11 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
 });
 
 document.getElementById("edit-preferences").addEventListener("click", () => {
+  state.productStage = "preview";
+  state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
+  state.productBuilderVisible = true;
+  state.productReviewState = "review";
   switchView("product");
-  els.productCategory?.focus();
 });
 
 els.memoryList.addEventListener("click", (event) => {
@@ -1576,45 +2082,91 @@ els.memoryList.addEventListener("click", (event) => {
 
 els.forgetAll.addEventListener("click", forgetAllMemory);
 
-els.accountSaveProfile?.addEventListener("click", async () => {
+els.headerAccount.addEventListener("click", (event) => {
+  if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  openAccount("save", event.currentTarget);
+});
+els.accountBack.addEventListener("click", returnFromAccount);
+els.accountContinue.addEventListener("click", returnFromAccount);
+els.accountRetry.addEventListener("click", () => { if (state.accountAvailability !== "loading") void loadAccount(); });
+els.accountDisplayName.addEventListener("input", () => { els.accountDisplayName.dataset.edited = "true"; });
+document.querySelectorAll("[data-account-intent]").forEach((button) => {
+  button.addEventListener("click", () => openAccount(button.dataset.accountIntent, button));
+});
+els.accountLogin.addEventListener("click", (event) => {
+  // Keep redirects in this tab so the temporary draft and return action match.
+  if (state.accountAvailability !== "ready" || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    event.preventDefault();
+    els.accountStatus.textContent = state.accountAvailability === "ready"
+      ? "Sign in in this tab to bring your draft back with you."
+      : "Sign-in is unavailable while account access is being checked. Your draft stays here; continue anonymously or check again.";
+    return;
+  }
   try {
-    await accountRequest("/api/account/profile", { profile: { displayName: els.accountDisplayName.value } });
-    showToast("Account profile saved");
+    const fields = state.accountDraftFields || captureAccountDraftFields();
+    sessionStorage.setItem(ACCOUNT_DRAFT_KEY, JSON.stringify(accountDraftSnapshot(state, fields)));
+  } catch {
+    event.preventDefault();
+    els.accountStatus.textContent = "This browser could not keep your draft for the sign-in return. Stay here and save in this browser before trying again.";
+  }
+});
+
+els.accountSaveProfile?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
+  try {
+    await accountRequest("/api/account/profile", { profile: { displayName: accountDisplayName(els.accountDisplayName.value) } });
+    delete els.accountDisplayName.dataset.edited;
+    renderAccount();
+    els.accountActionStatus.textContent = "Account profile saved";
   } catch (error) {
-    setAgent(`Account profile was not saved: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
 els.accountSavePreferences?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
   try {
     await accountRequest("/api/account/preferences", { preferences: state.preferences });
-    showToast("Current display rules saved to your account");
+    els.accountActionStatus.textContent = "Current display rules saved to your account";
   } catch (error) {
-    setAgent(`Account display rules were not saved: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
 els.accountImport?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
   if (!els.accountImportConfirm.checked) {
-    setAgent("Select the explicit browser-memory import checkbox before anything is uploaded.");
-    els.accountImportConfirm.focus();
+    els.accountActionStatus.textContent = "Select the import checkbox after reviewing the rules and browser notes. Nothing has been uploaded.";
+    els.accountImportConfirm.focus({ preventScroll: true });
     return;
   }
   try {
     await accountRequest("/api/account/import", {
       confirmed: true,
-      profile: { displayName: els.accountDisplayName.value },
+      profile: { displayName: accountDisplayName(els.accountDisplayName.value) },
       preferences: state.preferences,
-      memory: state.memory,
+      memory: accountBrowserMemory(),
     });
     els.accountImportConfirm.checked = false;
-    showToast("Selected browser memory imported to your account");
+    els.accountActionStatus.textContent = "Selected browser memory imported to your account";
   } catch (error) {
-    setAgent(`Browser memory was not imported: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
 els.accountForgetMemory?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
   try {
     await accountRequest("/api/account/memory", { action: "forget-all" });
     if (state.memorySource === "account") {
@@ -1622,22 +2174,32 @@ els.accountForgetMemory?.addEventListener("click", async () => {
       state.memorySource = "browser";
       renderJourney();
     }
-    showToast("Account product notes forgotten");
+    els.accountActionStatus.textContent = "Account product notes forgotten";
   } catch (error) {
-    setAgent(`Account product notes were not forgotten: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
 els.accountForgetProfile?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
   try {
     await accountRequest("/api/account/profile", { profile: {} });
-    showToast("Account profile cleared");
+    delete els.accountDisplayName.dataset.edited;
+    renderAccount();
+    els.accountActionStatus.textContent = "Account profile cleared";
   } catch (error) {
-    setAgent(`Account profile was not cleared: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
 els.accountLogout?.addEventListener("click", async () => {
+  if (state.accountBusy || state.accountAvailability !== "ready") return;
+  const scrollPosition = window.scrollY;
   try {
     await accountRequest("/api/account/logout", {});
     const journeyAfterLogout = accountJourneyAfterLogout({ preferenceSource: state.preferenceSource, memorySource: state.memorySource, preferences: state.preferences, memory: state.memory, anonymousPreferences: DEFAULT_PREFERENCES, hasSavedPreferences: state.hasSavedPreferences });
@@ -1650,10 +2212,13 @@ els.accountLogout?.addEventListener("click", async () => {
     state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.preferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
     renderJourney();
     state.account = { signedIn: false, csrfToken: null, profile: {}, preferences: {}, memory: [], error: "" };
+    delete els.accountDisplayName.dataset.edited;
     renderAccount();
     showToast("Logged out of hosted account");
   } catch (error) {
-    setAgent(`Logout did not complete: ${error.message}.`);
+    accountFailure();
+  } finally {
+    window.scrollTo({ top: scrollPosition, behavior: "instant" });
   }
 });
 
@@ -1801,6 +2366,8 @@ function registerEngineTools() {
 }
 
 async function init() {
+  restoreAccountDraft();
+  switchView(location.hash.slice(1) || "product");
   state.contextSnapshot = createContextSnapshot({
     profile: state.profile,
     preferences: state.preferences,
