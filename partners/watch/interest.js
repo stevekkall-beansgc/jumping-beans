@@ -6,12 +6,17 @@ const form = document.getElementById("interest");
 const product = document.getElementById("interest-product");
 const msg = document.getElementById("interest-msg");
 const submit = document.getElementById("interest-submit");
+const replayButton = document.getElementById("interest-replay");
 const confirmation = document.getElementById("interest-confirmed");
 const actionDetail = document.getElementById("interest-action");
 const receiptDetail = document.getElementById("interest-receipt");
 const LOCAL_DEVELOPMENT = new URLSearchParams(location.search).get("watch-local-development") === "1";
 let csrfToken = null;
 let pending = null;
+// Keep the committed request only in this page's memory. It is never written
+// to browser storage or exposed in the rendered receipt. This enables a person
+// to verify idempotent replay without creating a durable client-side secret.
+let lastCommitted = null;
 
 product.replaceChildren(...INTEREST_PRODUCTS.map((item) => { const option = document.createElement("option"); option.value = item.sku; option.textContent = item.name; return option; }));
 function show(text, state = "success") { msg.textContent = text; msg.dataset.state = state; msg.hidden = false; }
@@ -42,7 +47,23 @@ async function stage(data) {
 async function commit() {
   const response = await request("/api/register-interest", { action: pending.action, grantId: pending.grantId, confirmationGrant: pending.confirmationGrant }); const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `The demand store rejected this request (${response.status}).`);
+  lastCommitted = { action: pending.action, grantId: pending.grantId, confirmationGrant: pending.confirmationGrant };
   showReceipt(body.receipt, body.replayed); show(body.message); pending = null; confirmation.disabled = true; submit.textContent = "Stage another target price";
+  replayButton.hidden = false;
+}
+async function replayOriginal() {
+  if (!lastCommitted) return;
+  submit.disabled = true; replayButton.disabled = true; replayButton.setAttribute("aria-busy", "true");
+  try {
+    const response = await request("/api/register-interest", lastCommitted);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || `The original receipt could not be returned (${response.status}).`);
+    showReceipt(body.receipt, body.replayed); show(body.message);
+  } catch (error) {
+    show(`${error instanceof Error ? error.message : "The original receipt could not be returned."} No new demand signal was created.`, "error");
+  } finally {
+    submit.disabled = false; replayButton.disabled = false; replayButton.removeAttribute("aria-busy");
+  }
 }
 form.addEventListener("submit", async (event) => {
   event.preventDefault(); submit.disabled = true; submit.setAttribute("aria-busy", "true");
@@ -60,5 +81,7 @@ form.addEventListener("submit", async (event) => {
     else show(`${message} No demand signal, notification, purchase, or reservation was created.`, "error");
   } finally { submit.disabled = false; submit.removeAttribute("aria-busy"); }
 });
+
+replayButton.addEventListener("click", replayOriginal);
 
 prefillHandoff();
