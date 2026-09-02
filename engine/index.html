@@ -18,6 +18,11 @@
         <a class="bl-brand" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
         <p class="bl-muted product-note">User-controlled offer memory</p>
       </div>
+      <nav class="engine-nav" aria-label="Jumping Beans views" role="tablist">
+        <button class="engine-tab" id="tab-product" type="button" role="tab" aria-selected="true" aria-controls="product-view" data-engine-tab="product">What you want to see</button>
+        <button class="engine-tab" id="tab-network" type="button" role="tab" aria-selected="false" aria-controls="network-view" data-engine-tab="network" tabindex="-1">Your network</button>
+        <button class="engine-tab" id="tab-demo" type="button" role="tab" aria-selected="false" aria-controls="demo-view" data-engine-tab="demo" tabindex="-1">Demo / WebMCP details</button>
+      </nav>
       <p class="bl-muted connection-status" role="status" aria-live="polite">
         <span class="status-dot" id="status-dot" data-on="0" aria-hidden="true"></span>
         <span id="status">Open inventory ready. Checking opted-in partner sites.</span>
@@ -26,6 +31,105 @@
   </header>
 
   <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
+    <section class="product-view bl-stack" id="product-view" role="tabpanel" aria-labelledby="tab-product">
+      <div class="product-hero bl-measure">
+        <p class="eyebrow">Your preference layer</p>
+        <h1>What do you want to see?</h1>
+        <p class="lede">Tell Jumping Beans what matters to you. We’ll turn it into clear preferences you can use across your network.</p>
+      </div>
+
+      <section class="bl-card product-card" id="product-chooser" aria-labelledby="chooser-title">
+        <p class="section-label">Start with a style</p>
+        <h2 id="chooser-title">How should your network feel?</h2>
+        <p class="field-hint">Choose one starting point. You can change it before anything is saved or shared.</p>
+        <div class="style-grid">
+          <button class="style-option" type="button" data-starter-style="visual"><strong>Visual</strong><span>Let images and product stories lead.</span></button>
+          <button class="style-option" type="button" data-starter-style="balanced"><strong>Balanced</strong><span>Show useful facts without extra work.</span></button>
+          <button class="style-option" type="button" data-starter-style="compare"><strong>Compare</strong><span>Make price and evidence easy to scan.</span></button>
+          <button class="style-option" type="button" data-starter-style="custom"><strong>Start with my own words</strong><span>Describe what matters in your own words.</span></button>
+        </div>
+      </section>
+
+      <section class="bl-card product-card" aria-labelledby="builder-title">
+        <div class="product-card-heading">
+          <div>
+            <p class="section-label">Make it yours</p>
+            <h2 id="builder-title">Shape your preferences</h2>
+          </div>
+          <span class="bl-badge source-pill source-user" data-status="success">Draft only</span>
+        </div>
+        <p class="field-hint">These choices stay here until you review and choose what to do with them.</p>
+        <form id="product-preferences-form" class="product-form">
+          <label for="product-category">What are you shopping for?</label>
+          <input id="product-category" name="category" type="text" maxlength="80" placeholder="For example, watches or dog gear" autocomplete="off">
+          <label for="product-style">Feed style</label>
+          <select id="product-style" name="style">
+            <option value="visual">Visual</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="compare">Compare</option>
+            <option value="custom">My own words</option>
+          </select>
+          <label for="product-max-price">Price ceiling <span>(optional)</span></label>
+          <div class="money-input"><span aria-hidden="true">$</span><input id="product-max-price" name="maxPrice" type="number" min="0" max="10000000" step="0.01" placeholder="No limit" inputmode="decimal"></div>
+          <button class="bl-button" type="submit">Review my preferences</button>
+        </form>
+        <form id="product-prompt" class="product-prompt">
+          <label for="product-prompt-input">Or say it in your own words</label>
+          <div class="compose-row"><input id="product-prompt-input" name="prompt" type="text" placeholder="Show me proof, not pressure" autocomplete="off"><button class="bl-button" data-variant="secondary" type="submit">Add preference</button></div>
+        </form>
+        <section class="product-rule-manager" aria-labelledby="product-rules-title">
+          <div class="product-card-heading">
+            <div>
+              <p class="section-label">Your words</p>
+              <h3 id="product-rules-title">Preference rules</h3>
+            </div>
+            <span class="field-hint">Add as many as you need.</span>
+          </div>
+          <p class="field-hint">Use a rule everywhere, or for the category above. When a category has its own rule, that is the one your network sees there.</p>
+          <form class="product-rule-form" id="product-rule-form">
+            <label for="product-rule-text">What should your network keep in mind?</label>
+            <div class="product-rule-entry">
+              <input id="product-rule-text" name="ruleText" type="text" maxlength="240" placeholder="For example, show repair options first" autocomplete="off">
+              <label class="product-rule-scope-label" for="product-rule-scope">Where</label>
+              <select id="product-rule-scope" name="ruleScope">
+                <option value="everywhere">Everywhere</option>
+                <option value="category">For this category</option>
+              </select>
+              <button class="bl-button" data-variant="secondary" type="submit">Add rule</button>
+            </div>
+          </form>
+          <div class="product-rule-list" id="product-rule-list" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section class="bl-card product-card product-review" id="product-review" aria-labelledby="product-review-title" hidden>
+        <p class="section-label">Before anything changes</p>
+        <h2 id="product-review-title">Here’s what we’ll use</h2>
+        <ul class="product-review-list" id="product-review-rules"></ul>
+        <p class="product-review-sharing" id="product-review-sharing"></p>
+        <div class="product-review-actions">
+          <button class="bl-button" id="product-save" type="button">Use these preferences and save</button>
+          <button class="bl-button" data-variant="secondary" id="product-use-once" type="button">Use this time only</button>
+        </div>
+      </section>
+
+      <button class="product-network-link" id="product-network-link" type="button">See your network</button>
+    </section>
+
+    <section class="network-view bl-stack" id="network-view" role="tabpanel" aria-labelledby="tab-network" hidden>
+      <div class="product-hero bl-measure">
+        <p class="eyebrow">Your network</p>
+        <h1>A feed shaped around what matters to you.</h1>
+        <p class="lede" id="network-status">Use your preferences to see a network shaped around them.</p>
+      </div>
+      <div class="network-toolbar bl-card">
+        <div><strong>Network sharing</strong><p class="field-hint">Connected member sites can use your approved preferences. Open selections stay inside Jumping Beans.</p></div>
+        <button class="bl-button" data-variant="quiet" id="pause-network-sharing" type="button">Pause network sharing</button>
+      </div>
+      <section class="product-feed" id="network-feed" aria-label="Personalized network feed"></section>
+    </section>
+
+    <section class="demo-view" id="demo-view" role="tabpanel" aria-labelledby="tab-demo" hidden>
     <section class="bl-stack bl-measure intro" data-space="compact" aria-labelledby="page-title">
       <p class="eyebrow">Agent-led offer journey</p>
       <h1 id="page-title">Let the next offer remember what you chose.</h1>
@@ -108,9 +212,10 @@
                 </dl>
               </section>
 
+              <p class="field-hint">Review the exact fact on the primary page; from there, you can Save and apply to Site B or Apply once without saving.</p>
               <div class="bl-actions step-actions">
-                <button class="bl-button" id="apply-preferences" type="button">Save and apply to Site B</button>
-                <button class="bl-button" data-variant="secondary" id="apply-once" type="button">Apply once without saving</button>
+                <button class="bl-button" id="apply-preferences" type="button">Review what we’ll use</button>
+                <button class="bl-button" data-variant="secondary" id="apply-once" type="button">Review temporary use</button>
                 <button class="bl-button" data-variant="quiet" id="reset-preferences" type="button">Reset choices</button>
               </div>
             </article>
@@ -210,6 +315,7 @@
         </section>
       </aside>
     </div>
+    </section>
   </main>
 
   <div class="bl-callout toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>

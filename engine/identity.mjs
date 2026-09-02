@@ -1,6 +1,8 @@
 // Optional hosted identity for the engine. This is deliberately separate from
 // WebMCP: it never participates in partner discovery, tool inputs, or receipts.
 
+import { normalizePreferencePlane } from "./preference-plane.mjs";
+
 export const SESSION_COOKIE = "__Host-jb-session";
 export const OIDC_COOKIE = "__Host-jb-oidc";
 const LOCAL_SESSION_COOKIE = "jb-local-session";
@@ -133,14 +135,14 @@ async function accountSession(request, env, { csrf = false } = {}) {
 
 function parseStored(value, fallback) { try { return JSON.parse(value); } catch { return fallback; } }
 function profile(value) { return plainObject(value) ? { displayName: text(value.displayName, 120), bio: text(value.bio, 500) } : {}; }
-function preferences(value) { if (!plainObject(value)) return {}; const formats = Array.isArray(value.formats) ? value.formats.filter((item) => typeof item === "string" && item.length <= 64).slice(0, 12) : []; const maxPrice = Number.isFinite(value.maxPrice) && value.maxPrice >= 0 && value.maxPrice <= 10_000_000 ? value.maxPrice : null; return { formats, maxPrice }; }
+export function sanitizeAccountPreferences(value) { return normalizePreferencePlane(value); }
 function memory(value) { if (!Array.isArray(value)) return []; return value.filter(plainObject).map((item) => ({ key: text(item.key, 160), title: text(item.title || item.name, 160), detail: text(item.detail || item.reason, 500), observedAt: text(item.observedAt, 64) })).filter((item) => item.key && item.title).slice(0, 30); }
 
 async function accountPayload(env, session, csrfToken = null) {
   const row = await first(db(env).prepare("/* engine:data */ SELECT profile_json, preferences_json, memory_json, updated_at FROM engine_user_data WHERE user_id = ?").bind(session.user_id));
   const rawPreferences = row?.preferences_json || "{}";
   const rawMemory = row?.memory_json || "[]";
-  return { signedIn: true, user: { email: session.email, displayName: session.display_name || null }, profile: profile(parseStored(row?.profile_json, {})), preferences: preferences(parseStored(rawPreferences, {})), memory: memory(parseStored(rawMemory, [])), hasPreferences: rawPreferences !== "{}", hasMemory: rawMemory !== "[]", updatedAt: row?.updated_at || null, csrfToken };
+  return { signedIn: true, user: { email: session.email, displayName: session.display_name || null }, profile: profile(parseStored(row?.profile_json, {})), preferences: sanitizeAccountPreferences(parseStored(rawPreferences, {})), memory: memory(parseStored(rawMemory, [])), hasPreferences: rawPreferences !== "{}", hasMemory: rawMemory !== "[]", updatedAt: row?.updated_at || null, csrfToken };
 }
 
 async function requireAccount(request, env) {
@@ -203,7 +205,7 @@ export async function handleIdentity(request, env) {
       if (!(await rateLimit(env, request, "account-write", 60))) return failure("rate-limited", 429);
       const input = await body(request);
       if (path === "/api/account/profile") await updateData(env, auth.session.user_id, "profile_json", profile(input.profile));
-      if (path === "/api/account/preferences") await updateData(env, auth.session.user_id, "preferences_json", preferences(input.preferences));
+      if (path === "/api/account/preferences") await updateData(env, auth.session.user_id, "preferences_json", sanitizeAccountPreferences(input.preferences));
       if (path === "/api/account/memory") {
         const current = await accountPayload(env, auth.session);
         const next = input.action === "forget-all" ? [] : input.action === "forget" ? current.memory.filter((item) => item.key !== text(input.key, 160)) : memory(input.memory);
@@ -213,7 +215,7 @@ export async function handleIdentity(request, env) {
       if (path === "/api/account/import") {
         if (input.confirmed !== true) return failure("import-confirmation-required", 400);
         await db(env).batch([
-          db(env).prepare("/* engine:import-profile */ UPDATE engine_user_data SET profile_json = ?, preferences_json = ?, memory_json = ?, updated_at = ? WHERE user_id = ?").bind(JSON.stringify(profile(input.profile)), JSON.stringify(preferences(input.preferences)), JSON.stringify(memory(input.memory)), now(), auth.session.user_id),
+          db(env).prepare("/* engine:import-profile */ UPDATE engine_user_data SET profile_json = ?, preferences_json = ?, memory_json = ?, updated_at = ? WHERE user_id = ?").bind(JSON.stringify(profile(input.profile)), JSON.stringify(sanitizeAccountPreferences(input.preferences)), JSON.stringify(memory(input.memory)), now(), auth.session.user_id),
           db(env).prepare("/* engine:import-audit */ INSERT INTO engine_account_events (id, user_id, event_type, created_at) VALUES (?, ?, ?, ?)").bind(id("event"), auth.session.user_id, "explicit-browser-memory-import", now()),
         ]);
       }

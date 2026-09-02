@@ -1,6 +1,8 @@
 // P0 capability, authorization, resolver, and journey primitives.
 // WebMCP tool names adapt into this boundary; they do not bypass it.
 
+import { normalizePreferencePlane, preferenceSharingPayload } from "./preference-plane.mjs";
+
 export const CAPABILITIES = Object.freeze([
   Object.freeze({ id: "offers.discover", version: "1.0.0", title: "Discover eligible offers", mode: "read", requiredScope: "offers:read", outcomeType: "offer_set_ready" }),
   Object.freeze({ id: "preferences.stage", version: "1.0.0", title: "Stage presentation preferences", mode: "write", requiredScope: "preferences:stage", outcomeType: "preference_staged" }),
@@ -49,12 +51,29 @@ export function createContextSnapshot({ profile, preferences, applied, demoConte
   // has been applied. Draft state stays inside this document.
   const appliedContext = Boolean(applied);
   const explicitDemoContext = appliedContext && Boolean(demoContextGranted);
-  const source = explicitDemoContext ? "explicit-applied-demo-context" : "anonymous-browser-context";
-  return { contextSnapshotId: opaqueId("context"), source, scope: "Jumping Beans product in this browser", capturedAt: new Date().toISOString(), values: { personaId: explicitDemoContext ? profile?.personaId || null : null, recurringCategories: explicitDemoContext ? [...(profile?.recurringCategories || [])] : [], budgetCeilings: explicitDemoContext ? { ...(profile?.budgetCeilings || {}) } : {}, preferredChannels: [], presentationFormats: appliedContext ? [...(preferences?.formats || [])] : [], maxPrice: appliedContext ? preferences?.maxPrice ?? null : null, applied: appliedContext }, provenance: { demoContext: explicitDemoContext ? "user-approved applied demo context" : "not transmitted", preferences: appliedContext ? "user-applied" : "draft-not-transmitted" }, trust: { userContext: explicitDemoContext ? "explicitly-approved-applied-demo-context" : "anonymous", businessAuthorization: "not-provided" } };
+  const normalizedPreferences = normalizePreferencePlane(preferences);
+  const sharedPreferences = appliedContext ? preferenceSharingPayload(normalizedPreferences) : null;
+  const requestedCategory = normalizedPreferences.category;
+  const categories = appliedContext
+    ? requestedCategory
+      ? [requestedCategory]
+      : explicitDemoContext
+        ? [...(profile?.recurringCategories || [])]
+        : []
+    : [];
+  const source = explicitDemoContext
+    ? "explicit-applied-demo-context"
+    : appliedContext
+      ? "explicit-applied-preference-context"
+      : "anonymous-browser-context";
+  return { contextSnapshotId: opaqueId("context"), source, scope: "Jumping Beans product in this browser", capturedAt: new Date().toISOString(), values: { personaId: explicitDemoContext ? profile?.personaId || null : null, recurringCategories: categories, budgetCeilings: explicitDemoContext ? { ...(profile?.budgetCeilings || {}) } : {}, preferredChannels: [], presentationFormats: appliedContext ? [...normalizedPreferences.formats] : [], maxPrice: appliedContext ? normalizedPreferences.maxPrice : null, preferencePlane: sharedPreferences, applied: appliedContext }, provenance: { demoContext: explicitDemoContext ? "user-approved applied demo context" : "not transmitted", preferences: appliedContext ? "user-applied" : "draft-not-transmitted" }, trust: { userContext: explicitDemoContext ? "explicitly-approved-applied-demo-context" : "anonymous", businessAuthorization: "not-provided" } };
 }
 export function projectPartnerContext(context, origin) {
-  const values = context?.values || {}; const approved = context?.source === "explicit-applied-demo-context" && context?.provenance?.demoContext === "user-approved applied demo context" && values.applied === true;
-  return { recipient: origin, purpose: "find eligible offer records", retention: "request-only", approved, fields: { categories: approved ? [...(values.recurringCategories || [])] : [], maxPrice: approved && Number.isFinite(values.maxPrice) ? values.maxPrice : undefined }, fieldProvenance: { categories: approved ? "explicit-demo-context" : "not-transmitted", maxPrice: approved ? "user-entered" : "not-transmitted" } };
+  const values = context?.values || {}; const approved = ["explicit-applied-demo-context", "explicit-applied-preference-context"].includes(context?.source) && values.applied === true && values.preferencePlane && typeof values.preferencePlane === "object";
+  const fields = { categories: approved ? [...(values.recurringCategories || [])] : [] };
+  if (approved && Number.isFinite(values.maxPrice)) fields.maxPrice = values.maxPrice;
+  if (approved) fields.preferencePlane = { ...values.preferencePlane, formats: [...(values.preferencePlane.formats || [])], rules: (values.preferencePlane.rules || []).map((rule) => ({ text: rule.text, scope: rule.scope, category: rule.category })) };
+  return { recipient: origin, purpose: "find eligible offer records", retention: "request-only", approved, fields, fieldProvenance: { categories: approved ? "explicitly-approved preference context" : "not-transmitted", maxPrice: approved ? "user-entered" : "not-transmitted", preferencePlane: approved ? "user-approved canonical preference plane" : "not-transmitted" } };
 }
 export function createEvent(journey, type, payload = {}) { return { eventId: opaqueId("event"), journeyId: journey.journeyId, occurredAt: new Date().toISOString(), type, source: "jumping-beans-engine", observedOrInferred: "observed", schemaVersion: "1.0.0", ...payload }; }
 

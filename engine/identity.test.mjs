@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { OIDC_COOKIE, SESSION_COOKIE, handleIdentity, safeReturnPath, sha256 } from "./identity.mjs";
+import { OIDC_COOKIE, SESSION_COOKIE, handleIdentity, safeReturnPath, sanitizeAccountPreferences, sha256 } from "./identity.mjs";
 
 assert.equal(SESSION_COOKIE, "__Host-jb-session");
 assert.equal(OIDC_COOKIE, "__Host-jb-oidc");
@@ -11,6 +11,19 @@ assert.equal(safeReturnPath("/\\attacker.invalid"), "/");
 const digest = await sha256("account-session-test");
 assert.match(digest, /^[a-f0-9]{64}$/);
 assert.notEqual(digest, "account-session-test");
+
+const hostedPreferences = sanitizeAccountPreferences({
+  feedStyle: "compare",
+  category: "coffee",
+  maxPrice: 40,
+  formats: ["price-proof", "not-supported"],
+  sessionId: "session-secret",
+  grantId: "grant-secret",
+  rules: [{ id: "proof", text: "Show price proof", scope: "everywhere", idempotencyKey: "write-secret" }],
+});
+assert.equal(hostedPreferences.feedStyle, "compare");
+assert.deepEqual(hostedPreferences.formats, ["price-proof"]);
+assert.equal(JSON.stringify(hostedPreferences).includes("secret"), false);
 
 const anonymous = await handleIdentity(new Request("https://engine.invalid/api/account"), {});
 assert.equal(anonymous.status, 200);

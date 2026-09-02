@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const checkOnly = process.argv.includes("--check");
-const exts = new Set([".html", ".js", ".json", ".svg", ".css"]);
+const exts = new Set([".html", ".js", ".mjs", ".json", ".svg", ".css"]);
 // Files that must NOT be bundled into static.js (the worker/bundler/source itself).
 const exclude = new Set([
   "index.mjs",

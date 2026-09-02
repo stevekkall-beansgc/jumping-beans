@@ -25,6 +25,7 @@ import {
   resolveOfferDeals,
 } from "./p0.js";
 import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
+import { normalizePreferencePlane, reviewPreferencePlane, selectStarterStyle, STARTER_STYLES } from "./preference-plane.mjs";
 
 const els = {
   status: document.getElementById("status"),
@@ -64,13 +65,37 @@ const els = {
   accountForgetProfile: document.getElementById("account-forget-profile"),
   accountLogout: document.getElementById("account-logout"),
   toast: document.getElementById("toast"),
+  productView: document.getElementById("product-view"),
+  networkView: document.getElementById("network-view"),
+  demoView: document.getElementById("demo-view"),
+  productChooser: document.getElementById("product-chooser"),
+  productForm: document.getElementById("product-preferences-form"),
+  productCategory: document.getElementById("product-category"),
+  productMaxPrice: document.getElementById("product-max-price"),
+  productStyle: document.getElementById("product-style"),
+  productPrompt: document.getElementById("product-prompt"),
+  productRuleForm: document.getElementById("product-rule-form"),
+  productRuleText: document.getElementById("product-rule-text"),
+  productRuleScope: document.getElementById("product-rule-scope"),
+  productRuleList: document.getElementById("product-rule-list"),
+  productReview: document.getElementById("product-review"),
+  productReviewRules: document.getElementById("product-review-rules"),
+  productReviewSharing: document.getElementById("product-review-sharing"),
+  productUseOnce: document.getElementById("product-use-once"),
+  productSave: document.getElementById("product-save"),
+  productNetworkLink: document.getElementById("product-network-link"),
+  networkFeed: document.getElementById("network-feed"),
+  networkStatus: document.getElementById("network-status"),
+  pauseSharing: document.getElementById("pause-network-sharing"),
+  connectionStatus: document.querySelector(".connection-status"),
 };
 
 const STORAGE = {
   preferences: "jumping-beans-preferences",
   memory: "jumping-beans-offer-memory",
+  networkSharing: "jumping-beans-network-sharing",
 };
-const DEFAULT_PREFERENCES = { formats: ["price-proof"], tone: "calm", maxPrice: null };
+const DEFAULT_PREFERENCES = normalizePreferencePlane({ formats: ["price-proof"], tone: "calm" });
 const loadedAt = new Date().toISOString();
 const OPEN_INVENTORY = {
   sku: "open-wildone-walk-kit",
@@ -132,14 +157,12 @@ function removeStored(key) {
 }
 
 const storedPreferences = readStored(STORAGE.preferences, DEFAULT_PREFERENCES);
-const initialPreferences = {
-  formats:
-    Array.isArray(storedPreferences.formats) && storedPreferences.formats.length
-      ? storedPreferences.formats
-      : [...DEFAULT_PREFERENCES.formats],
-  tone: storedPreferences.tone || DEFAULT_PREFERENCES.tone,
-  maxPrice: storedPreferences.maxPrice ?? null,
-};
+const initialPreferences = normalizePreferencePlane({
+  ...storedPreferences,
+  formats: Array.isArray(storedPreferences.formats) && storedPreferences.formats.length
+    ? storedPreferences.formats
+    : [...DEFAULT_PREFERENCES.formats],
+});
 const storedMemory = readStored(STORAGE.memory, []);
 const state = {
   profile: PERSONAS[0],
@@ -170,6 +193,10 @@ const state = {
   draftRevision: 0,
   preferenceSource: "browser",
   memorySource: "browser",
+  networkSharingPaused: readStored(STORAGE.networkSharing, false) === true,
+  currentView: "product",
+  productReviewVisible: false,
+  editingRuleId: null,
 };
 
 function recordEvent(type, payload = {}) {
@@ -220,7 +247,7 @@ function safeUrl(value) {
 }
 
 function safeOrigin(value) {
-  return safeUrl(value)?.hostname || value || "unknown origin";
+  return safeUrl(value)?.origin || value || "unknown origin";
 }
 
 function absoluteTime(value) {
@@ -322,6 +349,7 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   // Native discovery is deferred until the page applies an explicit choice.
   // This keeps draft preferences and a merely toggled demo control in-page.
   if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])) };
+  if (state.networkSharingPaused) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "paused", count: 0, reason: "network sharing is paused by the user" }])) };
   if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {} };
   recordEvent("capability.invocation.started", {
     capabilityId: "offers.discover",
@@ -366,7 +394,7 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
       tools: matching, allowedOrigins: PARTNER_ORIGINS,
       inputForOrigin: (origin) => {
         const projection = projectPartnerContext(state.contextSnapshot, origin);
-        return { categories: projection.fields.categories, maxPrice: projection.fields.maxPrice };
+        return projection.fields;
       },
       execute: (tool, input) => executeTool(tool, input),
     }),
@@ -487,13 +515,13 @@ function provenanceMarkup(deal, sourceKind) {
     : `${deal.partnerName || deal.merchant || "The partner"} returned the record through WebMCP`;
   const source = isOpen
     ? "Public product-feed snapshot bundled with this demo"
-    : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.hostname}` : ""}`;
+    : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.origin}` : ""}`;
   const when = isOpen
     ? `Loaded into this page ${absoluteTime(deal.observedAt)}; the source capture time is unavailable`
     : `Tool response received ${absoluteTime(deal.observedAt)}`;
   const evidence = isOpen
     ? `Catalog record ${deal.sku}; no live price check ran`
-    : `Tool response from ${sourceOrigin?.hostname || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
+    : `Tool response from ${sourceOrigin?.origin || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
   const sourceLink = destination
     ? `<a href="${escapeHtml(destination.href)}" target="_blank" rel="noopener noreferrer">Merchant product page</a>`
     : escapeHtml(source);
@@ -566,15 +594,229 @@ function renderMemoryStep() {
   );
 }
 
+function switchView(view) {
+  const nextView = ["product", "network", "demo"].includes(view) ? view : "product";
+  state.currentView = nextView;
+  els.connectionStatus?.toggleAttribute("hidden", nextView === "product");
+  document.querySelectorAll("[data-engine-tab]").forEach((tab) => {
+    const selected = tab.dataset.engineTab === nextView;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  for (const [name, panel] of Object.entries({ product: els.productView, network: els.networkView, demo: els.demoView })) {
+    if (!panel) continue;
+    panel.hidden = name !== nextView;
+  }
+  if (nextView === "network") renderProductNetwork();
+  if (nextView === "product") renderProductShell();
+  const hash = nextView === "product" ? "" : `#${nextView}`;
+  if (location.hash !== hash) history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
+}
+
+function renderProductShell() {
+  if (!els.productReviewRules) return;
+  const active = normalizePreferencePlane(state.preferences);
+  els.productCategory.value = active.category;
+  els.productMaxPrice.value = active.maxPrice == null ? "" : String(active.maxPrice);
+  els.productStyle.value = active.feedStyle;
+  els.productChooser.hidden = state.hasSavedPreferences || state.preferences.category.length > 0;
+  els.productReview.hidden = !state.productReviewVisible;
+  renderProductRules(active);
+  els.productReviewRules.replaceChildren();
+  const review = reviewPreferencePlane(active, { save: false });
+  const rules = [
+    ["Feed style", STARTER_STYLES[active.feedStyle]?.label || "Balanced"],
+    ["Where it applies", active.category ? `For ${active.category}` : "Everywhere"],
+    ...(active.maxPrice == null ? [] : [["Budget", `Up to ${money(active.maxPrice)}`]]),
+    ...review.activeRules.map((rule) => [rule.scope === "category" ? `For ${rule.category}` : "Everywhere", rule.text]),
+  ];
+  if (!rules.length) rules.push(["Preferences", "Use the default presentation"]);
+  for (const [label, value] of rules) {
+    const item = document.createElement("li");
+    item.className = "product-review-rule";
+    item.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span>`;
+    els.productReviewRules.append(item);
+  }
+  els.productReviewSharing.textContent = `Choose how long to use these preferences. ${review.sharing}. “Use these preferences and save” keeps them for next time.`;
+}
+
+function ruleScopeLabel(rule) {
+  return rule.scope === "category" ? `For ${rule.category || "this category"}` : "Everywhere";
+}
+
+function renderProductRules(preferences) {
+  if (!els.productRuleList) return;
+  els.productRuleList.replaceChildren();
+  if (!preferences.rules.length) {
+    const empty = document.createElement("p");
+    empty.className = "field-hint product-rule-empty";
+    empty.textContent = "No extra rules yet. Your selected style is ready to review on its own.";
+    els.productRuleList.append(empty);
+    return;
+  }
+  for (const rule of preferences.rules) {
+    const item = document.createElement("article");
+    item.className = "product-rule";
+    item.dataset.paused = String(!rule.active);
+    if (state.editingRuleId === rule.id) {
+      item.innerHTML = `
+        <form class="product-rule-edit" data-rule-edit="${escapeHtml(rule.id)}">
+          <label for="rule-edit-${escapeHtml(rule.id)}">Edit preference</label>
+          <input id="rule-edit-${escapeHtml(rule.id)}" name="text" type="text" maxlength="240" value="${escapeHtml(rule.text)}">
+          <label for="rule-scope-${escapeHtml(rule.id)}">Where</label>
+          <select id="rule-scope-${escapeHtml(rule.id)}" name="scope">
+            <option value="everywhere"${rule.scope === "everywhere" ? " selected" : ""}>Everywhere</option>
+            <option value="category"${rule.scope === "category" ? " selected" : ""}>For this category</option>
+          </select>
+          <div class="product-rule-actions"><button class="bl-button" data-variant="secondary" type="submit">Save rule</button><button class="bl-button" data-variant="quiet" data-rule-cancel="${escapeHtml(rule.id)}" type="button">Cancel</button></div>
+        </form>`;
+    } else {
+      item.innerHTML = `
+        <div><strong>${escapeHtml(rule.text)}</strong><span>${escapeHtml(ruleScopeLabel(rule))}${rule.active ? "" : " · Paused"}</span></div>
+        <div class="product-rule-actions">
+          <button class="bl-button" data-variant="quiet" data-rule-edit="${escapeHtml(rule.id)}" type="button">Edit</button>
+          <button class="bl-button" data-variant="quiet" data-rule-pause="${escapeHtml(rule.id)}" type="button">${rule.active ? "Pause" : "Use again"}</button>
+          <button class="bl-button" data-variant="danger" data-rule-forget="${escapeHtml(rule.id)}" type="button">Forget</button>
+        </div>`;
+    }
+    els.productRuleList.append(item);
+  }
+}
+
+function currentProductCategory() {
+  return (els.productCategory?.value || state.preferences.category || "").trim();
+}
+
+function addDraftRule({ text, scope = "everywhere", category = currentProductCategory() }) {
+  const ruleText = text.trim().slice(0, 240);
+  if (!ruleText) return false;
+  if (scope === "category" && !category) {
+    setAgent("Name a category above before adding a rule for this category.");
+    els.productCategory?.focus();
+    return false;
+  }
+  const draft = productPreferenceDraft();
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({
+    ...draft,
+    rules: [...draft.rules, { id: opaqueId("rule"), text: ruleText, scope, category, active: true }],
+  });
+  state.productReviewVisible = true;
+  setAgent(`Added “${ruleText}” to your draft. Review what we’ll use before sharing it.`);
+  renderProductShell();
+  return true;
+}
+
+function updateDraftRule(id, changes) {
+  const current = normalizePreferencePlane(state.preferences);
+  const existing = current.rules.find((rule) => rule.id === id);
+  if (!existing) return;
+  const scope = changes.scope === "category" ? "category" : "everywhere";
+  const category = scope === "category" ? (existing.category || currentProductCategory()) : existing.category;
+  if (scope === "category" && !category) {
+    setAgent("Name a category above before using “For this category.”");
+    els.productCategory?.focus();
+    return;
+  }
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({
+    ...current,
+    rules: current.rules.map((rule) => rule.id === id ? { ...rule, ...changes, scope, category } : rule),
+  });
+  state.editingRuleId = null;
+  state.productReviewVisible = true;
+  renderProductShell();
+}
+
+function pauseDraftRule(id) {
+  const current = normalizePreferencePlane(state.preferences);
+  const existing = current.rules.find((rule) => rule.id === id);
+  if (!existing) return;
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({
+    ...current,
+    rules: current.rules.map((rule) => rule.id === id ? { ...rule, active: !rule.active } : rule),
+  });
+  state.productReviewVisible = true;
+  setAgent(existing.active ? "That preference is paused. It will not be used until you turn it back on." : "That preference is active again.");
+  renderProductShell();
+}
+
+function forgetDraftRule(id) {
+  const current = normalizePreferencePlane(state.preferences);
+  const existing = current.rules.find((rule) => rule.id === id);
+  if (!existing) return;
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({ ...current, rules: current.rules.filter((rule) => rule.id !== id) });
+  state.editingRuleId = null;
+  state.productReviewVisible = true;
+  setAgent(`Forgot “${existing.text}” from this draft.`);
+  renderProductShell();
+}
+
+function productPreferenceDraft() {
+  const current = normalizePreferencePlane(state.preferences);
+  const category = els.productCategory.value.trim();
+  const maxPrice = els.productMaxPrice.value === "" ? null : Number(els.productMaxPrice.value);
+  return normalizePreferencePlane({
+    ...current,
+    category,
+    maxPrice: Number.isFinite(maxPrice) && maxPrice >= 0 ? maxPrice : null,
+    feedStyle: els.productStyle.value,
+  });
+}
+
+function stageProductPreferences() {
+  const next = productPreferenceDraft();
+  markDraftEdited({ preferences: true });
+  state.preferences = next;
+  state.productReviewVisible = true;
+  setAgent("Your draft is ready to review. Nothing has been saved or shared.");
+  renderProductShell();
+  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function applyStarterStyle(style) {
+  const selected = selectStarterStyle(style);
+  markDraftEdited({ preferences: true });
+  state.preferences = normalizePreferencePlane({ ...state.preferences, ...selected });
+  state.productReviewVisible = true;
+  setAgent("Your style is ready. Review what we’ll use before you choose this time only or save for next time.");
+  renderProductShell();
+  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderProductNetwork() {
+  if (!els.networkFeed) return;
+  els.networkStatus.textContent = state.networkSharingPaused
+    ? "Network sharing is paused. Your preferences are still saved here; connected member sites are using their standard experiences."
+    : state.applied
+      ? state.appliedMode === "once"
+        ? "Your network is using these preferences for this visit only."
+        : "Your network is using the preferences you approved."
+      : "Use your preferences to see a network shaped around them.";
+  els.pauseSharing.textContent = state.networkSharingPaused ? "Resume network sharing" : "Pause network sharing";
+  els.pauseSharing.dataset.variant = state.networkSharingPaused ? "secondary" : "quiet";
+  const openCard = `<article class="product-offer-card">${offerMarkup(state.sourceA, "open", "Open selection", state.applied ? state.appliedPreferences : state.preferences)}</article>`;
+  const partnerDeals = state.capabilityResolution?.exposed || [];
+  const partnerCards = partnerDeals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "optin", `${deal.partnerName || "Member experience"} · matched to your preferences`, state.appliedPreferences)}</article>`);
+  els.networkFeed.innerHTML = partnerCards.length
+    ? `${openCard}${partnerCards.join("")}`
+    : `${openCard}<section class="bl-callout network-empty" data-tone="info"><h3>No connected member selections yet</h3><p>${state.networkSharingPaused ? "Resume network sharing when you want connected member sites to use your preferences." : "Use these preferences to check the opted-in member experiences in your network."}</p><button class="bl-button" id="network-use-preferences" type="button">Use these preferences</button></section>`;
+  document.getElementById("network-use-preferences")?.addEventListener("click", () => {
+    state.productReviewVisible = true;
+    switchView("product");
+    renderProductShell();
+  });
+}
+
 function renderOfferCard(container, markup) {
   container.innerHTML = markup;
 }
 
-function withPreferenceQuery(destination, preferences) {
+function partnerDestination(destination) {
   const url = safeUrl(destination);
   if (!url) return null;
-  url.searchParams.set("jb_presentation", (preferences.formats || []).join(","));
-  url.searchParams.set("jb_memory", state.appliedMode === "saved" ? "saved" : "once");
   return url.href;
 }
 
@@ -586,7 +828,8 @@ function networkMarkup() {
     const partnerDeals = exposed.filter((deal) => deal.partnerOrigin === origin);
     const eligible = state.capabilityResolution?.eligible.filter((deal) => deal.partnerOrigin === origin).length || 0;
     const outcome = state.originOutcomes[origin] || { status: "failed", reason: "not discovered" };
-    return `<li><strong>${escapeHtml(PARTNER_NAMES[origin] || safeOrigin(origin))}</strong><span>${escapeHtml(outcome.status)} · ${eligible} eligible · ${partnerDeals.length} exposed</span></li>`;
+    const partnerLabel = PARTNER_NAMES[origin] || "Member experience";
+    return `<li><strong>${escapeHtml(partnerLabel)}</strong><span>${escapeHtml(safeOrigin(origin))} · ${escapeHtml(outcome.status)} · ${eligible} eligible · ${partnerDeals.length} exposed</span></li>`;
   });
   if (!rows.length) {
     return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>No opted-in partner capability responded in this browser. The open catalog remains available as the baseline.</p></section>`;
@@ -635,7 +878,7 @@ function renderNextStep() {
   const sourceKind = "optin";
   const destination =
     deal.partnerOrigin || PARTNER_ORIGINS[0] || deal.landing;
-  const href = withPreferenceQuery(destination, activePreferences);
+  const href = partnerDestination(destination);
   const label = "Site B · adapted by an opted-in partner";
   const openLabel = "Open opted-in Site B";
   const actions = `
@@ -779,8 +1022,8 @@ function hydrateAccountJourney(account, requestDraftRevision, hasBrowserPersiste
     memory: state.memory,
   });
   if (!hydrated) return false;
-  state.preferences = hydrated.preferences;
-  state.appliedPreferences = hydrated.appliedPreferences;
+  state.preferences = normalizePreferencePlane(hydrated.preferences);
+  state.appliedPreferences = normalizePreferencePlane(hydrated.appliedPreferences);
   state.memory = hydrated.memory;
   state.preferenceSource = hydrated.preferenceSource;
   state.memorySource = hydrated.memorySource;
@@ -939,6 +1182,8 @@ function renderJourney() {
     els.watchDetail.textContent = "Stage one Watch Co product and target price for review. Jumping Beans does not save or monitor it.";
     els.watchButton.textContent = "Prepare Watch Co handoff";
   }
+  renderProductShell();
+  renderProductNetwork();
 }
 
 async function applyPreferences({ persist }) {
@@ -962,7 +1207,10 @@ async function applyPreferences({ persist }) {
     persisted: Boolean(persist),
   });
   if (persist) {
+    const sharingWasPaused = state.networkSharingPaused;
     const preferencesSaved = writeStored(STORAGE.preferences, state.appliedPreferences);
+    if (!sharingWasPaused) writeStored(STORAGE.networkSharing, true);
+    state.networkSharingPaused = sharingWasPaused;
     state.hasSavedPreferences = preferencesSaved;
     state.preferenceSource = "browser";
     const labels = state.appliedPreferences.formats
@@ -979,7 +1227,7 @@ async function applyPreferences({ persist }) {
     state.pendingRemember = false;
     setAgent(
       preferencesSaved && memorySaved
-        ? "Saved in this browser and applied to Site B. Only the selected display rules travel in the preview URL."
+        ? "Saved in this browser and applied to Site B. Only the approved preference plane travels in the native WebMCP request."
         : "Applied to Site B for this visit, but this browser did not allow the preference to be saved.",
     );
     showToast(preferencesSaved && memorySaved ? "Display rules saved and applied" : "Applied once; browser storage unavailable");
@@ -995,6 +1243,7 @@ async function applyPreferences({ persist }) {
   });
   renderJourney();
   await rerunAppliedJourney();
+  switchView("network");
 }
 
 function invalidateAppliedJourney() {
@@ -1036,6 +1285,13 @@ function handlePrompt(value) {
     state.preferences.maxPrice = 30;
   }
   if (text.includes("remember")) state.pendingRemember = true;
+  const category = currentProductCategory();
+  state.preferences = normalizePreferencePlane({
+    ...state.preferences,
+    category: category || state.preferences.category,
+    rules: [...state.preferences.rules, { id: opaqueId("rule"), text: value, scope: "everywhere", category, active: true }],
+  });
+  state.productReviewVisible = true;
   setAgent(`I updated the draft choices from “${value}”. Review the exact fact and choose whether to save it or apply it once.`);
   renderJourney();
 }
@@ -1121,6 +1377,109 @@ function showToast(message) {
   }, 2400);
 }
 
+function toggleNetworkSharing() {
+  state.networkSharingPaused = !state.networkSharingPaused;
+  writeStored(STORAGE.networkSharing, !state.networkSharingPaused);
+  if (state.networkSharingPaused) {
+    state.appliedJourneyRevision += 1;
+    invalidateAppliedJourney();
+    setAgent("Network sharing is paused. Your saved preferences remain in Jumping Beans.");
+    renderJourney();
+    return;
+  }
+  setAgent("Network sharing resumed. Connected member sites can use your saved preferences.");
+  renderJourney();
+  if (state.applied) void rerunAppliedJourney();
+}
+
+document.querySelectorAll("[data-engine-tab]").forEach((tab) => {
+  tab.addEventListener("click", () => switchView(tab.dataset.engineTab));
+  tab.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const tabs = [...document.querySelectorAll("[data-engine-tab]")];
+    const index = tabs.indexOf(tab);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault();
+    tabs[next].focus();
+    switchView(tabs[next].dataset.engineTab);
+  });
+});
+
+document.querySelectorAll("[data-starter-style]").forEach((button) => {
+  button.addEventListener("click", () => applyStarterStyle(button.dataset.starterStyle));
+});
+
+els.productForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  stageProductPreferences();
+});
+
+els.productPrompt?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = els.productPrompt.querySelector("input")?.value.trim();
+  if (!value) return;
+  handlePrompt(value);
+  els.productPrompt.reset();
+});
+
+els.productRuleForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (addDraftRule({ text: els.productRuleText.value, scope: els.productRuleScope.value })) {
+    els.productRuleText.value = "";
+    els.productRuleText.focus();
+  }
+});
+
+els.productRuleList?.addEventListener("click", (event) => {
+  const edit = event.target.closest("button[data-rule-edit]");
+  const pause = event.target.closest("button[data-rule-pause]");
+  const forget = event.target.closest("button[data-rule-forget]");
+  const cancel = event.target.closest("button[data-rule-cancel]");
+  if (edit) {
+    state.editingRuleId = edit.dataset.ruleEdit;
+    renderProductShell();
+    document.getElementById(`rule-edit-${state.editingRuleId}`)?.focus();
+  } else if (pause) {
+    pauseDraftRule(pause.dataset.rulePause);
+  } else if (forget) {
+    forgetDraftRule(forget.dataset.ruleForget);
+  } else if (cancel) {
+    state.editingRuleId = null;
+    renderProductShell();
+  }
+});
+
+els.productRuleList?.addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-rule-edit]");
+  if (!form) return;
+  event.preventDefault();
+  const text = new FormData(form).get("text");
+  if (!String(text || "").trim()) {
+    form.querySelector('[name="text"]')?.focus();
+    return;
+  }
+  updateDraftRule(form.dataset.ruleEdit, { text: String(text), scope: new FormData(form).get("scope") });
+});
+
+els.productUseOnce?.addEventListener("click", async () => {
+  state.productReviewVisible = false;
+  await applyPreferences({ persist: false });
+});
+
+els.productSave?.addEventListener("click", async () => {
+  state.productReviewVisible = false;
+  await applyPreferences({ persist: true });
+});
+
+els.productNetworkLink?.addEventListener("click", () => switchView("network"));
+els.pauseSharing?.addEventListener("click", toggleNetworkSharing);
+
+document.querySelectorAll("[data-open-engine-view]").forEach((button) => {
+  button.addEventListener("click", () => switchView(button.dataset.openEngineView));
+});
+
+window.addEventListener("hashchange", () => switchView(location.hash.slice(1) || "product"));
+
 els.controls.addEventListener("change", (event) => {
   const input = event.target.closest("[data-pref]");
   if (!input) return;
@@ -1152,11 +1511,17 @@ els.demoProfile?.addEventListener("change", async () => {
 });
 
 document.getElementById("apply-preferences").addEventListener("click", async () => {
-  await applyPreferences({ persist: true });
+  state.productReviewVisible = true;
+  switchView("product");
+  renderProductShell();
+  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("apply-once").addEventListener("click", async () => {
-  await applyPreferences({ persist: false });
+  state.productReviewVisible = true;
+  switchView("product");
+  renderProductShell();
+  document.getElementById("product-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
@@ -1200,7 +1565,8 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
 });
 
 document.getElementById("edit-preferences").addEventListener("click", () => {
-  document.querySelector("[data-pref]")?.focus();
+  switchView("product");
+  els.productCategory?.focus();
 });
 
 els.memoryList.addEventListener("click", (event) => {
@@ -1460,6 +1826,7 @@ async function init() {
   } else if (SUPPORTED) {
     setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B shows an honest no-result outcome.");
   }
+  switchView(location.hash.slice(1) || "product");
 }
 
 init();

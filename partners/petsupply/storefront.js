@@ -4,18 +4,15 @@
 const grid = document.getElementById("grid");
 const banner = document.getElementById("banner");
 const partnerName = document.body.dataset.partnerName || "Partner shop";
-const params = new URLSearchParams(location.search);
-const requestedFormats = params.get("jb_presentation")?.split(",").filter(Boolean) || [];
+const partnerState = globalThis.__JB_PARTNER_CONTEXT__ ??= { preferencePlane: null };
+const ALLOWED_FORMATS = new Set(["testimonial", "price-proof", "video", "no-urgency"]);
+const ALLOWED_FEED_STYLES = new Set(["visual", "balanced", "compare", "custom"]);
 const formatLabels = {
   testimonial: "testimonials first",
   video: "a short video first",
   "price-proof": "price proof first",
   "no-urgency": "no urgency",
 };
-const adaptiveLabel = requestedFormats
-  .map((format) => formatLabels[format])
-  .filter(Boolean)
-  .join(" · ");
 
 const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
 
@@ -24,6 +21,58 @@ function element(tag, className, text) {
   if (className) node.className = className;
   if (text != null) node.textContent = text;
   return node;
+}
+
+function normalizePreferencePlane(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const formats = Array.isArray(value.formats)
+    ? [...new Set(value.formats.filter((format) => ALLOWED_FORMATS.has(format)))]
+    : [];
+  const rules = Array.isArray(value.rules)
+    ? value.rules
+        .filter((rule) => rule && typeof rule === "object" && !Array.isArray(rule))
+        .map((rule) => {
+          const text = typeof rule.text === "string" ? rule.text.trim().slice(0, 240) : "";
+          const scope = rule.scope === "category" ? "category" : "everywhere";
+          const category = typeof rule.category === "string" ? rule.category.trim().slice(0, 80) : "";
+          return text ? { text, scope, category: scope === "category" ? category : "" } : null;
+        })
+        .filter(Boolean)
+    : [];
+  return {
+    feedStyle: ALLOWED_FEED_STYLES.has(value.feedStyle) ? value.feedStyle : "balanced",
+    category: typeof value.category === "string" ? value.category.trim().slice(0, 80) : "",
+    maxPrice: Number.isFinite(value.maxPrice) && value.maxPrice >= 0 ? value.maxPrice : null,
+    formats,
+    rules,
+  };
+}
+
+function currentPreferencePlane() {
+  partnerState.preferencePlane = normalizePreferencePlane(partnerState.preferencePlane);
+  return partnerState.preferencePlane;
+}
+
+function formatPreferencePlane(plane) {
+  if (!plane) return null;
+  const parts = [];
+  if (plane.feedStyle) parts.push(`feed style ${plane.feedStyle}`);
+  if (plane.category) parts.push(`category ${plane.category}`);
+  if (Number.isFinite(plane.maxPrice)) parts.push(`max price ${money.format(plane.maxPrice)}`);
+  if (plane.formats.length) {
+    const formats = plane.formats.map((format) => formatLabels[format]).filter(Boolean).join(" · ");
+    if (formats) parts.push(formats);
+  }
+  return parts.join(" · ");
+}
+
+function relevantRules(plane) {
+  if (!plane?.rules?.length) return [];
+  const categoryKey = String(plane.category || "").trim().toLocaleLowerCase();
+  return plane.rules.filter((rule) => {
+    if (rule.scope === "everywhere") return true;
+    return categoryKey && String(rule.category || "").trim().toLocaleLowerCase() === categoryKey;
+  });
 }
 
 function safeHttpUrl(value) {
@@ -47,6 +96,63 @@ function expiryLabel(value) {
   if (days === 0) return "Listed offer ends today";
   if (days === 1) return "Listed offer ends tomorrow";
   return `Listed offer ends ${expiry.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+}
+
+function collateralForDeal(deal) {
+  const hasMerchantListPrice = deal.listPriceSource === "merchant"
+    && Number.isFinite(deal.listPrice)
+    && deal.listPrice > deal.dealPrice;
+  const collateral = [
+    { type: "image", url: deal.imageUrl, label: "Merchant product image" },
+    ...(hasMerchantListPrice
+      ? [{
+          type: "price-proof",
+          text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
+          source: `${partnerName} catalog compare-at price`,
+        }]
+      : []),
+  ];
+  if (deal.sku === "WO-CLR-WV-S-BLK") {
+    collateral.push({
+      type: "testimonial",
+      text: "The quick-release collar is simple, sturdy, and easy to use every day.",
+      source: "Petsupply customer story",
+    });
+  }
+  if (deal.sku === "LGLIGT10") {
+    collateral.push({
+      type: "testimonial",
+      text: "A bright, easy everyday roast with a smooth finish.",
+      source: "Coffee Co customer story",
+    });
+  }
+  return collateral;
+}
+
+function normalizeCatalog(catalog) {
+  return catalog.map((deal) => ({ ...deal, collateral: collateralForDeal(deal) }));
+}
+
+function presentationScore(deal, plane) {
+  if (!plane) return 0;
+  let score = 0;
+  const requestedFormats = new Set(plane.formats || []);
+  const collateralTypes = new Set((deal.collateral || []).map((item) => item.type));
+  if (plane.category && String(deal.category || "").trim().toLocaleLowerCase() === String(plane.category).trim().toLocaleLowerCase()) score += 3;
+  if (plane.feedStyle === "visual" && collateralTypes.has("testimonial")) score += 2;
+  if (plane.feedStyle === "compare" && collateralTypes.has("price-proof")) score += 2;
+  if (requestedFormats.has("testimonial") && collateralTypes.has("testimonial")) score += 4;
+  if (requestedFormats.has("price-proof") && collateralTypes.has("price-proof")) score += 4;
+  if (requestedFormats.has("video") && collateralTypes.has("video")) score += 4;
+  if (requestedFormats.has("no-urgency")) score += 1;
+  return score;
+}
+
+function preferenceNotes(deal, plane) {
+  if (!plane) return [];
+  const requestedFormats = new Set(plane.formats || []);
+  const testimonial = (deal.collateral || []).find((item) => item.type === "testimonial");
+  return requestedFormats.has("testimonial") && testimonial?.text ? [testimonial.text] : [];
 }
 
 function provenanceDetails(deal, destination) {
@@ -73,7 +179,7 @@ function provenanceDetails(deal, destination) {
   return details;
 }
 
-function productCard(deal, index) {
+function productCard(deal, index, plane) {
   const item = document.createElement("li");
   const article = element("article", "bl-card offer-card");
   const headingId = `offer-${index}`;
@@ -114,8 +220,9 @@ function productCard(deal, index) {
   expiry.append(time);
 
   body.append(element("p", "bl-card__eyebrow category", category), heading, price, expiry);
-  if (adaptiveLabel) {
-    const adaptation = element("p", "bl-callout adaptation-note", `Adapted using this browser’s selected display rules: ${adaptiveLabel}.`);
+  const notes = preferenceNotes(deal, plane);
+  if (notes.length) {
+    const adaptation = element("p", "bl-callout adaptation-note", notes.join(" "));
     adaptation.dataset.tone = "info";
     body.append(adaptation);
   }
@@ -137,12 +244,30 @@ function productCard(deal, index) {
   return item;
 }
 
-function showAdaptation() {
-  if (!banner || !adaptiveLabel) return;
+function showAdaptation(plane) {
+  if (!banner) return;
+  if (!plane) {
+    banner.replaceChildren(
+      element("strong", "", "Opted-in partner, public-feed inventory"),
+      element("span", "", `${partnerName} exposes structured offers through WebMCP. The underlying catalog records came from a public feed and are not independently verified by Jumping Beans.`),
+    );
+    return;
+  }
+  const summary = formatPreferencePlane(plane);
+  const rules = relevantRules(plane).slice(0, 3);
   banner.replaceChildren(
     element("strong", "", "Opted-in partner preview"),
-    element("span", "", `${partnerName} received scoped presentation context: ${adaptiveLabel}. Product facts still come from the catalog source named on each offer.`),
+    element("span", "", `${partnerName} received scoped presentation context: ${summary}. Product facts still come from the catalog source named on each offer.`),
   );
+  if (rules.length) {
+    banner.append(
+      element(
+        "p",
+        "bl-callout adaptation-note",
+        `Relevant rules: ${rules.map((rule) => rule.scope === "category" && rule.category ? `${rule.text} (${rule.category})` : rule.text).join(" · ")}`,
+      ),
+    );
+  }
 }
 
 async function renderCatalog() {
@@ -155,7 +280,11 @@ async function renderCatalog() {
       grid.replaceChildren(element("li", "bl-callout offer-grid__state", "No catalog offers are available right now."));
       return;
     }
-    grid.replaceChildren(...catalog.map(productCard));
+    const plane = currentPreferencePlane();
+    showAdaptation(plane);
+    const ranked = normalizeCatalog(catalog)
+      .sort((a, b) => presentationScore(b, plane) - presentationScore(a, plane) || Number(a.dealPrice || 0) - Number(b.dealPrice || 0));
+    grid.replaceChildren(...ranked.map((deal, index) => productCard(deal, index, plane)));
   } catch {
     grid.replaceChildren(
       (() => {
@@ -169,5 +298,8 @@ async function renderCatalog() {
   }
 }
 
-showAdaptation();
+showAdaptation(currentPreferencePlane());
+window.addEventListener("jb:preference-plane", () => {
+  void renderCatalog();
+});
 renderCatalog();

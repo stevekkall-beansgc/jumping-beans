@@ -176,6 +176,14 @@ includesAll(engineApp, [
   "% below merchant comparison price",
 ], "engine WebMCP, provenance, and consent contract");
 check(!engineApp.includes("% below list") && !engineApp.includes("Listed price"), "Engine renders an unsupported generic list-price claim");
+check(!engineApp.includes("jb_presentation") && !engineApp.includes("jb_memory"), "Engine does not pass preference state through partner URL parameters");
+const petsupplyTool = await readFile(path.join(root, "partners/petsupply/tool.js"), "utf8");
+const coffeeTool = await readFile(path.join(root, "partners/coffee/tool.js"), "utf8");
+const sharedStorefront = await readFile(path.join(root, "shared/storefront.js"), "utf8");
+includesAll(petsupplyTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "petsupply preference-plane adapter");
+includesAll(coffeeTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "coffee preference-plane adapter");
+includesAll(sharedStorefront, ["__JB_PARTNER_CONTEXT__", "preferencePlane", "jb:preference-plane", "relevantRules", "presentationScore"], "shared partner storefront preference-plane contract");
+check(!sharedStorefront.includes("jb_presentation"), "shared storefront no longer relies on query-string presentation hints");
 includesAll(engineHtml, [
   'id="demo-profile"',
   'value="alex-budget-parent"',
@@ -333,6 +341,9 @@ const draftDemoContext = p0.createContextSnapshot({ profile: { personaId: "seed"
 check(draftDemoContext.source === "anonymous-browser-context" && draftDemoContext.values.maxPrice == null && !p0.projectPartnerContext(draftDemoContext, contractOrigins[0]).approved, "Draft demo context can reach a partner projection");
 const appliedDemoContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { formats: ["video"], maxPrice: 10 }, applied: true, demoContextGranted: true });
 check(appliedDemoContext.source === "explicit-applied-demo-context" && p0.projectPartnerContext(appliedDemoContext, contractOrigins[0]).fields.maxPrice === 10, "Explicit applied demo context is not distinct from anonymous context");
+const appliedPreferenceContext = p0.createContextSnapshot({ profile: { personaId: "seed", recurringCategories: ["coffee"] }, preferences: { category: "watches", feedStyle: "compare", formats: ["price-proof"], rules: [{ id: "local-only", text: "Show repair options first", scope: "category", category: "watches" }] }, applied: true });
+const appliedPreferenceProjection = p0.projectPartnerContext(appliedPreferenceContext, contractOrigins[0]);
+check(appliedPreferenceProjection.approved && appliedPreferenceProjection.fields.categories[0] === "watches" && appliedPreferenceProjection.fields.preferencePlane.rules[0].text === "Show repair options first" && !Object.hasOwn(appliedPreferenceProjection.fields, "maxPrice") && !/personaId|session|credential|receipt|grant|idempotency/i.test(JSON.stringify(appliedPreferenceProjection.fields)), "Native partner projection carries only the approved redacted preference plane");
 const sameSkuDifferentOrigins = p0.resolveOfferDeals([
   { ...contractDeal("shared", 10, "one"), origin: contractOrigins[0] },
   { ...contractDeal("shared", 11, "two"), origin: contractOrigins[1] },
