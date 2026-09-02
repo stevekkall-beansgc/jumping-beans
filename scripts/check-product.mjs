@@ -214,6 +214,15 @@ includesAll(engineWorker, [
   'import { handleIdentity } from "./identity.mjs"',
   "const identityResponse = await handleIdentity(request, env);",
 ], "engine WebMCP response policy");
+const engineWorkerModule = await import(`${pathToFileURL(path.join(root, "engine/index.mjs")).href}?check=${Date.now()}`);
+const preferencePlaneResponse = await engineWorkerModule.default.fetch(
+  new Request("https://engine.invalid/preference-plane.mjs"),
+  {},
+);
+check(
+  preferencePlaneResponse.headers.get("content-type") === "text/javascript; charset=utf-8",
+  "Engine serves .mjs modules with a non-JavaScript MIME type",
+);
 const identitySource = await readFile(path.join(root, "engine/identity.mjs"), "utf8");
 const identityMigration = await readFile(path.join(root, "engine/migrations/0001_identity.sql"), "utf8");
 const engineWrangler = await readFile(path.join(root, "engine/wrangler.toml"), "utf8");
