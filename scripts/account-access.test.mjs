@@ -1,9 +1,10 @@
+import { interpretPreferenceWords } from "../engine/preference-canvas.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView } from "../engine/account-access.js";
 import { normalizePreferencePlane, reviewPreferencePlane } from "../engine/preference-plane.mjs";
-import { mergeAccountResponse } from "../engine/personal-experience.js";
+import { accountJourneyAfterLogout, mergeAccountResponse } from "../engine/personal-experience.js";
 
 const draft = { editingRuleId: "repair", preferences: { feedStyle: "compare", category: "watches", rules: [{ id: "repair", text: "Show repair options", scope: "everywhere" }], sessionId: "private-session" }, account: { user: { email: "private@example.invalid" }, csrfToken: "private-csrf" }, memory: [{ receipt: "private-receipt" }], accountIntent: "import", accountReturnView: "network", productStage: "preview", productSetupPath: "manual", productBuilderVisible: true, applied: true };
 const snapshot = accountDraftSnapshot(draft, { "product-rule-text": "Still typing", "rule-edit-text": "Unfinished repair edit", credential: "private-password" }, 1000);
@@ -25,7 +26,7 @@ assert.equal(accountReturnView("//elsewhere.invalid"), "product");
 assert.equal(accountIntent("logout"), "save");
 for (const intent of ["save", "import", "profile"]) {
   assert.match(accountGateCopy(intent, false), /Sign in to/);
-  assert.match(accountGateCopy(intent, false), /Apply once without saving/);
+  assert.match(accountGateCopy(intent, false), /This visit only/);
   assert.match(accountGateCopy(intent, true), /never saves or imports automatically/);
 }
 assert.equal(accountDisplayName("Friendly nickname"), "Friendly nickname");
@@ -50,7 +51,8 @@ const els = Object.fromEntries([...source.matchAll(/(\w+): document.getElementBy
 let fetches = 0;
 let response = { ok: true, status: 200, json: async () => ({ signedIn: false, signInAvailable: true }) };
 const state = { ...draft, account: { signedIn: false, error: "" }, accountAvailability: "ready", accountBusy: false, currentView: "product", draftRevision: 3 };
-const context = vm.createContext({ state, els, ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView, normalizePreferencePlane, reviewPreferencePlane, mergeAccountResponse,
+const context = vm.createContext({ state, els, interpretPreferenceWords, accountJourneyAfterLogout, DEFAULT_PREFERENCES: normalizePreferencePlane({}),
+  createContextSnapshot: (value) => value, clearCanvasComposer() {}, invalidateAppliedJourney() {}, ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView, normalizePreferencePlane, reviewPreferencePlane, mergeAccountResponse,
   AbortSignal,
   document: { getElementById: node, createElement: () => node(`generated-${nodes.size}`), querySelectorAll: () => [] },
   window: { scrollY: 380, scrollTo: ({ top }) => { context.scroll = top; } },
@@ -156,4 +158,29 @@ assert.ok(!html.slice(html.indexOf('id="demo-view"'), html.indexOf('id="account-
 assert.match(html, /id="account-back" href="#product"/);
 assert.match(html, /returnTo=%2F%23account/);
 assert.doesNotMatch(html, /role="tablist"|data-engine-tab/);
+const canvasReturn = accountDraftSnapshot({ ...draft, productStage: "results", canvasRuleId: "repair", canvasRetention: "saved", appliedPreferences: draft.preferences }, { "product-prompt-input": "under $200 or below $80" }, 1000);
+assert.equal(canvasReturn.productStage, "results");
+assert.equal(canvasReturn.canvasRuleId, "repair");
+assert.equal(canvasReturn.canvasRetention, "saved");
+assert.equal(canvasReturn.resultSelection.category, "watches");
+assert.doesNotMatch(JSON.stringify(canvasReturn), /private-|csrf|receipt|applied|grant/);
+const recovered = readAccountDraft(storage(JSON.stringify(canvasReturn)), 1500);
+assert.equal(recovered.productStage, "results");
+assert.equal(recovered.resultSelection.category, "watches");
+context.sessionStorage=storage(JSON.stringify({...canvasReturn, createdAt:Date.now()}));
+context.restoreAccountDraft();
+assert.equal(state.canvasRuleId, "repair");
+assert.ok(state.canvasClarification, "ambiguous words remain blocked after sign-in");
+assert.equal(state.canvasRetention, "saved");
+assert.equal(state.canvasReturnSelection.category, "watches");
+
+state.account={signedIn:true,csrfToken:"fixture"};state.accountAvailability="ready";
+state.preferenceSource="account";state.memorySource="account";state.savedPreferences=draft.preferences;state.hasSavedPreferences=true;
+response={ok:true,status:200,json:async()=>({signedIn:false})};
+await node("account-logout").listeners.click();
+assert.equal(state.savedPreferences,null,"account-only saved selection cannot survive logout");
+assert.equal(state.hasSavedPreferences,false);
+assert.equal(state.applied,false);
+assert.equal(state.canvasReturnSelection,null);
+
 console.log("account access contracts pass (draft return, privacy, gates, controls, unavailable service)");

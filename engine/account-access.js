@@ -15,7 +15,7 @@ export function accountGateCopy(intent, signedIn) {
   }[accountIntent(intent)];
   return signedIn
     ? `You can now ${purpose}. Review the details below and choose the action yourself. Signing in never saves or imports automatically.`
-    : `Sign in to ${purpose}. Browsing, setup, local drafts, Save and apply in this browser, and Apply once without saving remain available without an account.`;
+    : `Sign in to ${purpose}. Local drafts, This visit only, and Save in this browser remain available without an account.`;
 }
 
 // Render only the user-editable nickname, never the identity provider's name,
@@ -39,10 +39,13 @@ export function accountDraftSnapshot(state, fields, now = Date.now()) {
     returnFocus: ["header-account", "product-account-save"].includes(state.accountReturnFocus?.id) ? state.accountReturnFocus.id : "header-account",
     preferences: normalizePreferencePlane(state.preferences),
     editingRuleId: normalizePreferencePlane(state.preferences).rules.some((rule) => rule.id === state.editingRuleId) ? state.editingRuleId : null,
-    productStage: ["empty", "saved", "preview"].includes(state.productStage) ? state.productStage : "empty",
+    productStage: ["empty", "saved", "preview", "results"].includes(state.productStage) ? state.productStage : "empty",
     productReturnStage: state.productReturnStage === "saved" ? "saved" : "empty",
     productSetupPath: ["style", "words", "manual", "saved"].includes(state.productSetupPath) ? state.productSetupPath : null,
     productBuilderVisible: state.productBuilderVisible === true,
+    canvasRetention: state.canvasRetention === "saved" ? "saved" : "once",
+    canvasRuleId: normalizePreferencePlane(state.preferences).rules.some((rule) => rule.id === state.canvasRuleId) ? state.canvasRuleId : null,
+    resultSelection: state.productStage === "results" ? normalizePreferencePlane(state.resultSelection || state.appliedPreferences || state.preferences) : null,
     fields: draftFields(fields),
   };
 }
