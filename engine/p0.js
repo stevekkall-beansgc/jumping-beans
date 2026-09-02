@@ -97,7 +97,7 @@ function timeoutAfter(ms) { return new Promise((_, reject) => setTimeout(() => r
 export function isCompatibilityInputError(error) {
   if (/(AbortError|NotAllowedError|SecurityError|TimeoutError)/.test(String(error?.name || ""))) return false;
   const message = String(error?.message || error);
-  return /(?:expected|expects|requires|must be|only accepts)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+(?:string|input|argument)|(?:input|argument)\s+(?:must be|expected as|should be)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+string/i.test(message);
+  return /failed to parse input arguments|(?:expected|expects|requires|must be|only accepts)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+(?:string|input|argument)|(?:input|argument)\s+(?:must be|expected as|should be)\s+(?:a\s+)?(?:json(?:-encoded)?|serialized)\s+string/i.test(message);
 }
 
 // Each origin has an independent deadline. Malformed results never reach ranking.
