@@ -13,8 +13,8 @@ URLs (`landing`). Rebuilt with `scripts/ingest-feed.mjs`:
 | Partner | Live source | # products | Categories |
 |---|---|---|---|
 | petsupply | `wildone.com` | 57 | bowl, toys, leash, collar, harness, carrier, cat*, dog tags… |
-| coffee | `deathwishcoffee.com` | 60 | coffee, mugs, accessories, apparel, on-the-go drinkware… |
-| watch | `watchgecko.com` | 60 | watches (filtered `--only watches`) |
+| coffee | `deathwishcoffee.com` | 150 | coffee, mugs, accessories, apparel, on-the-go drinkware… |
+| watch | `watchgecko.com` | 170 | watches (filtered `--only watches`) |
 
 Regenerate any catalog:
 
@@ -35,13 +35,15 @@ Ingester flags: `--host` (shopify domain), `--out` (target file), `--max`,
 ## Deal shape (the contract the engine expects — unchanged from before)
 
 ```jsonc
-{ "sku","name","category","listPrice","dealPrice","imageUrl","expiresAt",
+{ "sku","name","category","listPrice","listPriceSource","dealPrice","imageUrl","expiresAt",
   "landing",   // NEW: real product URL (the goto / affiliate deep-link target)
   "vendor","source" }
 ```
 
-`listPrice` falls back to `dealPrice * 1.2` when the store has no compare-at
-price, so cards still render a "% off" deal framing over real products.
+`listPrice` is the merchant's compare-at price only when it is present and
+higher than the current price; `listPriceSource` is then `"merchant"`.
+Otherwise both fields are `null`. Storefronts and WebMCP tools must not infer a
+comparison price or render savings claims without that explicit evidence.
 
 ## Cross-origin note
 

@@ -88,22 +88,24 @@ function productCard(deal, index) {
   const category = String(deal.category || "Offer").replaceAll("-", " ");
   const heading = element("h2", "", deal.name || "Unnamed offer");
   heading.id = headingId;
-  const listPrice = Number(deal.listPrice || 0);
   const dealPrice = Number(deal.dealPrice || 0);
-  const savedPercent = listPrice > 0
-    ? Math.max(0, Math.round((1 - dealPrice / listPrice) * 100))
-    : 0;
+  const hasMerchantListPrice = deal.listPriceSource === "merchant"
+    && Number.isFinite(deal.listPrice)
+    && deal.listPrice > dealPrice;
+  const savedPercent = hasMerchantListPrice
+    ? Math.round((1 - dealPrice / deal.listPrice) * 100)
+    : null;
 
   const price = element("p", "offer-card__price");
-  if (listPrice > dealPrice && dealPrice >= 0) {
-    const listed = element("span", "list-price", money.format(listPrice));
-    listed.setAttribute("aria-label", `Listed price ${money.format(listPrice)}`);
+  if (hasMerchantListPrice) {
+    const listed = element("span", "list-price", money.format(deal.listPrice));
+    listed.setAttribute("aria-label", `Merchant comparison price ${money.format(deal.listPrice)}`);
     price.append(listed);
   }
   const current = element("strong", "deal-price", money.format(dealPrice));
   current.setAttribute("aria-label", `Current catalog price ${money.format(dealPrice)}`);
   price.append(current);
-  if (savedPercent > 0) price.append(element("span", "discount", `${savedPercent}% below list`));
+  if (savedPercent > 0) price.append(element("span", "discount", `${savedPercent}% below merchant comparison price`));
 
   const expiry = element("p", "expiry");
   const time = element("time", "", expiryLabel(deal.expiresAt));

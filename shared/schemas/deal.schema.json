@@ -5,7 +5,8 @@
     "sku": { "type": "string" },
     "name": { "type": "string" },
     "category": { "type": "string" },
-    "listPrice": { "type": "number" },
+    "listPrice": { "type": ["number", "null"] },
+    "listPriceSource": { "type": ["string", "null"], "enum": ["merchant", null] },
     "dealPrice": { "type": "number" },
     "imageUrl": { "type": "string" },
     "partnerId": { "type": "string" },
@@ -28,5 +29,5 @@
       }
     }
   },
-  "required": ["sku", "name", "category", "listPrice", "dealPrice", "partnerId"]
+  "required": ["sku", "name", "category", "listPrice", "listPriceSource", "dealPrice", "partnerId"]
 }

@@ -23,12 +23,21 @@ const TESTIMONIALS = {
 };
 
 function enrich(deal) {
-  const savedPct = Math.round((1 - deal.dealPrice / deal.listPrice) * 100);
+  const hasMerchantListPrice = deal.listPriceSource === "merchant"
+    && Number.isFinite(deal.listPrice)
+    && deal.listPrice > deal.dealPrice;
+  const priceProof = hasMerchantListPrice
+    ? [{
+        type: "price-proof",
+        text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
+        source: `${PARTNER_NAME} catalog compare-at price`,
+      }]
+    : [];
   return {
     ...deal,
     collateral: [
       { type: "image", url: deal.imageUrl, label: "Merchant product image" },
-      { type: "price-proof", text: `${savedPct}% below list price`, source: PARTNER_NAME },
+      ...priceProof,
       ...(TESTIMONIALS[deal.sku] ? [TESTIMONIALS[deal.sku]] : []),
     ],
   };

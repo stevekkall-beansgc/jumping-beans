@@ -68,8 +68,8 @@ function renderCard(product, summary) {
   );
   const meter = element("div", "demand-meter");
   meter.setAttribute("aria-hidden", "true");
-  const percent = summary.medianPrice && product.listPrice
-    ? Math.min(100, Math.round((summary.medianPrice / product.listPrice) * 100))
+  const percent = summary.medianPrice && product.currentPrice
+    ? Math.min(100, Math.round((summary.medianPrice / product.currentPrice) * 100))
     : 0;
   meter.style.setProperty("--demand-percent", `${percent}%`);
   item.append(heading, count, range, meter);

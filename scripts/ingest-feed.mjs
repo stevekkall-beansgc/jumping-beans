@@ -2,7 +2,7 @@
 // partners. Multiple backends; each returns items in a canonical Deal shape:
 //
 //   {
-//     sku, name, category, listPrice, dealPrice, imageUrl, expiresAt,
+//     sku, name, category, listPrice, listPriceSource, dealPrice, imageUrl, expiresAt,
 //     landing, vendor, source
 //   }
 //
@@ -51,13 +51,18 @@ function mapCat(c) {
 
 function canonical(item) {
   const dealPrice = Number(item.dealPrice);
-  const listPrice = Number(item.listPrice) || Math.round(dealPrice * 1.2 * 100) / 100;
+  const candidateListPrice = Number(item.listPrice);
+  const hasMerchantListPrice = item.listPriceSource === "merchant"
+    && Number.isFinite(candidateListPrice)
+    && candidateListPrice > dealPrice;
+  const listPrice = hasMerchantListPrice ? candidateListPrice : null;
   const ex = item.expiresAt || new Date(Date.now() + EXPIRES_DAYS * 864e5).toISOString();
   return {
     sku: String(item.sku),
     name: String(item.name),
     category: mapCat(item.category || CATEGORY),
     listPrice,
+    listPriceSource: hasMerchantListPrice ? "merchant" : null,
     dealPrice,
     imageUrl: item.imageUrl || "",
     expiresAt: ex,
@@ -88,7 +93,8 @@ async function fetchShopify(host, max) {
         sku: v.sku || `${p.handle}-${v.id}`,
         name: p.title,
         category: (ptype || (p.tags || [])[0] || CATEGORY).toLowerCase(),
-        listPrice: v.compare_at_price ? Number(v.compare_at_price) : "",
+        listPrice: v.compare_at_price ? Number(v.compare_at_price) : null,
+        listPriceSource: v.compare_at_price ? "merchant" : null,
         dealPrice: Number(v.price),
         imageUrl: p.images?.[0]?.src || p.image?.src || "",
         landing: `https://${host}/products/${p.handle}`,

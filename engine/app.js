@@ -77,8 +77,9 @@ const OPEN_INVENTORY = {
   merchant: "Wild One",
   name: "Everyday Walk Kit",
   category: "dog gear",
-  listPrice: 72,
-  dealPrice: 54,
+  listPrice: 92,
+  listPriceSource: "merchant",
+  dealPrice: 88,
   imageUrl:
     "https://cdn.shopify.com/s/files/1/0011/7532/2687/files/WO_VM_HarnessWalkKit_StepInHarness_WaterproofLeash_Lilac_PDP_01_4x5_Web.jpg?v=1771034687",
   landing: "https://wildone.com/products/step-in-harness-waterproof-leash-dog-walk-kit",
@@ -90,8 +91,8 @@ const OPEN_INVENTORY = {
   collateral: [
     {
       type: "price-proof",
-      text: "Save $18 versus the listed price",
-      source: "Bundled public catalog prices",
+      text: "Save $4 versus the merchant comparison price",
+      source: "Bundled public catalog compare-at price",
     },
   ],
 };
@@ -198,10 +199,15 @@ function money(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
 
+function hasMerchantListPrice(deal) {
+  return deal?.listPriceSource === "merchant"
+    && Number.isFinite(deal.listPrice)
+    && deal.listPrice > Number(deal.dealPrice);
+}
+
 function percent(deal) {
-  const listPrice = Number(deal.listPrice || 0);
-  if (listPrice <= 0) return 0;
-  return Math.max(0, Math.round((1 - Number(deal.dealPrice || 0) / listPrice) * 100));
+  if (!hasMerchantListPrice(deal)) return null;
+  return Math.round((1 - Number(deal.dealPrice) / deal.listPrice) * 100);
 }
 
 function safeUrl(value) {
@@ -436,8 +442,8 @@ function selectedCollateral(deal, preferences) {
   const collateral = Array.isArray(deal.collateral) ? deal.collateral : [];
   const formats = preferences.formats || [];
   const wanted = [
-    ...preferredFormats.filter((format) => formats.includes(format)),
-    "price-proof",
+    ...preferredFormats.filter((format) => formats.includes(format) && (format !== "price-proof" || hasMerchantListPrice(deal))),
+    ...(hasMerchantListPrice(deal) ? ["price-proof"] : []),
   ];
   for (const type of wanted) {
     const item = collateral.find((entry) => entry.type === type);
@@ -459,9 +465,9 @@ function selectedCollateral(deal, preferences) {
     }
   }
   return {
-    type: "price-proof",
-    text: `${percent(deal)}% below list price at ${money(deal.dealPrice)}`,
-    source: "Offer record arithmetic",
+    type: "offer-fact",
+    text: `Current catalog price ${money(deal.dealPrice)}. No merchant comparison price was supplied.`,
+    source: "Offer record",
   };
 }
 
@@ -521,6 +527,9 @@ function offerMarkup(deal, sourceKind, label, preferences) {
         : escapeHtml(collateral.text);
   const sourceClass = sourceKind === "open" ? "source-open" : "source-optin";
   const sourceLabel = sourceKind === "open" ? "Open inventory" : "Opted-in partner";
+  const comparisonPrice = hasMerchantListPrice(deal)
+    ? `<del aria-label="Merchant comparison price ${money(deal.listPrice)}">${money(deal.listPrice)}</del><span>${percent(deal)}% below merchant comparison price</span>`
+    : "";
   const reason =
     sourceKind === "open"
       ? "Found in a bundled public catalog snapshot. No partner connection was needed."
@@ -537,8 +546,7 @@ function offerMarkup(deal, sourceKind, label, preferences) {
         <p class="offer-copy">${copy}</p>
         <div class="offer-price">
           <strong>${money(deal.dealPrice)}</strong>
-          <del aria-label="Listed price ${money(deal.listPrice)}">${money(deal.listPrice)}</del>
-          <span>${percent(deal)}% below list</span>
+          ${comparisonPrice}
         </div>
         <p class="reason"><strong>Why it appeared</strong><br>${reason}</p>
         <div class="bl-callout collateral" data-tone="info">

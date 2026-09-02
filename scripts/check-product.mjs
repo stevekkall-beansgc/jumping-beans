@@ -172,7 +172,10 @@ includesAll(engineApp, [
   "mergeAccountResponse",
   "draftRevision",
   "hasBrowserPersistence",
+  "hasMerchantListPrice",
+  "% below merchant comparison price",
 ], "engine WebMCP, provenance, and consent contract");
+check(!engineApp.includes("% below list") && !engineApp.includes("Listed price"), "Engine renders an unsupported generic list-price claim");
 includesAll(engineHtml, [
   'id="demo-profile"',
   'value="alex-budget-parent"',
@@ -299,7 +302,13 @@ check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverG
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, scopes: [] }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "insufficient-scope", "Capability boundary permits insufficient scope");
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, expiresAt: new Date(0).toISOString() }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "expired-grant", "Capability boundary permits an expired grant");
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverGrant, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).allowed, "Capability boundary rejects a valid scoped grant");
-const contractDeal = (sku, price, origin) => ({ sku, name: `Offer ${sku}`, category: "coffee", listPrice: price + 10, dealPrice: price, partnerId: origin, partnerName: origin, collateral: [{ type: "price-proof" }] });
+const contractDeal = (sku, price, origin) => ({ sku, name: `Offer ${sku}`, category: "coffee", listPrice: price + 10, listPriceSource: "merchant", dealPrice: price, partnerId: origin, partnerName: origin, collateral: [{ type: "price-proof" }] });
+const noComparisonDeal = { ...contractDeal("no-comparison", 10, "one"), listPrice: null, listPriceSource: null, collateral: [] };
+check(p0.validateOffer(noComparisonDeal), "Partner contract rejects an offer with no merchant comparison price");
+check(!p0.validateOffer({ ...noComparisonDeal, listPrice: 12 }), "Partner contract accepts a comparison price without merchant evidence");
+check(!p0.validateOffer({ ...noComparisonDeal, collateral: [{ type: "price-proof", text: "unsupported savings" }] }), "Partner contract accepts price-proof collateral without merchant comparison evidence");
+check(!p0.validateOffer({ ...contractDeal("bad-comparison", 10, "one"), listPriceSource: null }), "Partner contract accepts a merchant comparison without its source marker");
+check(!p0.validateOffer({ ...contractDeal("bad-order", 10, "one"), listPrice: 9 }), "Partner contract accepts a comparison price below the current price");
 const contractOrigins = ["https://one.invalid", "https://two.invalid", "https://three.invalid", "https://four.invalid"];
 const partnerContract = await p0.resolvePartnerTools({
   tools: contractOrigins.map((origin) => ({ origin, name: "get_matching_deals" })), allowedOrigins: contractOrigins,
@@ -449,14 +458,34 @@ includesAll(watchHandoffBlock, [
 ], "Watch Co safe handoff prefill contract");
 check(!watchHandoffBlock.includes("stage(") && !watchHandoffBlock.includes("request("), "Watch handoff prefill silently stages or commits a demand signal");
 
-const watchCatalog = JSON.parse(await readFile(path.join(root, "partners/watch/catalog.json"), "utf8"));
+const partnerCatalogs = new Map();
+for (const partner of ["petsupply", "coffee", "watch"]) {
+  const catalog = JSON.parse(await readFile(path.join(root, `partners/${partner}/catalog.json`), "utf8"));
+  partnerCatalogs.set(partner, catalog);
+  check(catalog.every((deal) =>
+    (deal.listPrice === null && deal.listPriceSource === null)
+    || (deal.listPriceSource === "merchant" && Number.isFinite(deal.listPrice) && deal.listPrice > deal.dealPrice)
+  ), `${partner} catalog contains a comparison price without valid merchant evidence`);
+}
+const ingestSource = await readFile(path.join(root, "scripts/ingest-feed.mjs"), "utf8");
+includesAll(ingestSource, ['listPriceSource: v.compare_at_price ? "merchant" : null', "const hasMerchantListPrice", "listPriceSource: hasMerchantListPrice"], "catalog comparison-price provenance contract");
+check(!ingestSource.includes("dealPrice * 1.2"), "Catalog ingestion still fabricates comparison prices");
+const storefrontSource = await readFile(path.join(root, "shared/storefront.js"), "utf8");
+includesAll(storefrontSource, ['deal.listPriceSource === "merchant"', "% below merchant comparison price"], "storefront comparison-price evidence contract");
+check(!storefrontSource.includes("% below list") && !storefrontSource.includes("Listed price"), "Storefront renders an unsupported generic list-price claim");
+for (const partner of ["petsupply", "coffee", "watch"]) {
+  const toolSource = await readFile(path.join(root, `partners/${partner}/tool.js`), "utf8");
+  includesAll(toolSource, ['deal.listPriceSource === "merchant"', "...priceProof", "% below merchant comparison price"], `${partner} WebMCP comparison-price evidence contract`);
+  check(!toolSource.includes("% below list price"), `${partner} WebMCP tool emits an unsupported generic list-price claim`);
+}
+const watchCatalog = partnerCatalogs.get("watch");
 const productModule = await import(`${pathToFileURL(path.join(root, "partners/watch/interest-products.js")).href}?check=${Date.now()}`);
 const catalogBySku = new Map(watchCatalog.map((item) => [item.sku, item]));
 for (const product of productModule.INTEREST_PRODUCTS) {
   const catalog = catalogBySku.get(product.sku);
   check(Boolean(catalog), `Watch interest SKU ${product.sku} is absent from catalog.json`);
   check(catalog?.name === product.name, `Watch interest name for ${product.sku} differs from catalog.json`);
-  check(catalog?.listPrice === product.listPrice, `Watch interest listPrice for ${product.sku} differs from catalog.json`);
+  check(catalog?.dealPrice === product.currentPrice, `Watch interest currentPrice for ${product.sku} differs from catalog.json`);
   check(watchHtml.includes(`value="${product.sku}"`), `Watch form is missing eligible SKU ${product.sku}`);
 }
 check(productModule.activeInterestRecords([
@@ -627,6 +656,7 @@ const scaffoldSource = await readFile(path.join(root, "scripts/scaffold-partner.
 check(!/(?:#[0-9a-f]{3,8}|rgba?\()/i.test(scaffoldSource), "Partner scaffold reintroduces raw authored colors");
 check(!/live and verified|verified by the shop/i.test(scaffoldSource), "Partner scaffold reintroduces unsupported verification claims");
 includesAll(scaffoldSource, ["design-system/tokens.css", "design-system/primitives.css", "class=\"bl-skip-link\"", "not independently verified by Jumping Beans"], "partner scaffold standard output");
+check((scaffoldSource.match(/listPrice: null/g) || []).length === 2 && (scaffoldSource.match(/listPriceSource: null/g) || []).length === 2, "Partner scaffold invents comparison evidence for demo products");
 
 const prohibited = [engineApp, scaffoldSource, await readFile(path.join(root, "shared/storefront.js"), "utf8")];
 for (const partner of ["petsupply", "coffee", "watch"]) {
