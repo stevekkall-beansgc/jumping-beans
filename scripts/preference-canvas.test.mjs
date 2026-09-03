@@ -344,6 +344,21 @@ finishDiscovery([{name:'get_matching_deals',origin:'one'}]);
 await pendingNative;
 assert.equal(invocations,0,'revoked discovery cannot invoke a native partner tool');
 
+// A completed discovery must refresh its derived origin state before the
+// decision receipt and capability.decision event are created.
+load('function applyPartnerDiscovery(', 'let nativeToolchangeReconciliationQueued');
+state.connectedTools=[{origin:'one'},{origin:'two'},{origin:'two'}];
+state.connectedOrigins=[];
+state.selectedWatchOfferId=null;
+let originsSeenByDecision;
+context.choosePartnerOffer=()=>{originsSeenByDecision=[...state.connectedOrigins];return null;};
+context.watchHandoffOffers=()=>[];
+context.updateConnections=()=>{};
+context.renderJourney=()=>{};
+context.applyPartnerDiscovery({deals:[],originOutcomes:{one:{status:'ready'},two:{status:'no-match'}}});
+assert.equal(JSON.stringify(originsSeenByDecision),'["one","two"]','decision evidence sees every unique origin from the current native discovery');
+assert.equal(JSON.stringify(state.connectedOrigins),'["one","two"]');
+
 // Chrome's native API receives JSON text first, while the legacy-object
 // compatibility retry keeps the same revocation boundary.
 load('async function executeTool(', 'function discoverGrant(');

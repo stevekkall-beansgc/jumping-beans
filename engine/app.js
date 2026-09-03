@@ -641,6 +641,9 @@ async function fetchCatalogDeals(preferences = state.appliedPreferences) {
 function applyPartnerDiscovery(result) {
   state.partnerDeals = result.deals;
   state.originOutcomes = result.originOutcomes;
+  // The decision receipt and its event must describe the tools discovered for
+  // this invocation. Refresh the derived origin list before either is built.
+  state.connectedOrigins = [...new Set(state.connectedTools.map((tool) => tool.origin).filter(Boolean))];
   state.sourceB = choosePartnerOffer(result.deals);
   const watchOffers = watchHandoffOffers();
   if (!watchOffers.some((deal) => deal.resolution.offerId === state.selectedWatchOfferId)) {
