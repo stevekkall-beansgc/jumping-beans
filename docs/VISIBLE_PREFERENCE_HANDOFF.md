@@ -20,8 +20,10 @@ the current selection. Unsupported and partial states say so.
 Privacy boundaries are enforced at both ends: incoming queries, identity,
 memory, receipts, raw prompts, and tracking paths are excluded; malformed or
 noncanonical fragments are rejected and scrubbed; the fragment is not saved or
-automatically propagated. A copied fragment can replay the same nonsensitive
-display settings and is not an authorization token.
+sent in an HTTP request. A storefront may carry the validated fragment only on
+its own action-preview link so the same visit keeps the applied display rules.
+A copied fragment can replay the same nonsensitive display settings and is not
+an authorization token.
 
 Current deterministic, local-browser, production, rollback, and native-release
 evidence is tracked in

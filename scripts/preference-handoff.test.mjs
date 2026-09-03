@@ -147,6 +147,26 @@ test('visible navigation hydrates before render, filters, ranks stories first an
   assert.equal(eligibleStorefrontOffer({ ...catalogDeal(), expiresAt: '2029-12-31T23:59:59Z' }, planeForEligibility(), fixedNow), false);
 });
 
+test('same-store action-chain navigation retains the validated visit-only preference plane', async () => {
+  const firstRender = await storefront(selection);
+  const actionLink = nodesWithClass(firstRender.grid, 'action-card-link')[0];
+  assert.ok(actionLink?.href);
+
+  const actionUrl = new URL(actionLink.href);
+  assert.equal(actionUrl.searchParams.get('jb_action'), 'chain');
+  assert.equal(actionUrl.searchParams.get('jb_sku'), 'LGLIGT10');
+  assert.deepEqual(readPreferenceHandoff(actionUrl.hash), preferenceSharingPayload(selection));
+
+  const actionRender = await storefront(selection, null, actionUrl.hash, { search: actionUrl.search });
+  assert.equal(actionRender.grid.children.length, 2, 'the budget and category still filter the catalog after the action-chain reload');
+  assert.match(textOf(actionRender.banner), /2 eligible offers.*visual.*coffee.*20/);
+  assert.equal(actionRender.grid.dataset.feedStyle, 'visual');
+  assert.doesNotMatch(textOf(actionRender.grid), /Costly coffee|Watch/);
+  assert.equal(actionRender.actionPreview.hidden, false);
+  assert.equal(actionRender.replacements.length, 1, 'the retained fragment is scrubbed again after hydration');
+  assert.equal(actionRender.replacements[0][2], actionUrl.pathname + actionUrl.search);
+});
+
 function catalogDeal() { return { name: 'Coffee', category: 'coffee', dealPrice: 10, availability: 'in-stock' }; }
 function planeForEligibility() { return { category: 'coffee', maxPrice: 20 }; }
 
@@ -187,7 +207,9 @@ test('malformed handoff is scrubbed with visible rejection; native context event
   const rejected = await storefront(selection, null, '#jb_preferences=%ZZ');
   assert.match(textOf(rejected.banner), /could not be applied/);
   assert.equal(rejected.replacements.length, 1);
+  assert.ok(nodesWithClass(rejected.grid, 'action-card-link').every((link) => new URL(link.href).hash === ''));
   const native = await storefront(selection, { ...selection, maxPrice: 9, formats: [], feedStyle: 'balanced' });
   assert.equal(native.grid.children.length, 1);
   assert.match(textOf(native.grid), /Cheap coffee/);
+  assert.ok(nodesWithClass(native.grid, 'action-card-link').every((link) => new URL(link.href).hash === ''), 'a later native plane must not replay the stale arrival fragment');
 });

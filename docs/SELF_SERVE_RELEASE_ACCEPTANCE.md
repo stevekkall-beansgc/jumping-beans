@@ -40,7 +40,7 @@ catalog, preference-handoff, tool, and action-link paths.
 
 | Gate | Current result |
 |---|---|
-| Deterministic product gate | PASS locally: 740 assertions |
+| Deterministic product gate | PASS locally: 741 assertions |
 | Generated UI, Engine bundle, and inventory index | PASS locally; current in the isolated worktree |
 | Chromium local journey | PASS in Chrome 152.0.7977.65: all 9 product/viewport cases; strict prices, category and presentation behavior, fragments, responsive images, hidden actions, page errors, and overflow checked |
 | Partner paging and keyboard focus | PASS locally: Watch 24 → 48 cards; focus moved to the first new heading; action forward/back/approval focused the active heading |
@@ -83,7 +83,8 @@ accepted:
   healthy Watch read-only demand summary;
 - all nine ordinary-browser recipe/viewport journeys, with bounded prices,
   fragment scrubbing, hidden inactive actions, no uncaught page errors, and no
-  horizontal overflow.
+  horizontal overflow; the Watch action-preview navigation must also retain
+  the applied watch category, comparison layout, and strict price ceiling.
 
 The workflow snapshots the previous Pages deployments before it changes
 production. On a failed post-deploy gate, cleanup attempts to restore each unit

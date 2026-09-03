@@ -14,8 +14,11 @@ const CATALOG_TIMEOUT_MS = Number.isFinite(configuredCatalogTimeout)
   ? Math.max(1, Math.min(10000, configuredCatalogTimeout))
   : 10000;
 let visibleCount = PAGE_SIZE;
-// Consume before any catalog render. Do not persist or propagate the fragment.
+// Consume before any catalog render. Do not persist the fragment. Keep the
+// validated value in memory so this visit's same-store action-chain navigation
+// can retain the applied presentation plane after the address bar is scrubbed.
 const arrivedPlane = readPreferenceHandoff(window.location.hash);
+const arrivedPreferenceFragment = arrivedPlane ? window.location.hash : "";
 const rejectedHandoff = window.location.hash.startsWith("#jb_preferences=") && !arrivedPlane;
 if (arrivedPlane) partnerState.preferencePlane = arrivedPlane;
 if (window.location.hash.startsWith("#jb_preferences=")) {
@@ -290,6 +293,7 @@ function productCard(deal, index, plane) {
   actionLink.searchParams.set("jb_sku", deal.sku || "");
   actionLink.searchParams.set("jb_trigger", "product");
   actionLink.searchParams.set("jb_source", "partner-storefront");
+  if (arrivedPreferenceFragment && plane === arrivedPlane) actionLink.hash = arrivedPreferenceFragment;
   const previewLink = element("a", "bl-button action-card-link", "Try an action chain");
   previewLink.href = actionLink.href;
   previewLink.dataset.variant = "secondary";

@@ -148,7 +148,27 @@ try {
         const actionHref = await page.getByRole("link", { name: "Try an action chain" }).first().getAttribute("href");
         assert.ok(actionHref);
         await page.goto(actionHref, { waitUntil: "domcontentloaded" });
+        await page.locator('#grid[aria-busy="false"]').waitFor();
         await page.locator("#action-chain-preview:not([hidden])").waitFor();
+        assert.equal(await page.evaluate(() => location.hash), "", "Watch action-chain navigation must scrub the preference fragment after hydration");
+        const actionBanner = await page.locator("#banner").textContent();
+        assert.match(actionBanner, /Your Engine selection is applied/, "Watch action-chain navigation must retain the applied Engine selection");
+        assert.match(actionBanner, new RegExp(scenario.category, "i"), "Watch action-chain navigation must retain the selected category");
+        assert.match(actionBanner, new RegExp(`\\$${scenario.maxPrice}(?:\\.00)?`), "Watch action-chain navigation must retain the selected budget");
+        assert.equal(await page.locator("#grid").getAttribute("data-feed-style"), "compare", "Watch action-chain navigation must retain the selected feed style");
+        const actionCards = page.locator("#grid > li:has(article.offer-card)");
+        const actionCardCount = await actionCards.count();
+        assert.ok(actionCardCount > 0 && actionCardCount <= 24, "Watch action-chain navigation must keep a bounded eligible result set");
+        assert.equal(actionCardCount, cardCount, "Watch action-chain navigation must retain the same applied result set");
+        const actionPrices = await page.locator("#grid .deal-price").allTextContents();
+        assert.equal(actionPrices.length, actionCardCount, "every Watch action-chain result must expose one catalog price");
+        assert.ok(
+          actionPrices.every((value) => Number(value.replace(/[^0-9.]/g, "")) < scenario.maxPrice),
+          `Watch action-chain results must remain under $${scenario.maxPrice}`,
+        );
+        const actionCategories = (await page.locator("#grid .category").allTextContents()).map((value) => value.trim().toLowerCase());
+        assert.equal(actionCategories.length, actionCardCount, "every Watch action-chain result must expose one category");
+        assert.ok(actionCategories.every((value) => value === scenario.category), "Watch action-chain navigation must retain only watch-category results");
         const actionImages = await responsiveImageEvidence(page);
         assert.ok(actionImages.some(({ sourceWidth, hasResponsiveSet }) => sourceWidth <= 320 && hasResponsiveSet), "action thumbnail must use a responsive bounded source");
         const next = page.getByRole("button", { name: /Continue to choose|Review approval/ });
