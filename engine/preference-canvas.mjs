@@ -5,13 +5,13 @@ export function interpretPreferenceWords(value) {
   let remainder = String(value || "").trim().slice(0, 240);
   // Negation, alternatives and open-ended categories remain literal priorities.
   if (/\b(?:not|never|except|exclude|avoid)\s+(?:category:|(?:shopping for|under|below|up to)\b)/i.test(remainder)) return { remainder, clarification: "" };
-  if (/\bshopping for\s+(?:watches|dog gear|coffee)\s+(?:and|or)\s+(?:category:\s*)?(?:shopping for\s*)?(?:watches|dog gear|coffee)\b/i.test(remainder)) return { remainder, clarification: "Choose one category above, or leave the category blank and remove the category list from your words." };
+  if (/\bshopping for\s+(?:watches|dog gear|coffee)\s+(?:and|or)\s+(?:category:\s*)?(?:shopping for\s*)?(?:watches|dog gear|coffee)\b/i.test(remainder)) return { remainder, clarification: "Choose one category in your words, or use the manual form and remove the category list from your words." };
   const budgets = [...remainder.matchAll(/\b(?:under|below|up to)\s*(?:\$|USD\s*)(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?![\d]|[.,]\d)/gi)];
   const categories = [...remainder.matchAll(/\b(?:shopping for|category:)\s*(watches|dog gear|coffee)(?=\s*(?:$|[.;,]|(?:under|below|up to)\b))/gi)];
   const prices = [...new Set(budgets.map((match) => Number(match[1].replaceAll(",", ""))))];
   const names = [...new Set(categories.map((match) => match[1].toLowerCase()))];
   const ambiguous = prices.length > 1 || prices.some((price) => price > 10000000) || names.length > 1;
-  if (ambiguous) return { remainder, clarification: "Choose one category and budget in the fields above, then remove the conflicting amounts or categories from your words." };
+  if (ambiguous) return { remainder, clarification: "Use one category and budget in your words, or use the manual form and remove the conflicting amounts or categories from your words." };
   for (const match of [...budgets, ...categories]) remainder = remainder.replace(match[0], "");
   remainder = remainder.replace(/\s+/g, " ").replace(/^[\s,;:.—-]+|[\s,;:.—-]+$/g, "").replace(/^(?:and|with)\s+|\s+(?:and|with)$/gi, "").trim();
   return { ...(prices.length ? { maxPrice: prices[0] } : {}), ...(names.length ? { category: names[0] } : {}), remainder, clarification: "" };

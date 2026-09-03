@@ -114,6 +114,13 @@ const els = {
   productTitle: document.getElementById("product-title"),
   pauseSharing: document.getElementById("pause-network-sharing"),
   canvasDraft: document.getElementById("canvas-draft"),
+  canvasChat: document.getElementById("canvas-chat"),
+  canvasChatForm: document.getElementById("canvas-chat-form"),
+  canvasManual: document.getElementById("canvas-manual"),
+  canvasEnterManual: document.getElementById("canvas-enter-manual"),
+  canvasBackChat: document.getElementById("canvas-back-chat"),
+  canvasReview: document.getElementById("canvas-review"),
+  canvasReviewSelection: document.getElementById("canvas-review-selection"),
   canvasEditing: document.getElementById("canvas-editing"),
   canvasClarification: document.getElementById("canvas-clarification"),
   canvasFormats: document.getElementById("canvas-formats"),
@@ -257,6 +264,8 @@ const state = {
   productReviewState: "idle",
   productApplyMode: null,
   canvasRetention: "once",
+  canvasEntryMode: "chat",
+  canvasReviewVisible: false,
   canvasRuleId: null,
   canvasClarification: "",
   canvasSaveFailed: false,
@@ -713,6 +722,12 @@ function renderProductReview(active = normalizePreferencePlane(state.preferences
     ? state.canvasReturnSelection ? "Previous selection retained after sign-in. Nothing was applied again." : state.appliedMode === "saved" ? "Saved in this browser until you use Forget." : state.canvasSaveFailed ? "Used for this visit. This browser could not save the selection; any previous saved copy is unchanged." : "This visit only. Nothing was saved."
     : state.productDraftDirty && state.applied ? "Your latest changes are not applied yet. Current results still use your last approved selection." : "Review or change any item before continuing.";
   els.canvasDraft.hidden = showingResults;
+  const manual = state.canvasEntryMode === "manual";
+  els.canvasChat.hidden = manual;
+  els.canvasManual.hidden = !manual;
+  els.canvasEnterManual.setAttribute("aria-expanded", String(manual));
+  els.canvasReview.hidden = !(showingResults || state.canvasReviewVisible || state.hasSavedPreferences || state.accountDraftRestored);
+  els.canvasReviewSelection.dataset.variant = els.canvasReview.hidden ? "primary" : "secondary";
   els.canvasEditing.hidden = showingResults;
   els.productAppliedActions.hidden = !showingResults;
   els.canvasResults.hidden = !showingResults;
@@ -740,7 +755,7 @@ function renderProductShell() {
   const active = normalizePreferencePlane(state.preferences);
   // Never rewrite a field while the user is typing or editing a rule.
   for (const [input, value] of [[els.productCategory, active.category], [els.productMaxPrice, active.maxPrice == null ? "" : String(active.maxPrice)], [els.productStyle, active.feedStyle]]) {
-    if (document.activeElement !== input) input.value = value;
+    if (document.activeElement !== input && input.validity?.valid !== false) input.value = value;
   }
   els.savedPreferenceActions.hidden = !state.hasSavedPreferences || !state.savedPreferences;
   if (state.savedPreferences) {
@@ -768,8 +783,13 @@ function updateCanvasWords() {
   els.canvasClarification.textContent = interpretation.clarification;
   els.canvasClarification.hidden = !interpretation.clarification;
   const current = normalizePreferencePlane(state.preferences);
+  const parsedFacts = {};
   for (const key of ["category", "maxPrice"]) {
-    if (state.canvasParsedFacts && current[key] === state.canvasParsedFacts[key]) current[key] = state.canvasWordsBase[key];
+    // A manual correction wins while the corresponding words stay unchanged.
+    const previous = state.canvasParsedFacts?.[key];
+    const corrected = previous !== undefined && current[key] !== previous;
+    if (!corrected && previous !== undefined) current[key] = state.canvasWordsBase[key];
+    if (interpretation[key] !== undefined && !(corrected && interpretation[key] === previous)) parsedFacts[key] = interpretation[key];
   }
   state.canvasWordsBase = { category: current.category, maxPrice: current.maxPrice };
   state.canvasParsedFacts = { category: interpretation.category, maxPrice: interpretation.maxPrice };
@@ -778,11 +798,31 @@ function updateCanvasWords() {
   const rules = current.rules.filter((rule) => rule.id !== state.canvasRuleId);
   if (interpretation.remainder) rules.push({ ...existing, id: state.canvasRuleId, text: interpretation.remainder, scope: existing?.scope || "everywhere", category: existing?.category || "", active: existing?.active ?? true });
   markDraftEdited({ preferences: true });
-  state.preferences = normalizePreferencePlane({ ...current, ...(interpretation.maxPrice === undefined ? {} : { maxPrice: interpretation.maxPrice }), ...(interpretation.category === undefined ? {} : { category: interpretation.category }), rules });
+  state.preferences = normalizePreferencePlane({ ...current, ...parsedFacts, rules });
   // Structured facts are authoritative immediately; the raw entry is not shared.
   els.productCategory.value = state.preferences.category;
   els.productMaxPrice.value = state.preferences.maxPrice ?? "";
   renderProductReview();
+}
+
+function setCanvasEntryMode(mode, { focus = true } = {}) {
+  if (state.productReviewState === "applying") return;
+  const { scrollX, scrollY } = window;
+  state.canvasEntryMode = mode === "manual" ? "manual" : "chat";
+  if (state.canvasEntryMode === "manual") state.canvasReviewVisible = true;
+  renderProductShell();
+  if (focus) (state.canvasEntryMode === "manual" ? els.productCategory : els.canvasWords).focus({ preventScroll: true });
+  // This is an in-place edit. Cancel any pending smooth scroll as well as
+  // restoring layout/focus adjustments, without changing navigation scrolling.
+  window.scrollTo({ left: scrollX, top: scrollY, behavior: "instant" });
+}
+
+function reviewCanvasSelection() {
+  if (state.productReviewState === "applying") return;
+  state.canvasReviewVisible = true;
+  renderProductShell();
+  // Reviewing is local. Only the separate commitment can save or share.
+  (state.canvasClarification ? els.canvasWords : els.productReviewTitle).focus({ preventScroll: true });
 }
 
 function settleCanvasWords() {
@@ -793,8 +833,10 @@ function settleCanvasWords() {
 }
 
 function editCanvasFact(id) {
-  if (id === "category") return els.productCategory.focus({ preventScroll: true });
-  if (id === "budget") return els.productMaxPrice.focus({ preventScroll: true });
+  if (id === "category" || id === "budget") {
+    setCanvasEntryMode("manual", { focus: false });
+    return (id === "category" ? els.productCategory : els.productMaxPrice).focus({ preventScroll: true });
+  }
   if (id === "presentation") {
     state.productBuilderVisible = true;
     els.productBuilder.open = true;
@@ -802,6 +844,9 @@ function editCanvasFact(id) {
   }
   const rule = state.preferences.rules.find((rule) => rule.id === id);
   if (!rule) return;
+  setCanvasEntryMode("chat", { focus: false });
+  state.canvasParsedFacts = null;
+  state.canvasWordsBase = null;
   state.canvasRuleId = id;
   els.canvasWords.value = rule.text;
   els.canvasWords.focus({ preventScroll: true });
@@ -868,8 +913,8 @@ function addDraftRule({ text, scope = "everywhere", category = currentProductCat
   const ruleText = text.trim().slice(0, 240);
   if (!ruleText) return false;
   if (scope === "category" && !category) {
-    setAgent("Name a category above before adding a rule for this category.");
-    els.productCategory?.focus();
+    setCanvasEntryMode("manual");
+    els.productReviewStatus.textContent = "Enter a category in Shopping for, then add your category rule. Your rule draft is unchanged.";
     return false;
   }
   const draft = productPreferenceDraft();
@@ -890,8 +935,8 @@ function updateDraftRule(id, changes) {
   const scope = changes.scope === "category" ? "category" : "everywhere";
   const category = scope === "category" ? (existing.category || currentProductCategory()) : existing.category;
   if (scope === "category" && !category) {
-    setAgent("Name a category above before using “For this category.”");
-    els.productCategory?.focus();
+    setCanvasEntryMode("manual");
+    els.productReviewStatus.textContent = "Enter a category in Shopping for, then save your category rule. Your rule draft is unchanged.";
     return;
   }
   markDraftEdited({ preferences: true });
@@ -899,6 +944,7 @@ function updateDraftRule(id, changes) {
     ...current,
     rules: current.rules.map((rule) => rule.id === id ? { ...rule, ...changes, scope, category } : rule),
   });
+  if (id === state.canvasRuleId) settleCanvasWords();
   state.editingRuleId = null;
   renderProductShell();
 }
@@ -922,6 +968,7 @@ function forgetDraftRule(id) {
   if (!existing) return;
   markDraftEdited({ preferences: true });
   state.preferences = normalizePreferencePlane({ ...current, rules: current.rules.filter((rule) => rule.id !== id) });
+  if (id === state.canvasRuleId) settleCanvasWords();
   state.editingRuleId = null;
   setAgent(`Forgot “${existing.text}” from this draft.`);
   renderProductShell();
@@ -938,17 +985,22 @@ function reviewSavedProductPreferences() {
   state.productStage = "preview";
   state.productDraftDirty = false;
   clearCanvasComposer();
+  state.canvasReviewVisible = true;
   renderProductShell();
   els.productReviewTitle.focus({ preventScroll: true });
 }
 
 function clearCanvasComposer() {
+  state.canvasEntryMode = "chat";
+  state.canvasReviewVisible = false;
   state.canvasRuleId = null;
   state.canvasReturnSelection = null;
   state.canvasParsedFacts = null;
   state.canvasWordsBase = null;
   state.canvasClarification = "";
   els.canvasWords.value = "";
+  els.productCategory.value = state.preferences.category;
+  els.productMaxPrice.value = state.preferences.maxPrice ?? "";
   els.canvasClarification.textContent = "";
   els.canvasClarification.hidden = true;
   els.productRuleText.value = "";
@@ -963,7 +1015,7 @@ function startFreshProductDraft() {
   state.canvasRetention = "once";
   clearCanvasComposer();
   renderProductShell();
-  els.productCategory.focus({ preventScroll: true });
+  els.canvasWords.focus({ preventScroll: true });
 }
 
 function discardCanvasDraft() {
@@ -976,15 +1028,16 @@ function discardCanvasDraft() {
   clearCanvasComposer();
   renderProductShell();
   els.productReviewStatus.textContent = "Draft discarded. Your saved selection is unchanged.";
-  els.productCategory.focus({ preventScroll: true });
+  els.canvasWords.focus({ preventScroll: true });
 }
 
 function returnToProductEntry() {
   if (state.productReviewState === "applying") return;
   state.productStage = "preview";
   state.productReviewState = "review";
+  state.canvasReviewVisible = true;
   renderProductShell();
-  els.productCategory.focus({ preventScroll: true });
+  (state.canvasEntryMode === "manual" ? els.productCategory : els.canvasWords).focus({ preventScroll: true });
 }
 
 function forgetSavedSelection() {
@@ -1037,8 +1090,12 @@ function renderProductNetwork() {
 
 async function commitCanvasSelection() {
   if (state.productReviewState === "applying") return;
-  if (!els.productForm.reportValidity()) return;
-  if (state.canvasClarification) { els.canvasWords.focus({ preventScroll: true }); return; }
+  if (!els.productForm.checkValidity()) {
+    setCanvasEntryMode("manual", { focus: false });
+    els.productForm.reportValidity();
+    return;
+  }
+  if (state.canvasClarification) { setCanvasEntryMode("chat"); return; }
   // Do not parse again here: corrected/removed interpretation is the approval.
   await applyPreferences({ persist: state.canvasRetention === "saved" });
 }
@@ -1419,7 +1476,12 @@ function restoreAccountDraft() {
   state.canvasRetention = draft.canvasRetention || "once";
   state.canvasRuleId = draft.canvasRuleId || null;
   state.canvasReturnSelection = draft.resultSelection || null;
-  state.canvasClarification = interpretPreferenceWords(draft.fields["product-prompt-input"]).clarification;
+  const restoredWords = interpretPreferenceWords(draft.fields["product-prompt-input"]);
+  state.canvasClarification = restoredWords.clarification;
+  // The restored summary remains authoritative. Unchanged prose must not undo
+  // manual corrections after the existing account draft return.
+  state.canvasParsedFacts = { category: restoredWords.category, maxPrice: restoredWords.maxPrice };
+  state.canvasWordsBase = { category: state.preferences.category, maxPrice: state.preferences.maxPrice };
   els.canvasClarification.textContent = state.canvasClarification;
   els.canvasClarification.hidden = !state.canvasClarification;
   state.productReturnStage = draft.productReturnStage;
@@ -1874,7 +1936,12 @@ for (const input of [els.productCategory, els.productMaxPrice, els.productStyle]
   });
 }
 els.canvasWords.addEventListener("input", updateCanvasWords);
-els.canvasWords.addEventListener("blur", settleCanvasWords);
+els.canvasEnterManual.addEventListener("click", () => setCanvasEntryMode("manual"));
+els.canvasBackChat.addEventListener("click", () => setCanvasEntryMode("chat"));
+els.canvasChatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  reviewCanvasSelection();
+});
 els.canvasFormats.addEventListener("change", () => {
   markDraftEdited({ preferences: true });
   state.preferences.formats = [...els.canvasFormats.querySelectorAll("input:checked")].map((input) => input.value);

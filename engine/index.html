@@ -36,13 +36,13 @@
   <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
     <section class="product-view bl-stack" id="product-view" aria-labelledby="product-title">
       <div class="product-hero bl-measure" id="product-hero">
-        <p class="eyebrow">Your preference layer</p>
-        <h1 id="product-title" tabindex="-1">What do you want to see?</h1>
-        <p class="lede">Choose what matters. Review your selection, then see matching offers.</p>
+        <p class="eyebrow">Your offer concierge</p>
+        <h1 id="product-title" tabindex="-1">Tell me what you’re looking for</h1>
+        <p class="lede">Describe what matters. Review the interpretation, then approve what’s shared.</p>
       </div>
 
       <div class="product-workspace bl-stack">
-        <section class="bl-card product-card preference-canvas" id="product-preview" aria-labelledby="product-preview-title">
+        <section class="product-card preference-canvas" id="product-preview" aria-labelledby="product-title">
           <details class="bl-disclosure" id="saved-preference-actions" hidden>
             <summary class="bl-disclosure__summary" id="saved-selection-summary">Saved selection in this browser</summary>
             <div class="bl-disclosure__body bl-stack" data-space="compact">
@@ -55,19 +55,33 @@
             </div>
           </details>
           <div id="canvas-draft" class="bl-stack" data-space="compact">
-            <form id="product-preferences-form" class="canvas-basics product-form">
+            <div class="canvas-entry">
+            <div id="canvas-chat" class="canvas-entry-panel">
+              <form id="canvas-chat-form" class="canvas-chat-form">
+                <label for="product-prompt-input">What matters to you?</label>
+                <textarea id="product-prompt-input" rows="4" maxlength="240" placeholder="Shopping for watches under $200. Show repair options first." aria-describedby="canvas-words-hint canvas-clarification"></textarea>
+                <p class="field-hint" id="canvas-words-hint">Your words become an editable selection. Nothing is shared yet.</p>
+                <div class="canvas-chat-actions">
+                  <button class="bl-button" data-variant="secondary" id="canvas-enter-manual" type="button" aria-controls="canvas-manual" aria-expanded="false">Enter in the manual form</button>
+                  <button class="bl-button" id="canvas-review-selection" type="submit" aria-controls="canvas-review">Review selection</button>
+                </div>
+              </form>
+            </div>
+            <div id="canvas-manual" class="canvas-entry-panel" hidden>
+              <div class="product-card-heading"><h2 id="canvas-manual-title">Your selection</h2></div>
+              <p class="field-hint">Set the details here. Your chat draft stays available.</p>
+              <form id="product-preferences-form" class="canvas-basics product-form" aria-labelledby="canvas-manual-title">
               <div><label for="product-category">Shopping for <span>(optional)</span></label>
                 <input id="product-category" name="category" type="text" maxlength="80" placeholder="Any category" autocomplete="off"></div>
               <div><label for="product-max-price">Budget in USD <span>(optional)</span></label>
                 <input id="product-max-price" name="maxPrice" type="number" min="0" max="10000000" step="0.01" placeholder="Any budget" inputmode="decimal"></div>
-            </form>
-            <div class="product-form">
-              <label for="product-prompt-input">Anything else? <span>(optional)</span></label>
-              <textarea id="product-prompt-input" rows="2" maxlength="240" placeholder="Show repair options first under $200" aria-describedby="canvas-words-hint canvas-clarification"></textarea>
-              <p class="field-hint" id="canvas-words-hint">Your words become editable preferences below. Nothing is shared yet.</p>
-              <p id="canvas-clarification" role="status" hidden></p>
+              </form>
+              <button class="bl-button" data-variant="secondary" id="canvas-back-chat" type="button" aria-controls="canvas-chat">Back to chat</button>
             </div>
+            </div>
+            <p id="canvas-clarification" role="status" hidden></p>
           </div>
+          <div id="canvas-review" class="bl-stack canvas-review" data-space="compact" hidden>
           <div class="product-card-heading">
             <h2 id="product-preview-title" tabindex="-1">We’ll use</h2>
             <span class="bl-badge" id="product-preview-badge" data-status="info">Draft</span>
@@ -147,6 +161,7 @@
               <button class="bl-button" data-variant="quiet" id="product-account-save" data-account-intent="save" type="button">Sync this saved selection across devices</button>
             </div>
           </section>
+          </div>
         </section>
       </div>
     </section>

@@ -174,6 +174,23 @@ assert.ok(state.canvasClarification, "ambiguous words remain blocked after sign-
 assert.equal(state.canvasRetention, "saved");
 assert.equal(state.canvasReturnSelection.category, "watches");
 
+// A corrected summary must survive redirect and unrelated edits to preserved prose.
+const correctedReturn = accountDraftSnapshot({ ...draft, preferences: { ...draft.preferences, category: "coffee", maxPrice: 80 }, canvasRuleId: "repair" }, { "product-prompt-input": "Shopping for watches under $200. Show repair options" });
+context.sessionStorage=storage(JSON.stringify(correctedReturn));
+context.restoreAccountDraft();
+assert.equal(state.preferences.category,"coffee", "corrected category restores before further typing");
+context.markDraftEdited=()=>{}; context.renderProductReview=()=>{}; context.opaqueId=()=>"repair";
+context.normalizePreferencePlane=(value)=>normalizePreferencePlane(JSON.parse(JSON.stringify(value)));
+vm.runInContext(source.slice(source.indexOf("function updateCanvasWords()"), source.indexOf("function setCanvasEntryMode(")), context);
+els.canvasWords.value += " first";
+context.updateCanvasWords();
+assert.equal(state.preferences.category,"coffee");
+assert.equal(state.preferences.maxPrice,80);
+els.canvasWords.value=els.canvasWords.value.replace("$200","$100");
+context.updateCanvasWords();
+assert.equal(state.preferences.category,"coffee");
+assert.equal(state.preferences.maxPrice,100);
+
 state.account={signedIn:true,csrfToken:"fixture"};state.accountAvailability="ready";
 state.preferenceSource="account";state.memorySource="account";state.savedPreferences=draft.preferences;state.hasSavedPreferences=true;
 response={ok:true,status:200,json:async()=>({signedIn:false})};

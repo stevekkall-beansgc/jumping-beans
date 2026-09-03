@@ -32,6 +32,12 @@ const html = readFileSync(new URL('../engine/index.html', import.meta.url), 'utf
 assert.doesNotMatch(html, /data-setup-path|preview-words-chat|See your results|Continue to review/);
 assert.equal((html.match(/id="canvas-show-offers"/g) || []).length, 1);
 assert.equal((html.match(/<h1\b/g) || []).length, 1);
+assert.match(html, /<h1[^>]*>Tell me what you’re looking for<\/h1>/);
+assert.match(html, /id="canvas-enter-manual"[^>]*>Enter in the manual form<\/button>/);
+assert.match(html, /id="canvas-manual"[^>]*hidden/);
+assert.match(html, /id="canvas-back-chat"[^>]*>Back to chat<\/button>/);
+assert.match(html, /id="canvas-chat-form"/);
+assert.match(html, /id="canvas-review-selection"[^>]*>Review selection<\/button>/);
 assert.match(html, /id="canvas-visit"[^>]+checked/);
 assert.match(html, /<details[^>]+id="product-builder"/);
 assert.ok(html.indexOf('id="product-account-save"') > html.indexOf('id="canvas-results"'));
@@ -43,7 +49,7 @@ function node(id) {
     setAttribute(key, value) { this.attrs[key] = value; },
     toggleAttribute(key, value) { if (value) this.attrs[key] = ''; else delete this.attrs[key]; },
     replaceChildren(...items) { this.children = items; }, append(...items) { this.children.push(...items); },
-    querySelectorAll() { return []; }, reportValidity() { return context.valid; },
+    querySelectorAll() { return []; }, checkValidity() { return context.valid; }, reportValidity() { return context.valid; },
     focus(options) { assert.equal(options?.preventScroll, true); context.focused = id; context.document.activeElement = this; },
   });
   return nodes.get(id);
@@ -65,7 +71,9 @@ context = vm.createContext({
   reviewPreferencePlane, selectStarterStyle, canvasDraft, interpretPreferenceWords, selectionSummary, canvasResultState,
   SUPPORTED: true, PARTNER_ORIGINS: ['one', 'two'], formatLabels: { 'price-proof': 'Price proof' },
   document: { activeElement: null, getElementById: node, createElement: () => node(`generated-${nodes.size}`) },
-  window: { confirm: () => context.confirmed }, confirmed: true,
+  window: { confirm: () => context.confirmed, scrollX: 0, scrollY: 0,
+    scrollTo({ left, top, behavior }) { assert.equal(behavior, 'instant'); this.scrollX = left; this.scrollY = top; },
+  }, confirmed: true,
   localStorage: { removeItem(key) { saved.delete(key); }, setItem(key, value) { saved.set(key, JSON.parse(value)); } },
   STORAGE: { preferences: 'preferences', memory: 'memory', networkSharing: 'network' },
   hasStored: (key) => saved.has(key), readStored: (key, fallback) => saved.get(key) ?? fallback,
@@ -82,11 +90,15 @@ context = vm.createContext({
 function load(start, end) { const a=source.indexOf(start), b=source.indexOf(end,a); assert.ok(a>=0 && b>a); vm.runInContext(source.slice(a,b),context); }
 load('function renderProductReview(', 'function ruleScopeLabel(');
 load('function ruleScopeLabel(', 'function currentProductCategory(');
+load('function currentProductCategory(', 'function productPreferenceDraft(');
 load('function productPreferenceDraft()', 'function renderOfferCard(');
 load('function markDraftEdited(', 'function hydrateAccountJourney(');
 load('async function applyPreferences(', 'function invalidateAppliedJourney(');
 context.renderProductShell();
 assert.equal(els.canvasDraft.hidden,false);
+assert.equal(els.canvasChat.hidden,false);
+assert.equal(els.canvasManual.hidden,true);
+assert.equal(els.canvasReview.hidden,true);
 assert.equal(els.canvasVisit.checked,true);
 assert.equal(writes.length,0);
 els.canvasWords.value='Show repair options first under $200';
@@ -96,6 +108,29 @@ assert.deepEqual(state.preferences.rules.map(r=>r.text),['Show repair options fi
 assert.equal((els.productReviewRules.innerHTML.match(/\$200/g)||[]).length,1);
 assert.equal(calls,0,'draft never requests offers');
 assert.equal(writes.length,0,'draft never persists');
+assert.equal(els.canvasReview.hidden,true,'typing cannot expose a commitment before review');
+const chatDraft = els.canvasWords.value;
+const draftPlane = JSON.stringify(state.preferences);
+const draftRevision = state.draftRevision;
+state.canvasRetention = 'saved';
+context.setCanvasEntryMode('manual');
+assert.equal(els.canvasChat.hidden,true);
+assert.equal(els.canvasManual.hidden,false);
+assert.equal(els.canvasEnterManual.attrs['aria-expanded'],'true');
+assert.equal(context.focused,'product-category');
+assert.equal(els.canvasReview.hidden,false);
+context.setCanvasEntryMode('chat');
+assert.equal(els.canvasWords.value,chatDraft,'switching preserves the exact chat draft');
+assert.equal(JSON.stringify(state.preferences),draftPlane,'switching preserves interpreted preferences');
+assert.equal(state.draftRevision,draftRevision,'switching is presentation only');
+assert.equal(state.canvasRetention,'saved','switching preserves retention');
+assert.equal(context.focused,'product-prompt-input');
+context.reviewCanvasSelection();
+assert.equal(els.canvasReview.hidden,false);
+assert.equal(context.focused,'product-preview-title');
+assert.equal(calls,0,'review and mode switches cannot invoke offers');
+assert.equal(writes.length,0,'review and mode switches cannot save');
+state.canvasRetention='once';
 context.editCanvasFact('budget');
 assert.equal(context.focused,'product-max-price');
 context.removeCanvasFact('budget');
@@ -112,6 +147,67 @@ assert.equal(els.canvasWords.value,'');
 for (const words of ['under $200', 'under $200.', 'under $20', 'under $']) { els.canvasWords.value=words; context.updateCanvasWords(); }
 assert.equal(state.preferences.maxPrice,null);
 context.settleCanvasWords();
+context.startFreshProductDraft();
+assert.equal(context.focused,'product-prompt-input');
+assert.equal(state.canvasEntryMode,'chat');
+assert.equal(els.canvasReview.hidden,true);
+
+// Corrected manual fields win over unchanged facts in the preserved prose.
+els.canvasWords.value='Shopping for watches under $200. Prefer repair options'; context.updateCanvasWords();
+context.setCanvasEntryMode('manual');
+state.preferences={...state.preferences,category:'coffee',maxPrice:80};
+context.setCanvasEntryMode('chat');
+els.canvasWords.value += ' first'; context.updateCanvasWords();
+assert.equal(state.preferences.category,'coffee');
+assert.equal(state.preferences.maxPrice,80);
+els.canvasWords.value=els.canvasWords.value.replace('$200','$100'); context.updateCanvasWords();
+assert.equal(state.preferences.maxPrice,100,'explicitly changed words can change the budget');
+assert.equal(state.preferences.category,'coffee');
+context.startFreshProductDraft();
+
+els.canvasWords.value='Show repair options first under $200'; context.updateCanvasWords();
+const editedRule=state.canvasRuleId;
+context.updateDraftRule(editedRule,{text:'Show warranty terms first',scope:'everywhere'});
+els.canvasWords.value += ' please'; context.updateCanvasWords();
+assert.equal(state.preferences.rules[0].text,'Show warranty terms first please','chat cannot resurrect an advanced edit');
+context.forgetDraftRule(editedRule);
+assert.equal(els.canvasWords.value,'','forgotten priority cannot return from stale chat text');
+context.startFreshProductDraft();
+
+// Ambiguity never grants sharing; validation reveals the relevant entry pane.
+els.canvasWords.value='under $200 or below $80'; context.updateCanvasWords();
+context.setCanvasEntryMode('manual');
+await context.commitCanvasSelection();
+assert.equal(state.canvasEntryMode,'chat');
+assert.equal(context.focused,'product-prompt-input');
+assert.equal(calls,0);
+context.startFreshProductDraft();
+context.valid=false;
+els.productMaxPrice.value='-1';
+els.productMaxPrice.validity={valid:false};
+context.setCanvasEntryMode('manual');
+context.setCanvasEntryMode('chat');
+assert.equal(els.productMaxPrice.value,'-1','mode switches preserve invalid raw budgets for correction');
+await context.commitCanvasSelection();
+assert.equal(state.canvasEntryMode,'manual','invalid hidden manual field is exposed before native validation');
+assert.equal(calls,0);
+assert.equal(els.productMaxPrice.value,'-1');
+context.valid=true;
+els.productMaxPrice.validity={valid:true};
+context.startFreshProductDraft();
+
+// Category-scoped rule validation must expose the now-hidden category field.
+context.reviewCanvasSelection();
+assert.equal(context.addDraftRule({text:'Repair first',scope:'category'}),false);
+assert.equal(state.canvasEntryMode,'manual');
+assert.equal(context.focused,'product-category');
+assert.match(els.productReviewStatus.textContent,/Enter a category/);
+assert.equal(state.preferences.rules.length,0);
+state.preferences={...state.preferences,rules:[{id:'scope-test',text:'Repair first',scope:'everywhere',category:'',active:true}]};
+context.setCanvasEntryMode('chat');
+context.updateDraftRule('scope-test',{scope:'category'});
+assert.equal(state.canvasEntryMode,'manual');
+assert.equal(state.preferences.rules[0].scope,'everywhere');
 context.startFreshProductDraft();
 
 // Capture the actual apply boundary; pause native resolution to inspect loading.

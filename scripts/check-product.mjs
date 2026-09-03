@@ -185,6 +185,8 @@ includesAll(engineHtml, [
   'id="canvas-results-title" tabindex="-1"', 'id="canvas-results-status" role="status"',
   'id="product-forget-saved"', 'id="canvas-discard"', 'id="product-account-save"',
   'What’s shared?', 'This visit only', 'Save in this browser', 'Show matching offers',
+  'Tell me what you’re looking for', 'Enter in the manual form',
+  'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"',
 ], "Product preference canvas, interpretation, retention, and immediate results");
 check(!/data-setup-path|preview-words-chat|See your results|Continue to review/.test(engineHtml), "Obsolete setup navigation remains");
 check(!engineHtml.includes('role="tablist"'), "Primary path exposes competing tabs");
