@@ -90,12 +90,19 @@ export function validateEnginePermissionsPolicy(policy, partnerOrigins) {
 
 async function fetchText(url, timeoutMs) {
   const requested = new URL(url);
-  const response = await fetch(url, {
-    cache: 'no-store',
-    headers: { accept: '*/*', 'cache-control': 'no-cache' },
-    redirect: 'error',
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      cache: 'no-store',
+      headers: { accept: '*/*', 'cache-control': 'no-cache' },
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    const detail = [error?.cause?.code, error?.cause?.message].filter(Boolean).join(': ')
+      || [error?.name, error?.message].filter(Boolean).join(': ');
+    throw new Error(`${requested.href} fetch failed${detail ? ` (${detail})` : ''}`, { cause: error });
+  }
   if (response.url) {
     const effective = new URL(response.url);
     assert.equal(effective.origin, requested.origin, `${requested.href} resolved to another origin`);
@@ -122,7 +129,12 @@ export async function smokeUnit(unitId, unit, { attempts = 8, delayMs = 4000, ti
         );
       }
       for (const asset of unit.assets) {
-        const remote = await fetchText(`${unit.origin}/${asset}?jb_smoke=${Date.now()}`, timeoutMs);
+        // Cloudflare Pages canonicalizes every terminal /index.html path to its
+        // directory URL, including nested pages such as /merchant/.
+        const publicPath = `/${asset}`.replace(/\/index\.html$/, '/');
+        const remote = publicPath === '/'
+          ? root
+          : await fetchText(`${unit.origin}${publicPath}?jb_smoke=${Date.now()}`, timeoutMs);
         assert.equal(remote.response.status, 200, `${unitId}/${asset} returned ${remote.response.status}`);
         const expected = await expectedAsset(unitId, asset);
         assert.equal(sha256(remote.body), sha256(expected), `${unitId}/${asset} does not match this checkout`);

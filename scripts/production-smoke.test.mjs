@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   monitorProductionReadiness,
   originTrialRegistration,
   PRODUCTION_UNITS,
+  smokeUnit,
   validateEnginePermissionsPolicy,
   validateRootResponse,
 } from './production-smoke.mjs';
@@ -58,6 +60,128 @@ test('Engine Permissions-Policy is the exact three-origin allowlist', () => {
   assert.equal(validateEnginePermissionsPolicy(policy, origins), policy);
   assert.throws(() => validateEnginePermissionsPolicy(`${policy.slice(0, -1)} "https://extra.example")`, origins));
   assert.throws(() => validateEnginePermissionsPolicy('tools=(self "https://pet.example")', origins));
+});
+
+function assetContentType(asset) {
+  if (/\.m?js$/.test(asset)) return 'application/javascript; charset=utf-8';
+  if (asset.endsWith('.css')) return 'text/css; charset=utf-8';
+  if (asset.endsWith('.json')) return 'application/json; charset=utf-8';
+  if (asset.endsWith('.svg')) return 'image/svg+xml';
+  return 'application/octet-stream';
+}
+
+function petsupplyDeploymentFetch(unit, { rootBody, failPath, seen = [] } = {}) {
+  return async (input) => {
+    const url = new URL(input);
+    seen.push(url.pathname);
+    if (url.pathname === '/index.html') {
+      throw new TypeError('fetch failed', { cause: new Error('unexpected redirect') });
+    }
+    if (url.pathname === failPath) {
+      const cause = Object.assign(new Error('unexpected redirect'), { code: 'ERR_REDIRECT' });
+      throw new TypeError('fetch failed', { cause });
+    }
+    if (url.pathname === '/') {
+      const body = rootBody ?? await readFile(new URL('../partners/petsupply/index.html', import.meta.url));
+      return new Response(body, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cross-origin-opener-policy': 'same-origin',
+          'cross-origin-embedder-policy': 'require-corp',
+          'cross-origin-resource-policy': 'cross-origin',
+          'origin-trial': token(unit.origin),
+        },
+      });
+    }
+    const asset = url.pathname.slice(1);
+    const body = await readFile(new URL(`../partners/petsupply/${asset}`, import.meta.url));
+    return new Response(body, { headers: { 'content-type': assetContentType(asset) } });
+  };
+}
+
+test('production smoke verifies the canonical root as index.html without requesting the redirecting path', async () => {
+  const unit = { ...PRODUCTION_UNITS.petsupply, origin: 'https://demo.example' };
+  const seen = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = petsupplyDeploymentFetch(unit, { seen });
+  try {
+    const result = await smokeUnit('petsupply', unit, { attempts: 1 });
+    assert.equal(result.assets, unit.assets.length);
+    assert.ok(seen.includes('/'));
+    assert.ok(!seen.includes('/index.html'));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('production smoke rejects canonical root byte drift', async () => {
+  const unit = { ...PRODUCTION_UNITS.petsupply, origin: 'https://demo.example' };
+  const expected = await readFile(new URL('../partners/petsupply/index.html', import.meta.url), 'utf8');
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = petsupplyDeploymentFetch(unit, { rootBody: expected.replace('</body>', '<!-- drift --></body>') });
+  try {
+    await assert.rejects(smokeUnit('petsupply', unit, { attempts: 1 }), /petsupply\/index\.html does not match this checkout/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('production smoke reports the failing asset URL and fetch cause', async () => {
+  const unit = { ...PRODUCTION_UNITS.petsupply, origin: 'https://demo.example' };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = petsupplyDeploymentFetch(unit, { failPath: '/tool.js' });
+  try {
+    await assert.rejects(
+      smokeUnit('petsupply', unit, { attempts: 1 }),
+      /https:\/\/demo\.example\/tool\.js\?jb_smoke=\d+ fetch failed \(ERR_REDIRECT: unexpected redirect\)/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('production smoke verifies nested index assets through canonical directory URLs', async () => {
+  const unit = {
+    ...PRODUCTION_UNITS.watch,
+    origin: 'https://demo.example',
+    assets: ['index.html', 'merchant/index.html'],
+  };
+  const seen = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, options) => {
+    const url = new URL(input);
+    seen.push(url.pathname);
+    assert.equal(options.redirect, 'error');
+    if (url.pathname === '/') {
+      return new Response(await readFile(new URL('../partners/watch/index.html', import.meta.url)), {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cross-origin-opener-policy': 'same-origin',
+          'cross-origin-embedder-policy': 'require-corp',
+          'cross-origin-resource-policy': 'cross-origin',
+          'origin-trial': token(unit.origin),
+        },
+      });
+    }
+    if (url.pathname === '/merchant/') {
+      return new Response(await readFile(new URL('../partners/watch/merchant/index.html', import.meta.url)), {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+    }
+    if (url.pathname === '/api/interest-summary') {
+      return new Response(JSON.stringify({ product: 'NIV-77007Q45', count: 0 }), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    throw new Error(`unexpected URL ${url.href}`);
+  };
+  try {
+    const result = await smokeUnit('watch', unit, { attempts: 1 });
+    assert.equal(result.assets, 2);
+    assert.deepEqual(seen, ['/', '/merchant/', '/api/interest-summary']);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 function readinessFetch(now, overrides = {}) {
