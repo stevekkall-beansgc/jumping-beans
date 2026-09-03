@@ -68,6 +68,14 @@ function checkHtml(html, file) {
   check(!html.includes("<style"), `${file} contains an inline style block`);
 }
 
+const generatedCatalogIndex = path.join(root, "engine/inventory-assets/catalog-index.json");
+try {
+  await stat(generatedCatalogIndex);
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+  runNode("generated catalog index bootstrap", ["scripts/build-inventory-index.mjs"]);
+}
+
 runNode("generated UI freshness", ["scripts/sync-static-ui.mjs", "--check"]);
 runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
 runNode("engine identity contracts", ["engine/identity.test.mjs"]);
