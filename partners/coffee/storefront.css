@@ -37,6 +37,10 @@ a:visited {
   outline-offset: var(--bl-space-1);
 }
 
+:where([hidden]) {
+  display: none !important;
+}
+
 .skip-link {
   position: fixed;
   inset: var(--bl-space-2) auto auto var(--bl-space-2);
@@ -181,6 +185,15 @@ h1 {
   aspect-ratio: 4 / 3;
   margin-bottom: var(--bl-space-3);
   border-radius: var(--bl-radius-sm);
+  background: var(--bl-color-surface-subtle);
+  object-fit: contain;
+}
+
+.offer-card__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--bl-radius-sm) var(--bl-radius-sm) 0 0;
   background: var(--bl-color-surface-subtle);
   object-fit: contain;
 }
@@ -483,4 +496,9 @@ h1 {
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Comparison keeps facts ahead of imagery; visual retains image-first cards. */
+.offer-grid[data-feed-style="compare"] .offer-card__body {
+  order: -1;
 }

@@ -73,9 +73,21 @@ runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
 runNode("engine identity contracts", ["engine/identity.test.mjs"]);
 runNode("personal experience hydration contracts", ["engine/personal-experience.test.mjs"]);
 runNode("account access contracts", ["scripts/account-access.test.mjs"]);
+runNode("visible preference handoff contracts", ["scripts/preference-handoff.test.mjs"]);
+runNode("native WebMCP capability contracts", ["engine/native-webmcp.test.mjs"]);
+runNode("deployment readiness contracts", ["scripts/deployment-readiness.test.mjs"]);
+runNode("production smoke contracts", ["scripts/production-smoke.test.mjs"]);
+runNode("production monitor contracts", ["scripts/monitor-production.test.mjs"]);
+runNode("self-serve product array contracts", ["scripts/self-serve-demo.test.mjs"]);
 runNode("preference canvas contracts", ["scripts/preference-canvas.test.mjs"]);
 runNode("catalog matching contracts", ["partners/catalog-matching.test.mjs"]);
 runNode("Watch Co tool contracts", ["partners/watch/tool.test.mjs"]);
+runNode("Rakuten inventory contracts", ["engine/rakuten.test.mjs"]);
+runNode("out-of-network catalog contracts", ["engine/catalog.test.mjs"]);
+runNode("Open feed ingestion contracts", ["scripts/ingest-feed.test.mjs"]);
+runNode("Merchant registry contracts", ["scripts/merchant-registry.test.mjs"]);
+runNode("out-of-network catalog index freshness", ["scripts/build-inventory-index.mjs", "--check"]);
+runNode("out-of-network catalog index build", ["scripts/build-inventory-index.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -151,6 +163,7 @@ includesAll(engineHtml, [
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
   "frame.allow = `tools ${origin}; cross-origin-isolated ${origin}`",
+  "frame.tabIndex = -1",
   "getTools({ fromOrigins: PARTNER_ORIGINS })",
   "PARTNER_ORIGINS.includes(tool.origin)",
   "executeTool(tool, JSON.stringify(input))",
@@ -169,6 +182,9 @@ includesAll(engineApp, [
   "comparisonMarkup",
   "No opted-in offer matches this context",
   "get_journey_receipt",
+  "/api/inventory/rakuten",
+  "fetchRakutenDeals",
+  'sourceKind === "affiliate"',
   "profile: PERSONAS[0]",
   "rerunAppliedJourney",
   "appliedJourneyRevision",
@@ -181,7 +197,26 @@ includesAll(engineApp, [
   'WebMCP · not requested',
   'WebMCP · sharing paused',
   'status: "partner_acknowledged"',
+  "fetchCatalogDeals",
+  "/api/inventory/catalog",
+  'catalogStatus = "loading"',
+  'offerMarkup(deal, "catalog"',
+  "Public catalog health",
+  "previewPartnerHandoff",
+  "Open storefront preview",
+  "does not claim that WebMCP matched an offer",
+  "renderBrowserReadiness",
+  "Storefront preview is ready",
+  "selfServePreviewMarkup()",
+  "Native WebMCP verified with all",
+  "if (!SUPPORTED) return Promise.resolve([])",
 ], "engine WebMCP, provenance, and consent contract");
+const nativeCapabilitySource = await readFile(path.join(root, "engine/native-webmcp.mjs"), "utf8");
+includesAll(nativeCapabilitySource, ["isolated === true", "nonNativeMembers", 'startsWith("codex")', '"getTools", "executeTool", "registerTool"'], "fail-closed native WebMCP readiness contract");
+const catalogWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
+includesAll(catalogWorker, ["handleCatalogInventory", "catalog.mjs"], "engine catalog API route");
+const catalogWrangler = await readFile(path.join(root, "engine/wrangler.toml"), "utf8");
+includesAll(catalogWrangler, ["[assets]", "directory = \"./inventory-assets\"", "binding = \"INVENTORY_ASSETS\"", "run_worker_first = true"], "engine catalog static-asset binding");
 includesAll(engineHtml, [
   'class="product-workspace bl-stack"', 'class="bl-disclosure engine-details"',
   'id="canvas-draft"', 'id="product-category"', 'id="product-max-price"', 'id="product-prompt-input"',
@@ -191,7 +226,11 @@ includesAll(engineHtml, [
   'id="product-forget-saved"', 'id="canvas-discard"', 'id="product-account-save"',
   'What’s shared?', 'This visit only', 'Save in this browser', 'Show matching offers',
   'Tell me what you’re looking for', 'Enter in the manual form',
-  'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"',
+  'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"', 'Out-of-network affiliate',
+  'id="browser-readiness"', 'Shopping for coffee under $15. Show customer stories first.',
+  'data-self-serve-prompt="Shopping for dog gear under $50."',
+  'data-self-serve-prompt="Shopping for watches under $500."',
+  'Dog gear, coffee, and watches have tested member previews.',
 ], "Product preference canvas, interpretation, retention, and immediate results");
 check(!/data-setup-path|preview-words-chat|See your results|Continue to review/.test(engineHtml), "Obsolete setup navigation remains");
 check(!engineHtml.includes('role="tablist"'), "Primary path exposes competing tabs");
@@ -204,11 +243,13 @@ includesAll(engineApp, [
   'setAttribute("aria-busy", String(isApplying))', 'setAttribute("aria-disabled", String(isApplying))',
   'els.canvasResultsTitle.focus({ preventScroll: true })',
   'writeStored(STORAGE.networkSharing, !state.networkSharingPaused)',
+  'document.querySelectorAll("[data-self-serve-prompt]")',
 ], "Canvas control and storage boundaries");
 const applyTransition = engineApp.slice(engineApp.indexOf("async function applyPreferences"), engineApp.indexOf("function invalidateAppliedJourney"));
 check(applyTransition.indexOf('state.productStage = "results"') < applyTransition.indexOf('await rerunAppliedJourney()'), "Results must appear before partner resolution completes");
 check(!applyTransition.includes('switchView("network"'), "Apply adds a separate results navigation");
 check(!engineApp.includes("scrollIntoView"), "Canvas forces scrolling");
+check(!engineApp.includes("url.origin ="), "Engine assigns the read-only URL.origin property during startup");
 includesAll(await readFile(path.join(root, "engine/app.css"), "utf8"), [
   ":where([hidden])", "display: none !important", ".canvas-fact", ".canvas-retention", ".engine-details", "@media (prefers-reduced-motion: reduce)",
 ], "Product hidden state, canvas, disclosure, and reduced motion CSS");
@@ -251,6 +292,7 @@ const sharedStorefront = await readFile(path.join(root, "shared/storefront.js"),
 includesAll(petsupplyTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "petsupply preference-plane adapter");
 includesAll(coffeeTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "coffee preference-plane adapter");
 includesAll(sharedStorefront, ["__JB_PARTNER_CONTEXT__", "preferencePlane", "jb:preference-plane", "relevantRules", "presentationScore"], "shared partner storefront preference-plane contract");
+includesAll(sharedStorefront, ["embeddedForDiscovery", "PAGE_SIZE = 24", "renderRankedCatalog", "NIV-77007Q45"], "bounded self-serve storefront contract");
 check(!sharedStorefront.includes("jb_presentation"), "shared storefront no longer relies on query-string presentation hints");
 includesAll(engineHtml, [
   'id="demo-profile"',
@@ -763,6 +805,8 @@ for (const route of [
 ]) {
   check(route in staticModule.default, `engine/static.js is missing ${route}`);
 }
+check(Object.keys(staticModule.default).every((route) => !route.includes("/inventory-assets/") && !route.includes(".test.")), "engine/static.js publishes generated inventory or test modules");
+check(!("/identity.mjs" in staticModule.default), "engine/static.js publishes the server-only identity module");
 
 if (failures.length) {
   console.error(`\nProduct check failed (${failures.length} finding${failures.length === 1 ? "" : "s"}):`);

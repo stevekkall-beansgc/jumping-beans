@@ -46,7 +46,12 @@ same network state in human-readable form. Declarative Watch Co writes are
 staged for page confirmation and confirmed requests carry an idempotency key.
 
 Non-WebMCP browsers still get the normal UI (the deal grid, the form, the
-merchant readout) — the agent surfaces are additive.
+merchant readout) — the agent surfaces are additive. After a visitor applies a
+Coffee, Dog gear, or Watches selection, those browsers also get a clearly
+labeled **storefront preview** link. It carries the same validated, visit-only
+preference plane to the matching member storefront without claiming that a
+WebMCP offer was discovered. Supported Chrome shows the native three-partner
+result and its opted-in partner link instead.
 
 ## Repo layout (4 deployable units + shared)
 
@@ -75,14 +80,22 @@ store behind `/api/register-interest` and `/api/interest-summary`, and a
 
 ## Requirements
 
-- **Chrome 149+** (tested on 151) with WebMCP enabled. Local dev uses the flag
-  `--enable-features=WebMCP,WebMCPTesting` in **headed** mode (headless has
-  `document.modelContext === undefined`).
+- A current headed Chrome Stable build with WebMCP enabled for the native lane.
+  Record the exact production browser version in the release receipt. Local
+  development can use `--enable-features=WebMCP,WebMCPTesting`; headless mode
+  does not provide the native surface and is used only for the ordinary-browser
+  acceptance matrix.
 - On production HTTPS origins, WebMCP requires an **origin-trial token** on
   every origin that runs it (iframes don't inherit). See
   [`docs/origin-trial.md`](docs/origin-trial.md).
 - No application framework or third-party runtime dependencies. Plain static
   HTML and ES modules are prepared with the included Node scripts.
+
+The public Engine detects native WebMCP before the shopper starts. A green
+readiness message means the full native member search is available. A blue
+storefront-preview message means the shopper can still execute the visible
+category/budget/presentation handoff in an ordinary browser, with the result
+explicitly separated from native discovery evidence.
 
 Repository operating rules and test commands live in [AGENTS.md](AGENTS.md).
 
@@ -106,6 +119,8 @@ node scripts/sync-static-ui.mjs --check  # verify without writing
 node engine/bundle-static.mjs            # refresh the Worker bundle
 node engine/bundle-static.mjs --check    # verify without writing
 node scripts/check-product.mjs           # run the complete read-only product gate
+node scripts/self-serve.browser.mjs      # headed ordinary-browser array acceptance
+node scripts/production-smoke.mjs        # prove production matches this checkout
 ```
 
 See [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) for source paths, the
@@ -133,7 +148,8 @@ python3 spikes/a-cross-origin/serve.py 8086 partners/watch
 ```
 
 Then open `http://localhost:8082` in the flagged Chrome. After discovery, the
-engine status should report **3 opted-in sites connected**.
+shopper must select and apply a recipe; after all three native calls complete,
+the Engine should report **3 opted-in sites connected**.
 
 > The `/api/*` endpoints and `/merchant` loop are backed by Cloudflare Pages
 > Functions and require the D1 `WATCH_DB` binding. Plain `serve.py` does not
@@ -143,11 +159,10 @@ engine status should report **3 opted-in sites connected**.
 ## Deploy (Cloudflare — all four units)
 
 Production deployment is repository-owned. The
-[Deploy Cloudflare workflow](.github/workflows/deploy-cloudflare.yml) runs
-from a published versioned release, or from a manually confirmed GitHub
-Actions dispatch. It uses a pinned Wrangler CLI and deploys the engine Worker
-plus all three Pages projects from their own directories, preserving Watch's
-Pages Functions.
+[Deploy Cloudflare workflow](.github/workflows/deploy-cloudflare.yml) runs only
+from a manually approved dispatch naming the full 40-character release commit.
+It uses a pinned Wrangler CLI and deploys the engine Worker plus all three Pages
+projects from their own directories, preserving Watch's Pages Functions.
 
 Configure these GitHub **production environment** secrets once:
 
@@ -155,17 +170,28 @@ Configure these GitHub **production environment** secrets once:
   edit access for this account.
 - `CLOUDFLARE_ACCOUNT_ID` — the Cloudflare account ID.
 
-The secrets are credentials only; they are never committed or printed. To
-manually publish the current `main` branch after review:
+The secrets are credentials only; they are never committed or printed. After
+the clean commit, annotated tag, GitHub Release, and explicit release approval,
+publish that exact commit:
 
 ```bash
 gh workflow run deploy-cloudflare.yml \
   --repo stevekkall-beansgc/jumping-beans \
-  --ref main -f confirm=DEPLOY
+  --ref main -f confirm=DEPLOY \
+  -f release_sha="$(git rev-parse HEAD)" -f release_tag="$(git describe --tags --exact-match)"
 ```
 
-Publishing a GitHub release triggers the same workflow automatically. Local
-Wrangler deployment is intentionally not the production path.
+Publishing a GitHub Release does not deploy automatically. Local Wrangler
+deployment is intentionally not the production path.
+
+The workflow publishes the three backward-compatible partner sites first,
+verifies their exact release assets and WebMCP headers, then publishes the
+Engine last. Its final smoke compares the public JavaScript, handoff modules,
+styles, and catalogs byte-for-byte with the release checkout, then executes all
+three self-serve recipes at desktop and compact mobile widths. It snapshots the
+previous canonical Pages deployments and the exact active Worker version in a
+durable artifact. A separate cleanup job restores only units carrying this
+workflow run's release marker if a post-deploy gate fails or times out.
 
 > Watch ships Cloudflare Pages Functions in `partners/watch/functions/`
 > (stage, commit, and summary routes) backed by the transactional `WATCH_DB`

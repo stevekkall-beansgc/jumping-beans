@@ -3,6 +3,8 @@
 // Each independently deployed unit keeps a self-contained copy of this runtime
 // contract. Local pages resolve every origin from the hostname that served the
 // page; non-local pages use the explicit production allowlist.
+import { nativeWebMcpCapability } from "./native-webmcp.mjs";
+
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const localOrigin = (port) => `${location.protocol}//${location.hostname}:${port}`;
 
@@ -42,7 +44,8 @@ export const TOOL_NAMES = {
   registerInterest: "register_interest",
 };
 
-export const SUPPORTED = typeof document.modelContext?.getTools === "function";
+export const NATIVE_WEBMCP = nativeWebMcpCapability(document.modelContext, globalThis.crossOriginIsolated);
+export const SUPPORTED = NATIVE_WEBMCP.available;
 
 // Personas (self-contained per-unit copy of shared/personas.json).
 // Categories are the REAL categories present in each partner's live feed:

@@ -69,7 +69,7 @@
         </div>
         <div class="anywhere-actions__preview">
           <div class="anywhere-actions__product">
-            <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" crossorigin="anonymous">
+            <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347&amp;width=144" width="144" height="144" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" decoding="async" crossorigin="anonymous">
             <div>
               <p class="section-label">Illustrative partner action</p>
               <h3 id="action-preview-name">Light Roast Coffee (10oz Ground)</h3>
@@ -102,8 +102,14 @@
             <div id="canvas-chat" class="canvas-entry-panel">
               <form id="canvas-chat-form" class="canvas-chat-form">
                 <label for="product-prompt-input">What matters to you?</label>
-                <textarea id="product-prompt-input" rows="4" maxlength="240" placeholder="Shopping for watches under $200. Show repair options first." aria-describedby="canvas-words-hint canvas-clarification"></textarea>
+                <textarea id="product-prompt-input" rows="4" maxlength="240" placeholder="Shopping for coffee under $15. Show customer stories first." aria-describedby="canvas-words-hint canvas-clarification"></textarea>
                 <p class="field-hint" id="canvas-words-hint">Your words become an editable selection. Nothing is shared yet.</p>
+                <div class="starter-row" aria-label="Tested self-serve recipes">
+                  <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for dog gear under $50." data-feed-style="balanced" data-formats="no-urgency" type="button">Dog gear · under $50</button>
+                  <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for coffee under $15. Show customer stories first." data-feed-style="visual" data-formats="testimonial,no-urgency" type="button">Coffee stories · under $15</button>
+                  <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for watches under $500." data-feed-style="compare" data-formats="" type="button">Watches · under $500</button>
+                </div>
+                <div class="bl-callout" id="browser-readiness" data-tone="info" role="status"></div>
                 <div class="canvas-chat-actions">
                   <button class="bl-button" data-variant="secondary" id="canvas-enter-manual" type="button" aria-controls="canvas-manual" aria-expanded="false">Enter in the manual form</button>
                   <button class="bl-button" id="canvas-review-selection" type="submit" aria-controls="canvas-review">Review selection</button>
@@ -115,7 +121,9 @@
               <p class="field-hint">Set the details here. Your chat draft stays available.</p>
               <form id="product-preferences-form" class="canvas-basics product-form" aria-labelledby="canvas-manual-title">
               <div><label for="product-category">Shopping for <span>(optional)</span></label>
-                <input id="product-category" name="category" type="text" maxlength="80" placeholder="Any category" autocomplete="off"></div>
+                <input id="product-category" name="category" type="text" maxlength="80" placeholder="Any category" autocomplete="off" list="self-serve-categories" aria-describedby="product-category-hint">
+                <datalist id="self-serve-categories"><option value="dog gear"></option><option value="coffee"></option><option value="watches"></option></datalist>
+                <p class="field-hint" id="product-category-hint">Dog gear, coffee, and watches have tested member previews. Other categories use open and out-of-network inventory.</p></div>
               <div><label for="product-max-price">Budget in USD <span>(optional)</span></label>
                 <input id="product-max-price" name="maxPrice" type="number" min="0" max="10000000" step="0.01" placeholder="Any budget" inputmode="decimal"></div>
               </form>
@@ -141,7 +149,7 @@
                 <fieldset id="canvas-formats"><legend>Offer presentation</legend>
                   <label><input type="checkbox" value="price-proof"> Price proof</label>
                   <label><input type="checkbox" value="testimonial"> Testimonials</label>
-                  <label><input type="checkbox" value="video"> Short video</label>
+                  <label><input type="checkbox" value="video"> Short video (when supplied)</label>
                   <label><input type="checkbox" value="no-urgency"> No urgency</label>
                 </fieldset>
             <section class="product-rule-manager" aria-labelledby="product-rules-title">
@@ -170,10 +178,10 @@
               </div>
             </details>
             <div class="product-consent bl-stack" data-space="compact">
-              <p id="product-review-sharing">Only the selection above will be sent to opted-in member sites when you continue.</p>
+              <p id="product-review-sharing">Only the selection above will be sent to opted-in member sites when you continue. The category also powers a live Rakuten inventory search; your budget filters those results in this browser.</p>
               <details class="bl-disclosure">
                 <summary class="bl-disclosure__summary">What’s shared?</summary>
-                <div class="bl-disclosure__body"><p>Category, budget, presentation, and active priorities are shared through native browser WebMCP. Category rules apply only to that category. Paused rules stay out of requests. Account identity, saved offer notes, and receipts are never included. This does not place an order, make a payment, or send a message.</p><p id="canvas-sharing-detail"></p></div>
+                <div class="bl-disclosure__body"><p>Category, budget, presentation, and active priorities are shared through native browser WebMCP. The category is also sent to Jumping Beans for a Rakuten catalog lookup; budget filtering happens in this browser. Category rules apply only to that category. Paused rules stay out of requests. Account identity, saved offer notes, and receipts are never included. This does not place an order, make a payment, or send a message.</p><p id="canvas-sharing-detail"></p></div>
               </details>
               <fieldset class="canvas-retention"><legend>Use for</legend>
                 <label><input id="canvas-visit" type="radio" name="retention" value="once" checked> This visit only</label>
@@ -224,6 +232,10 @@
           <dt><span class="source-marker source-optin" aria-hidden="true"></span>Opted-in partner</dt>
           <dd>A site that exposes structured offers through WebMCP.</dd>
         </div>
+        <div>
+          <dt><span class="source-marker source-affiliate" aria-hidden="true"></span>Out-of-network affiliate</dt>
+          <dd>Live catalog inventory that links to its merchant storefront.</dd>
+        </div>
       </dl>
     </section>
 
@@ -268,7 +280,7 @@
                 <div class="preference-options" aria-describedby="preference-hint">
                   <label><input type="checkbox" data-pref="testimonial"><span>Testimonials</span></label>
                   <label><input type="checkbox" data-pref="price-proof" checked><span>Price proof</span></label>
-                  <label><input type="checkbox" data-pref="video"><span>Short video</span></label>
+                  <label><input type="checkbox" data-pref="video"><span>Short video (when supplied)</span></label>
                   <label><input type="checkbox" data-pref="no-urgency"><span>No urgency</span></label>
                 </div>
               </fieldset>

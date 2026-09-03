@@ -235,6 +235,9 @@ const indexHtml = `<!doctype html>
 await writeFile(path.join(p, "index.html"), indexHtml);
 await writeFile(path.join(p, "tool.js"), toolJs);
 await writeFile(path.join(p, "storefront.js"), storefrontJs);
+for (const module of ["preference-handoff.mjs", "preference-plane.mjs", "shopping-intent.mjs"]) {
+  await writeFile(path.join(p, module), readFileSync(path.join(root, "engine", module), "utf8"));
+}
 await writeFile(path.join(p, "storefront.css"), storefrontCss);
 for (const file of ["tokens.css", "tokens.json", "source.json"]) {
   await writeFile(

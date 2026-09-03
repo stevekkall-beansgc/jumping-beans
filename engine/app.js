@@ -27,6 +27,8 @@ import {
 import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
 import { normalizePreferencePlane, reviewPreferencePlane, selectStarterStyle, STARTER_STYLES } from "./preference-plane.mjs";
 
+import { partnerHandoffUrl, previewPartnerHandoff } from "./preference-handoff.mjs";
+
 import { canvasDraft, interpretPreferenceWords, selectionSummary, canvasResultState } from "./preference-canvas.mjs";
 
 import { ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView } from "./account-access.js";
@@ -49,6 +51,7 @@ const els = {
   statusDot: document.getElementById("status-dot"),
   protocol: document.getElementById("protocol-badge"),
   sourceCount: document.getElementById("source-count"),
+  browserReadiness: document.getElementById("browser-readiness"),
   agent: document.getElementById("agent-message"),
   memoryStep: document.getElementById("memory-step"),
   nextStep: document.getElementById("next-step"),
@@ -235,6 +238,12 @@ const state = {
   appliedPreferences: { ...initialPreferences, formats: [...initialPreferences.formats] },
   memory: Array.isArray(storedMemory) ? storedMemory : [],
   partnerDeals: [],
+  rakutenDeals: [],
+  rakutenStatus: "idle",
+  rakutenMeta: null,
+  catalogDeals: [],
+  catalogStatus: "idle",
+  catalogMeta: null,
   connectedTools: [],
   sourceA: OPEN_INVENTORY,
   sourceB: null,
@@ -294,7 +303,7 @@ function recordEvent(type, payload = {}) {
 const formatLabels = {
   testimonial: "Testimonials",
   "price-proof": "Price proof",
-  video: "Short video",
+  video: "Short video (when supplied)",
   "no-urgency": "No urgency",
 };
 const preferredFormats = ["testimonial", "video", "price-proof"];
@@ -328,6 +337,21 @@ function safeUrl(value) {
   }
 }
 
+function imageUrlAtWidth(value, width) {
+  const url = safeUrl(value);
+  if (!url) return null;
+  if (url.hostname === "cdn.shopify.com") url.searchParams.set("width", String(width));
+  return url;
+}
+
+function responsiveImageSrcset(value) {
+  const url = safeUrl(value);
+  if (!url || url.hostname !== "cdn.shopify.com") return "";
+  return [320, 480, 512, 640, 960]
+    .map((width) => `${imageUrlAtWidth(url.href, width).href} ${width}w`)
+    .join(", ");
+}
+
 function safeOrigin(value) {
   return safeUrl(value)?.origin || value || "unknown origin";
 }
@@ -344,6 +368,7 @@ function absoluteTime(value) {
 function updateConnections() {
   const origins = [...new Set(state.connectedTools.map((tool) => tool.origin).filter(Boolean))];
   state.connectedOrigins = origins;
+  renderBrowserReadiness();
   const names = origins.map((origin) => PARTNER_NAMES[origin] || safeOrigin(origin));
   const discovered = origins.length;
   if (!SUPPORTED) {
@@ -400,11 +425,47 @@ function updateConnections() {
   els.statusDot.dataset.on = discovered ? "1" : "0";
 }
 
+function renderBrowserReadiness() {
+  if (!els.browserReadiness) return;
+  els.browserReadiness.replaceChildren();
+  const title = document.createElement("strong");
+  const copy = document.createElement("p");
+  title.className = "bl-callout__title";
+  const respondingOrigins = PARTNER_ORIGINS.filter((origin) => ["ready", "no-match"].includes(state.originOutcomes?.[origin]?.status));
+  const connectedOrigins = new Set(state.connectedTools.map((tool) => tool.origin));
+  const verified = state.applied && state.discoveryComplete
+    && respondingOrigins.length === PARTNER_ORIGINS.length
+    && PARTNER_ORIGINS.every((origin) => connectedOrigins.has(origin));
+  if (verified) {
+    title.textContent = `Native WebMCP verified with all ${PARTNER_ORIGINS.length} member sites`;
+    copy.textContent = "Each allowlisted site completed the current read-only offer check. Matched cards and the separate storefront preview can now show the same approved selection.";
+    els.browserReadiness.dataset.tone = "success";
+  } else if (SUPPORTED && state.applied && !state.discoveryComplete) {
+    title.textContent = "Checking native WebMCP";
+    copy.textContent = `Waiting for responses from ${PARTNER_ORIGINS.length} allowlisted member sites. The ordinary-browser storefront preview remains available in the results.`;
+    els.browserReadiness.dataset.tone = "info";
+  } else if (SUPPORTED && state.applied) {
+    title.textContent = "Native member check is incomplete";
+    copy.textContent = `${respondingOrigins.length} of ${PARTNER_ORIGINS.length} member sites completed the native check. The separately labeled storefront preview remains available and does not count as a WebMCP match.`;
+    els.browserReadiness.dataset.tone = "warning";
+  } else if (SUPPORTED) {
+    title.textContent = "Native WebMCP check is available";
+    copy.textContent = `This isolated browser exposes the native API. Apply a selection to verify all ${PARTNER_ORIGINS.length} allowlisted member sites before the demo claims a native result.`;
+    els.browserReadiness.dataset.tone = "info";
+  } else {
+    title.textContent = "Storefront preview is ready";
+    copy.textContent = "This browser cannot run native WebMCP. Apply a Coffee, Dog gear, or Watches selection to open the same visit-only preference handoff on its member storefront. The preview stays clearly separate from a WebMCP match.";
+    els.browserReadiness.dataset.tone = "info";
+  }
+  els.browserReadiness.append(title, copy);
+}
+
 function hasSuccessfulPartnerApplication() {
   return Object.values(state.originOutcomes || {}).some((outcome) => ["ready", "no-match"].includes(outcome?.status));
 }
 
 function createPartnerFrames() {
+  if (!SUPPORTED) return Promise.resolve([]);
   const waits = PARTNER_ORIGINS.map((origin, index) => {
     const frame = document.createElement("iframe");
     // WebMCP is origin-isolated. Delegate both the tool capability and the
@@ -419,6 +480,7 @@ function createPartnerFrames() {
     frame.className = "partner-frame";
     frame.dataset.origin = origin;
     frame.title = `WebMCP discovery frame for ${PARTNER_NAMES[origin] || `partner ${index + 1}`}`;
+    frame.tabIndex = -1;
     frame.setAttribute("aria-hidden", "true");
     const wait = new Promise((resolve) => {
       let settled = false;
@@ -442,12 +504,14 @@ async function executeTool(tool, input, { compatibilityRetry = true } = {}) {
   if (!state.applied || state.networkSharingPaused) throw new Error("Preference application was revoked");
   let raw;
   try {
-    raw = await document.modelContext.executeTool(tool, input);
+    // Chrome's imperative WebMCP API accepts the tool input as JSON text.
+    // Serialize first so the production path follows the browser contract.
+    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
   } catch (error) {
     if (!compatibilityRetry || !isCompatibilityInputError(error) || !state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) throw error;
-    // Some WebMCP implementations still expect serialized arguments. This
-    // retry is limited to partner reads and keeps the product protocol-aware.
-    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+    // Older development implementations accepted an object. Keep that
+    // compatibility path limited to recognized input-type failures.
+    raw = await document.modelContext.executeTool(tool, input);
   }
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
@@ -525,6 +589,48 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   return invocation.value;
 }
 
+async function fetchRakutenDeals(preferences = state.appliedPreferences) {
+  const category = String(preferences.category || "").trim();
+  const params = new URLSearchParams({ max: "24" });
+  if (category) params.set("q", category);
+  const response = await fetch(`/api/inventory/rakuten?${params}`, {
+    credentials: "same-origin",
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload?.items)) throw new Error(payload?.error || "rakuten-unavailable");
+  const ceiling = Number.isFinite(preferences.maxPrice) ? preferences.maxPrice : null;
+  const deals = payload.items.filter((deal) => {
+    const price = Number(deal?.dealPrice);
+    return Number.isFinite(price) && price >= 0 && (
+      ceiling == null || price < ceiling || (price === ceiling && preferences.maxPriceInclusive !== false)
+    );
+  });
+  return { deals, meta: payload.meta || null };
+}
+
+async function fetchCatalogDeals(preferences = state.appliedPreferences) {
+  const category = String(preferences.category || "").trim();
+  const params = new URLSearchParams({ max: "24" });
+  if (category) {
+    params.set("q", category);
+    params.set("category", category);
+  }
+  if (Number.isFinite(preferences.maxPrice)) {
+    params.set("maxPrice", String(preferences.maxPrice));
+    params.set("maxPriceInclusive", String(preferences.maxPriceInclusive !== false));
+  }
+  const response = await fetch(`/api/inventory/catalog?${params}`, {
+    credentials: "same-origin",
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload?.items)) throw new Error(payload?.error || "catalog-unavailable");
+  return { deals: payload.items, meta: payload.meta || null };
+}
+
 function applyPartnerDiscovery(result) {
   state.partnerDeals = result.deals;
   state.originOutcomes = result.originOutcomes;
@@ -594,51 +700,62 @@ function selectedCollateral(deal, preferences) {
   for (const type of wanted) {
     const item = collateral.find((entry) => entry.type === type);
     if (item) return item;
-    if (type === "testimonial" && formats.includes("testimonial")) {
-      return {
-        type,
-        text: "A partner can provide a sourced customer story in this slot.",
-        source: "Presentation slot; no story supplied",
-      };
-    }
-    if (type === "video" && formats.includes("video")) {
-      return {
-        type,
-        title: "A partner can provide a short product video in this slot",
-        duration: 18,
-        source: "Presentation slot; no video supplied",
-      };
-    }
   }
+  const unavailable = [
+    formats.includes("testimonial") && !collateral.some((entry) => entry.type === "testimonial") ? "customer story" : "",
+    formats.includes("video") && !collateral.some((entry) => entry.type === "video") ? "short video" : "",
+    formats.includes("price-proof") && !hasExplicitMerchantPageDiscount(deal) ? "merchant-page percentage proof" : "",
+  ].filter(Boolean);
   return {
     type: "offer-fact",
-    text: `Current catalog price ${money(deal.dealPrice)}. No merchant-page percentage was supplied.`,
-    source: "Offer record",
+    text: `${unavailable.length ? `Requested ${unavailable.join(", ")} was not supplied for this offer. ` : ""}Current catalog price ${money(deal.dealPrice)}.`,
+    source: "Offer record; requested collateral remains unavailable unless the partner supplies it",
   };
 }
 
 function offerImage(deal) {
   const source = safeUrl(deal.imageUrl);
-  return source
-    ? `<img src="${escapeHtml(source.href)}" alt="${escapeHtml(deal.name || "Offer")} product image" loading="lazy" crossorigin="anonymous">`
-    : '<div class="art-placeholder" aria-hidden="true">Offer image unavailable</div>';
+  if (!source) return '<div class="art-placeholder" aria-hidden="true">Offer image unavailable</div>';
+  const srcset = responsiveImageSrcset(source.href);
+  const responsiveAttributes = srcset
+    ? ` sizes="(max-width: 42rem) calc(100vw - 4rem), 12rem" srcset="${escapeHtml(srcset)}"`
+    : "";
+  return `<img${responsiveAttributes} src="${escapeHtml(imageUrlAtWidth(source.href, 640).href)}" width="640" height="480" alt="${escapeHtml(deal.name || "Offer")} product image" loading="lazy" decoding="async" crossorigin="anonymous">`;
 }
 
 function provenanceMarkup(deal, sourceKind) {
   const destination = safeUrl(deal.landing);
   const sourceOrigin = safeUrl(deal.partnerOrigin || deal.origin);
   const isOpen = sourceKind === "open";
+  const isAffiliate = sourceKind === "affiliate";
+  const isCatalog = sourceKind === "catalog";
   const who = isOpen
     ? `Jumping Beans loaded a public record attributed to ${deal.merchant || deal.vendor || "the catalog merchant"}`
+    : isAffiliate
+      ? `${deal.partnerName || deal.merchant || "The merchant"} supplied the record through Rakuten Advertising`
+      : isCatalog
+        ? `${deal.partnerName || deal.merchant || "The merchant"} supplied the record through its public catalog feed`
     : `${deal.partnerName || deal.merchant || "The partner"} returned the record through WebMCP`;
   const source = isOpen
     ? "Public product-feed snapshot bundled with this demo"
+    : isAffiliate
+      ? "Live Rakuten Advertising Product Search API record"
+      : isCatalog
+        ? (deal.sourceDescription || "Public merchant catalog snapshot; direct merchant link-out")
     : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.origin}` : ""}`;
   const when = isOpen
     ? `Loaded into this page ${absoluteTime(deal.observedAt)}; the source capture time is unavailable`
+    : isAffiliate
+      ? `Rakuten API response received ${absoluteTime(deal.observedAt)}`
+      : isCatalog
+        ? `Catalog snapshot captured ${absoluteTime(deal.observedAt)}; it expires ${absoluteTime(deal.expiresAt)}`
     : `Tool response received ${absoluteTime(deal.observedAt)}`;
   const evidence = isOpen
     ? `Catalog record ${deal.sku}; no live price check ran`
+    : isAffiliate
+      ? `Live Rakuten catalog record ${deal.sku}; no merchant-page price check ran`
+      : isCatalog
+        ? `Public catalog record ${deal.sku}; freshness ends ${absoluteTime(deal.expiresAt)}`
     : `Tool response from ${sourceOrigin?.origin || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
   const sourceLink = destination
     ? `<a href="${escapeHtml(destination.href)}" target="_blank" rel="noopener noreferrer">Merchant product page</a>`
@@ -671,14 +788,19 @@ function offerMarkup(deal, sourceKind, label, preferences) {
       : collateral.type === "video"
         ? `${escapeHtml(collateral.title || "Product video")} · ${escapeHtml(collateral.duration || 18)} seconds`
         : escapeHtml(collateral.text);
-  const sourceClass = sourceKind === "open" ? "source-open" : "source-optin";
-  const sourceLabel = sourceKind === "open" ? "Open inventory" : "Opted-in partner";
+  const isAffiliate = sourceKind === "affiliate";
+  const isCatalog = sourceKind === "catalog";
+  const sourceClass = sourceKind === "open" ? "source-open" : isAffiliate || isCatalog ? "source-affiliate" : "source-optin";
+  const sourceLabel = sourceKind === "open" ? "Open inventory" : isAffiliate || isCatalog ? "Out-of-network" : "Opted-in partner";
   const comparisonPrice = hasExplicitMerchantPageDiscount(deal)
     ? `<span>${escapeHtml(deal.merchantPageDiscountPercent)}% off shown on the merchant product page</span>`
     : "";
-  const reason =
-    sourceKind === "open"
-      ? "Found in a bundled public catalog snapshot. No partner connection was needed."
+  const reason = sourceKind === "open"
+    ? "Found in a bundled public catalog snapshot. No partner connection was needed."
+    : isAffiliate
+      ? "Found through a live Rakuten Advertising affiliate catalog. The merchant owns the destination and checkout."
+      : isCatalog
+        ? "Found in a public merchant catalog snapshot. Jumping Beans links directly to that merchant; no affiliate relationship is claimed for this feed."
       : "Matched through an opted-in WebMCP offer tool and rendered using your applied display rules.";
   return `
     <header class="step-card-head">
@@ -702,6 +824,7 @@ function offerMarkup(deal, sourceKind, label, preferences) {
         </div>
       </div>
     </div>
+    ${sourceKind === "optin" && partnerDestination(deal.partnerOrigin) ? `<div class="bl-actions"><a class="bl-button" href="${escapeHtml(partnerDestination(deal.partnerOrigin))}" target="_blank" rel="noopener noreferrer">Open adapted partner page</a></div>` : ""}
     ${provenanceMarkup(deal, sourceKind)}`;
 }
 
@@ -799,8 +922,8 @@ function updateActionChain(trigger = "message") {
     button.setAttribute("aria-pressed", String(button.dataset.actionTrigger === trigger));
   });
   if (els.actionPreviewLink) {
-    const url = new URL(els.actionPreviewLink.href);
-    url.origin = ORIGINS.coffee;
+    const current = new URL(els.actionPreviewLink.href, location.href);
+    const url = new URL(`${current.pathname}${current.search}${current.hash}`, ORIGINS.coffee);
     url.searchParams.set("jb_trigger", trigger);
     els.actionPreviewLink.href = url.href;
   }
@@ -1135,9 +1258,31 @@ function renderProductNetwork() {
   els.canvasResults.setAttribute("aria-busy", String(result.kind === "loading"));
   els.canvasResultsTitle.textContent = result.title;
   els.canvasResultsStatus.textContent = result.message;
-  const markup = result.kind === "loading" ? "" : [
+  const rakutenDeals = Array.isArray(state.rakutenDeals) ? state.rakutenDeals : [];
+  const rakutenStatus = state.rakutenStatus || "idle";
+  const rakutenMarkup = rakutenStatus === "loading"
+    ? `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>Searching live affiliate inventory for this selection…</p></section>`
+    : rakutenStatus === "error"
+      ? `<section class="bl-callout network-summary" data-tone="warning"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>Live Rakuten inventory is temporarily unavailable. Member-site results are still shown independently.</p></section>`
+      : rakutenDeals.length
+        ? `<section class="bl-stack rakuten-inventory"><div><h3>Out-of-network inventory · Rakuten Advertising</h3><p class="field-hint">Live affiliate catalog results. These merchants are separate from the three opted-in member sites and open in their own storefronts.</p></div>${rakutenDeals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "affiliate", "Rakuten · live merchant inventory", state.appliedPreferences)}</article>`).join("")}</section>`
+        : `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>No live Rakuten products matched this category and budget. This is a separate no-result from the member-site search.</p></section>`;
+  const catalogDeals = Array.isArray(state.catalogDeals) ? state.catalogDeals : [];
+  const catalogStatus = state.catalogStatus || "idle";
+  const catalogMarkup = catalogStatus === "loading"
+    ? `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · public merchant catalogs</h3><p>Searching the attached merchant catalog snapshots for this selection…</p></section>`
+    : catalogStatus === "error"
+      ? `<section class="bl-callout network-summary" data-tone="warning"><h3>Out-of-network inventory · public merchant catalogs</h3><p>Attached merchant catalogs are temporarily unavailable. Member-site and Rakuten results are still shown independently.</p></section>`
+      : catalogDeals.length
+        ? `<section class="bl-stack catalog-inventory"><div><h3>Out-of-network inventory · public merchant catalogs</h3><p class="field-hint">Snapshot results from attached public feeds. Each card links directly to its merchant; no affiliate relationship is claimed for these feeds.</p></div>${catalogDeals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "catalog", `${deal.partnerName || "Merchant catalog"} · public feed`, state.appliedPreferences)}</article>`).join("")}</section>`
+        : `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · public merchant catalogs</h3><p>No current public-catalog products matched this category and budget. Unavailable feeds are reported in Network details.</p></section>`;
+  const previewMarkup = selfServePreviewMarkup();
+  const markup = result.kind === "loading" ? previewMarkup : [
     ...deals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "optin", `${deal.partnerName || "Member experience"} · matched to your preferences`, state.appliedPreferences)}</article>`),
+    previewMarkup,
     `<section class="bl-stack"><h3>Open inventory · separate baseline</h3><p class="field-hint">Public catalog snapshot, independent of your matching results.</p><article class="product-offer-card">${offerMarkup(state.sourceA, "open", "Open selection", DEFAULT_PREFERENCES)}</article></section>`,
+    rakutenMarkup,
+    catalogMarkup,
   ].join("");
   if (els.canvasResultsFeed.innerHTML !== markup) els.canvasResultsFeed.innerHTML = markup;
   els.canvasNetworkDetails.innerHTML = networkMarkup();
@@ -1181,9 +1326,24 @@ function renderOfferCard(container, markup) {
 }
 
 function partnerDestination(destination) {
-  const url = safeUrl(destination);
-  if (!url) return null;
-  return url.href;
+  return partnerHandoffUrl(destination, state.appliedPreferences, {
+    origins: PARTNER_ORIGINS, applied: state.applied, paused: state.networkSharingPaused,
+  });
+}
+
+function selfServePreviewMarkup() {
+  const preview = previewPartnerHandoff(state.appliedPreferences, ORIGINS, {
+    origins: PARTNER_ORIGINS,
+    applied: state.applied,
+    paused: state.networkSharingPaused,
+  });
+  if (!preview) return "";
+  const partner = PARTNER_NAMES[ORIGINS[preview.partnerId]] || "member storefront";
+  return `<section class="bl-callout self-serve-preview" data-tone="info">
+    <h4 class="bl-callout__title">Preview this selection on ${escapeHtml(partner)}</h4>
+    <p>This visit-only navigation proves the selected category, budget, and presentation reach a member storefront. It is available in ordinary browsers and does not claim that WebMCP matched an offer.</p>
+    <div class="bl-actions"><a class="bl-button" data-variant="secondary" href="${escapeHtml(preview.href)}" target="_blank" rel="noopener noreferrer">Open storefront preview</a></div>
+  </section>`;
 }
 
 function networkMarkup() {
@@ -1200,7 +1360,14 @@ function networkMarkup() {
   if (!rows.length) {
     return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>No opted-in partner capability responded in this browser. The open catalog remains available as the baseline.</p></section>`;
   }
-  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul></section>`;
+  const catalogSources = Array.isArray(state.catalogMeta?.sources) ? state.catalogMeta.sources : [];
+  const catalogFailures = catalogSources.filter((source) => source.status !== "ready");
+  const catalogHealth = catalogSources.length
+    ? `<p>Public merchant feeds: ${catalogSources.length - catalogFailures.length} ready, ${catalogFailures.length} not currently ready. A not-ready feed is not presented as a match.</p>${catalogFailures.length ? `<ul class="network-list">${catalogFailures.map((source) => `<li><strong>${escapeHtml(source.name || source.host)}</strong><span>${escapeHtml(source.host || "merchant feed")} · ${escapeHtml(source.status)}${source.lastError ? ` · ${escapeHtml(source.lastError)}` : ""}</span></li>`).join("")}</ul>` : ""}`
+    : state.catalogStatus === "error"
+      ? "<p>Public merchant catalog status is unavailable for this request; no catalog result is substituted.</p>"
+      : "";
+  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul>${catalogHealth ? `<h4 class="bl-callout__title">Public catalog health</h4>${catalogHealth}` : ""}</section>`;
 }
 
 function isWatchHandoffOffer(deal) {
@@ -1230,14 +1397,14 @@ function renderNextStep() {
   if (state.discoveryComplete && !state.sourceB && state.partnerDeals.length) {
     renderOfferCard(
       els.nextStep,
-      `<header class="step-card-head"><div><p class="step-kicker">Site B · no relevant match</p><h3>No opted-in offer matches this context</h3></div><span class="bl-badge source-pill source-optin" data-status="info">Filtered</span></header><p class="offer-copy">The connected partners returned offers, but none met the current profile, category, or price rules. Adjust the draft choices to widen the result set.</p><p class="reason"><strong>Decision receipt</strong><br>${escapeHtml(state.capabilityResolution?.reason || "Eligibility rules")}; ${state.capabilityResolution?.relevant.length || 0} relevant offer${state.capabilityResolution?.relevant.length === 1 ? "" : "s"}.</p>${networkMarkup()}`,
+      `<header class="step-card-head"><div><p class="step-kicker">Site B · no relevant match</p><h3>No opted-in offer matches this context</h3></div><span class="bl-badge source-pill source-optin" data-status="info">Filtered</span></header><p class="offer-copy">The connected partners returned offers, but none met the current profile, category, or price rules. Adjust the draft choices to widen the result set.</p><p class="reason"><strong>Decision receipt</strong><br>${escapeHtml(state.capabilityResolution?.reason || "Eligibility rules")}; ${state.capabilityResolution?.relevant.length || 0} relevant offer${state.capabilityResolution?.relevant.length === 1 ? "" : "s"}.</p>${selfServePreviewMarkup()}${networkMarkup()}`,
     );
     return;
   }
   if (!state.sourceB) {
     renderOfferCard(
       els.nextStep,
-      `<header class="step-card-head"><div><p class="step-kicker">Site B · no partner result</p><h3>No opted-in partner offer is available</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">No result</span></header><p class="offer-copy">No partner offer was returned for this request. Jumping Beans will not create a substitute partner result.</p>${networkMarkup()}`,
+      `<header class="step-card-head"><div><p class="step-kicker">Site B · no partner result</p><h3>No opted-in partner offer is available</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">No result</span></header><p class="offer-copy">No partner offer was returned for this request. Jumping Beans will not create a substitute partner result.</p>${selfServePreviewMarkup()}${networkMarkup()}`,
     );
     return;
   }
@@ -1687,6 +1854,12 @@ function forgetAllMemory() {
   state.demoContextGranted = false;
   els.demoContext.checked = false;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
   state.originOutcomes = {};
   state.capabilityResolution = null;
@@ -1830,6 +2003,12 @@ function invalidateAppliedJourney() {
   state.pendingWatch = null;
   state.selectedWatchOfferId = null;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
   state.originOutcomes = {};
   state.capabilityResolution = null;
@@ -1839,10 +2018,37 @@ function invalidateAppliedJourney() {
 async function rerunAppliedJourney() {
   const revision = ++state.appliedJourneyRevision;
   invalidateAppliedJourney();
+  state.rakutenStatus = "loading";
+  state.catalogStatus = "loading";
   renderJourney();
-  const result = await discoverPartnerDeals(state.appliedPreferences);
+  const [partnerResult, rakutenResult, catalogResult] = await Promise.allSettled([
+    discoverPartnerDeals(state.appliedPreferences),
+    fetchRakutenDeals(state.appliedPreferences),
+    fetchCatalogDeals(state.appliedPreferences),
+  ]);
   if (revision !== state.appliedJourneyRevision) return;
-  applyPartnerDiscovery(result);
+  applyPartnerDiscovery(partnerResult.status === "fulfilled"
+    ? partnerResult.value
+    : { deals: [], originOutcomes: {} });
+  if (rakutenResult.status === "fulfilled") {
+    state.rakutenDeals = rakutenResult.value.deals;
+    state.rakutenMeta = rakutenResult.value.meta;
+    state.rakutenStatus = "ready";
+  } else {
+    state.rakutenDeals = [];
+    state.rakutenMeta = null;
+    state.rakutenStatus = "error";
+  }
+  if (catalogResult.status === "fulfilled") {
+    state.catalogDeals = catalogResult.value.deals;
+    state.catalogMeta = catalogResult.value.meta;
+    state.catalogStatus = "ready";
+  } else {
+    state.catalogDeals = [];
+    state.catalogMeta = null;
+    state.catalogStatus = "error";
+  }
+  renderJourney();
 }
 
 function handlePrompt(value) {
@@ -2006,6 +2212,21 @@ for (const input of [els.productCategory, els.productMaxPrice, els.productStyle]
   });
 }
 els.canvasWords.addEventListener("input", updateCanvasWords);
+document.querySelectorAll("[data-self-serve-prompt]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (state.productReviewState === "applying") return;
+    els.canvasWords.value = button.dataset.selfServePrompt;
+    updateCanvasWords();
+    state.preferences = normalizePreferencePlane({
+      ...state.preferences,
+      feedStyle: button.dataset.feedStyle,
+      formats: button.dataset.formats ? button.dataset.formats.split(",").filter(Boolean) : [],
+    });
+    state.canvasReviewVisible = true;
+    renderProductShell();
+    els.productReviewTitle.focus({ preventScroll: true });
+  });
+});
 els.canvasEnterManual.addEventListener("click", () => setCanvasEntryMode("manual"));
 els.canvasBackChat.addEventListener("click", () => setCanvasEntryMode("chat"));
 els.canvasChatForm.addEventListener("submit", (event) => {
@@ -2139,6 +2360,12 @@ document.getElementById("reset-preferences").addEventListener("click", () => {
   state.applied = false;
   state.appliedMode = null;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
   state.originOutcomes = {};
   state.capabilityResolution = null;
@@ -2482,8 +2709,23 @@ function registerEngineTools() {
   }, "offers.discover");
 }
 
+function hydrateEntryPreference() {
+  const raw = new URLSearchParams(location.search).get("jb_preference");
+  if (typeof raw !== "string" || !els.canvasWords || els.canvasWords.value.trim()) return;
+  const value = raw.trim();
+  if (!value || value.length > 240) {
+    if (value.length > 240) els.canvasClarification.textContent = "The entry preference was too long, so it was not added. Enter a shorter selection below.";
+    return;
+  }
+  els.canvasWords.value = value;
+  updateCanvasWords();
+  els.productReviewStatus.textContent = "A draft selection arrived with this link. Review or edit it before anything is shared.";
+}
+
 async function init() {
   restoreAccountDraft();
+  hydrateEntryPreference();
+  renderBrowserReadiness();
   switchView(location.hash.slice(1) || "product");
   state.contextSnapshot = createContextSnapshot({
     profile: state.profile,

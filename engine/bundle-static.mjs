@@ -15,10 +15,14 @@ const exts = new Set([".html", ".js", ".mjs", ".json", ".svg", ".css"]);
 // Files that must NOT be bundled into static.js (the worker/bundler/source itself).
 const exclude = new Set([
   "index.mjs",
+  "identity.mjs",
+  "rakuten.mjs",
+  "catalog.mjs",
   "bundle-static.mjs",
   "static.js",
   "wrangler.toml",
 ]);
+const excludeDirectories = new Set(["inventory-assets", "migrations", "node_modules", ".git", ".wrangler"]);
 const assets = {};
 
 function walk(d, prefix) {
@@ -26,9 +30,9 @@ function walk(d, prefix) {
     const p = path.join(d, f);
     const s = statSync(p);
     if (s.isDirectory()) {
-      if (f === "node_modules" || f === ".git" || f === ".wrangler") continue;
+      if (excludeDirectories.has(f)) continue;
       walk(p, prefix + "/" + f);
-    } else if (exts.has(path.extname(f)) && !exclude.has(f)) {
+    } else if (exts.has(path.extname(f)) && !exclude.has(f) && !f.includes(".test.")) {
       assets[(prefix + "/" + f).replace(/\/\//g, "/")] = readFileSync(p, "utf8");
     }
   }

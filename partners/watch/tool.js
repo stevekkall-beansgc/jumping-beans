@@ -17,7 +17,8 @@ const MAX_RESPONSE_DEALS = 24;
 const ALLOWED_FORMATS = new Set(["testimonial", "price-proof", "video", "no-urgency"]);
 const ALLOWED_FEED_STYLES = new Set(["visual", "balanced", "compare", "custom"]);
 
-const catalog = await fetch("/catalog.json").then((r) => r.json());
+const canRegisterNativeTool = typeof document.modelContext?.registerTool === "function";
+const catalog = canRegisterNativeTool ? await fetch("/catalog.json").then((r) => r.json()) : [];
 
 // Local catalog adapter, deliberately separate from the source taxonomy.  Its
 // aliases and facts are derived from displayable catalog fields only; it never
@@ -181,7 +182,7 @@ function savings(deal) {
     : 0;
 }
 
-await document.modelContext.registerTool(
+if (canRegisterNativeTool) await document.modelContext.registerTool(
   {
     name: TOOL_NAME,
     title: "Get matching deals",
@@ -329,4 +330,4 @@ await document.modelContext.registerTool(
   { exposedTo: [CONCIERGE_ORIGIN] }
 );
 
-console.log(`[${PARTNER_ID}] registered:`, TOOL_NAME);
+if (canRegisterNativeTool) console.log(`[${PARTNER_ID}] registered:`, TOOL_NAME);

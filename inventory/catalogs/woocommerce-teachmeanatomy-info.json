@@ -1,0 +1,50 @@
+[
+  {
+    "sku": "woocommerce-140606",
+    "name": "Lifetime",
+    "category": "uncategorised",
+    "listPrice": null,
+    "listPriceSource": null,
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 270,
+    "imageUrl": "",
+    "expiresAt": "2026-10-03T16:17:37.656Z",
+    "landing": "https://teachmeanatomy.info/product/lifetime/",
+    "vendor": "teachmeanatomy.info",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  },
+  {
+    "sku": "woocommerce-27373",
+    "name": "TeachMeAnatomy Pro",
+    "category": "uncategorised",
+    "listPrice": 35,
+    "listPriceSource": "merchant",
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 0,
+    "imageUrl": "",
+    "expiresAt": "2026-10-03T16:17:37.656Z",
+    "landing": "https://teachmeanatomy.info/product/gold-supporter/",
+    "vendor": "teachmeanatomy.info",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  },
+  {
+    "sku": "woocommerce-20700",
+    "name": "Memberships (Discontinued)",
+    "category": "uncategorised",
+    "listPrice": null,
+    "listPriceSource": null,
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 0,
+    "imageUrl": "",
+    "expiresAt": "2026-10-03T16:17:37.656Z",
+    "landing": "https://teachmeanatomy.info/product/memberships/",
+    "vendor": "teachmeanatomy.info",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  }
+]

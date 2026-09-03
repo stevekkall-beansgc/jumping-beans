@@ -1,12 +1,18 @@
 name: Deploy Cloudflare
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       confirm:
-        description: Type DEPLOY to publish the checked-out main branch
+        description: Type DEPLOY to publish the exact release
+        required: true
+        type: string
+      release_sha:
+        description: Full 40-character commit SHA to publish
+        required: true
+        type: string
+      release_tag:
+        description: Published annotated release tag for that SHA
         required: true
         type: string
 
@@ -15,23 +21,75 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
-  deploy:
-    if: github.event_name == 'release' || github.event.inputs.confirm == 'DEPLOY'
+  validate:
+    if: inputs.confirm == 'DEPLOY'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: production
+    timeout-minutes: 10
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
     steps:
-      - name: Check out the release
+      - name: Check out the proposed release
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      # No checked-out repository code is executed and no production secret is
+      # available to this gate.
+      - name: Require protected release provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "release_sha must be a full lowercase commit SHA" >&2; exit 1; }
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo "release_tag must be a version tag" >&2; exit 1; }
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || { echo "Checkout does not match release_sha" >&2; exit 1; }
+          test -z "$(git status --porcelain)" || { echo "Release checkout is not clean" >&2; exit 1; }
+          git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main || { echo "Release SHA is not on protected main" >&2; exit 1; }
+          test "$(git cat-file -t "refs/tags/$RELEASE_TAG")" = tag || { echo "Release tag must be annotated" >&2; exit 1; }
+          test "$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")" = "$RELEASE_SHA" || { echo "Release tag does not point to release_sha" >&2; exit 1; }
+          release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")"
+          jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .draft == false and .prerelease == false and ((.body // "") | test("\\S"))' <<<"$release_json" >/dev/null \
+            || { echo "release_tag must name a published, non-prerelease GitHub Release with notes" >&2; exit 1; }
+
+          require_successful_workflow() {
+            local workflow="$1" runs
+            runs="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs" \
+              -f head_sha="$RELEASE_SHA" -f per_page=20)"
+            jq -e --arg sha "$RELEASE_SHA" '
+              [.workflow_runs[]
+                | select(.head_sha == $sha)
+                | select(.status == "completed" and .conclusion == "success")]
+              | length > 0
+            ' <<<"$runs" >/dev/null || { echo "$workflow has no successful run for release_sha" >&2; exit 1; }
+          }
+          require_successful_workflow checks.yml
+          require_successful_workflow gate.yml
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_MARKER: Jumping Beans ${{ inputs.release_sha }} · GitHub run ${{ github.run_id }} attempt ${{ github.run_attempt }}
+      ENGINE_SCRIPT: jumping-beans-engine
+
+    steps:
+      - name: Check out the trusted release
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -40,28 +98,316 @@ jobs:
 
       - name: Require Cloudflare credentials
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN repository secret" >&2; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID repository secret" >&2; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "Missing CLOUDFLARE_API_TOKEN production secret" >&2; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "Missing CLOUDFLARE_ACCOUNT_ID production secret" >&2; exit 1; }
 
-      - name: Verify the release bundle
+      - name: Verify the release bundle without production credentials
         run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git status --porcelain)"
+          node scripts/build-inventory-index.mjs
           node scripts/check-product.mjs
           node scripts/sync-static-ui.mjs --check
           node engine/bundle-static.mjs --check
 
-      - name: Deploy engine Worker
-        working-directory: engine
-        run: npx --yes wrangler@4.125.0 deploy
+      - name: Capture canonical production rollback targets
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          for project in petsupply coffee watch; do
+            project_json="$(curl --fail-with-body --silent --show-error \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project")"
+            deployment_id="$(jq -er '.result.canonical_deployment.id' <<<"$project_json")"
+            printf -v "previous_$project" '%s' "$deployment_id"
+          done
+          worker_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$ENGINE_SCRIPT/deployments")"
+          previous_engine="$(jq -er '.result.deployments[0].versions | select(length == 1 and .[0].percentage == 100) | .[0].version_id' <<<"$worker_json")"
+          jq -n \
+            --arg release_sha "$RELEASE_SHA" \
+            --arg release_marker "$RELEASE_MARKER" \
+            --arg run_id "$GITHUB_RUN_ID" \
+            --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --arg engine "$previous_engine" \
+            --arg petsupply "$previous_petsupply" \
+            --arg coffee "$previous_coffee" \
+            --arg watch "$previous_watch" \
+            '{release_sha: $release_sha, release_marker: $release_marker, github_run_id: $run_id, github_run_attempt: $run_attempt, engine_version: $engine, pages: {petsupply: $petsupply, coffee: $coffee, watch: $watch}}' \
+            > "$RUNNER_TEMP/jumping-beans-previous-production.json"
+
+      - name: Persist rollback targets before changing production
+        uses: actions/upload-artifact@v4
+        with:
+          name: previous-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/jumping-beans-previous-production.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Deploy Petsupply Pages
         working-directory: partners/petsupply
-        run: npx --yes wrangler@4.125.0 pages deploy . --project-name petsupply --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.125.0 pages deploy . --project-name petsupply --branch main --commit-hash "$RELEASE_SHA" --commit-message "$RELEASE_MARKER"
+
+      - name: Verify Petsupply release assets
+        run: node scripts/production-smoke.mjs --unit petsupply
 
       - name: Deploy Coffee Pages
         working-directory: partners/coffee
-        run: npx --yes wrangler@4.125.0 pages deploy . --project-name coffee --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.125.0 pages deploy . --project-name coffee --branch main --commit-hash "$RELEASE_SHA" --commit-message "$RELEASE_MARKER"
+
+      - name: Verify Coffee release assets
+        run: node scripts/production-smoke.mjs --unit coffee
 
       - name: Deploy Watch Pages
         working-directory: partners/watch
-        run: npx --yes wrangler@4.125.0 pages deploy . --project-name watch --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.125.0 pages deploy . --project-name watch --branch main --commit-hash "$RELEASE_SHA" --commit-message "$RELEASE_MARKER"
+
+      - name: Verify Watch release assets
+        run: node scripts/production-smoke.mjs --unit watch
+
+      # Partners remain compatible with the previous Engine. Publishing the
+      # Engine last prevents it from linking to partner modules that are not live.
+      - name: Deploy Engine Worker
+        working-directory: engine
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4.125.0 deploy --tag "$RELEASE_TAG" --message "$RELEASE_MARKER"
+
+      - name: Verify the complete public release
+        run: node scripts/production-smoke.mjs
+
+      - name: Verify production token and inventory runway
+        run: node scripts/production-smoke.mjs --readiness-only
+
+      - name: Verify Cloudflare deployment identity
+        id: cloudflare_identity
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          for project in petsupply coffee watch; do
+            project_json="$(curl --fail-with-body --silent --show-error \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project")"
+            jq -e --arg sha "$RELEASE_SHA" --arg marker "$RELEASE_MARKER" \
+              '.result.canonical_deployment.deployment_trigger.metadata.commit_hash == $sha and .result.canonical_deployment.deployment_trigger.metadata.commit_message == $marker' \
+              <<<"$project_json" >/dev/null
+            deployment_id="$(jq -er '.result.canonical_deployment.id' <<<"$project_json")"
+            echo "$project=$deployment_id" >> "$GITHUB_OUTPUT"
+          done
+          worker_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$ENGINE_SCRIPT/deployments")"
+          jq -e --arg marker "$RELEASE_MARKER" \
+            '.result.deployments[0].annotations["workers/message"] == $marker and (.result.deployments[0].versions | length == 1 and .[0].percentage == 100)' \
+            <<<"$worker_json" >/dev/null
+          echo "engine=$(jq -er '.result.deployments[0].versions[0].version_id' <<<"$worker_json")" >> "$GITHUB_OUTPUT"
+
+      - name: Install the Chromium acceptance runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/jb-browser" --no-save --no-package-lock playwright@1.62.1
+          "$RUNNER_TEMP/jb-browser/node_modules/.bin/playwright" install --with-deps chromium
+
+      - name: Verify all three self-serve storefront journeys
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/jb-browser/node_modules/playwright/index.mjs
+          SELF_SERVE_HEADLESS: "1"
+          SELF_SERVE_TEST_URL: https://jumping-beans-engine.steve-k-kall.workers.dev/
+          SELF_SERVE_EVIDENCE_DIR: ${{ runner.temp }}/jumping-beans-self-serve-evidence
+        run: node scripts/self-serve.browser.mjs
+
+      - name: Write immutable deployment receipt
+        shell: bash
+        env:
+          ENGINE_VERSION: ${{ steps.cloudflare_identity.outputs.engine }}
+          PETSUPPLY_DEPLOYMENT: ${{ steps.cloudflare_identity.outputs.petsupply }}
+          COFFEE_DEPLOYMENT: ${{ steps.cloudflare_identity.outputs.coffee }}
+          WATCH_DEPLOYMENT: ${{ steps.cloudflare_identity.outputs.watch }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/jumping-beans-self-serve-evidence"
+          jq -n \
+            --arg release_sha "$RELEASE_SHA" --arg release_tag "$RELEASE_TAG" --arg run_id "$GITHUB_RUN_ID" --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --arg engine "$ENGINE_VERSION" --arg petsupply "$PETSUPPLY_DEPLOYMENT" \
+            --arg coffee "$COFFEE_DEPLOYMENT" --arg watch "$WATCH_DEPLOYMENT" \
+            '{release_sha: $release_sha, release_tag: $release_tag, github_run_id: $run_id, github_run_attempt: $run_attempt, engine_version: $engine, pages: {petsupply: $petsupply, coffee: $coffee, watch: $watch}}' \
+            > "$RUNNER_TEMP/jumping-beans-self-serve-evidence/deployment-identity.json"
+
+      - name: Upload the self-serve acceptance receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: self-serve-${{ inputs.release_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/jumping-beans-self-serve-evidence
+          if-no-files-found: ignore
+          retention-days: 30
+
+  rollback:
+    needs: [validate, deploy]
+    if: ${{ always() && needs.validate.result == 'success' && needs.deploy.result != 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      RELEASE_MARKER: Jumping Beans ${{ inputs.release_sha }} · GitHub run ${{ github.run_id }} attempt ${{ github.run_attempt }}
+      ENGINE_SCRIPT: jumping-beans-engine
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Download the pre-deploy rollback targets
+        uses: actions/download-artifact@v4
+        with:
+          name: previous-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/jumping-beans-rollback
+
+      - name: Restore only units changed by this release run
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -u
+          state="$RUNNER_TEMP/jumping-beans-rollback/jumping-beans-previous-production.json"
+          test "$(jq -er '.release_sha' "$state")" = "$RELEASE_SHA" || exit 1
+          test "$(jq -er '.release_marker' "$state")" = "$RELEASE_MARKER" || exit 1
+          test "$(jq -er '.github_run_id' "$state")" = "$GITHUB_RUN_ID" || exit 1
+          test "$(jq -er '.github_run_attempt' "$state")" = "$GITHUB_RUN_ATTEMPT" || exit 1
+          rollback_failed=0
+
+          cloudflare_get() {
+            curl --fail-with-body --silent --show-error \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$1"
+          }
+
+          worker_deployment() {
+            cloudflare_get "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$ENGINE_SCRIPT/deployments"
+          }
+
+          restore_engine() {
+            local previous worker_json current marker stable=0
+            previous="$(jq -er '.engine_version' "$state")" || return 1
+            for _ in $(seq 1 18); do
+              worker_json="$(worker_deployment)" || return 1
+              current="$(jq -er '.result.deployments[0].versions | select(length == 1 and .[0].percentage == 100) | .[0].version_id' <<<"$worker_json")" || return 1
+              marker="$(jq -r '.result.deployments[0].annotations["workers/message"] // ""' <<<"$worker_json")"
+              if [[ "$current" == "$previous" ]]; then
+                stable=$((stable + 1))
+                (( stable >= 6 )) && return 0
+              elif [[ "$marker" == "$RELEASE_MARKER" ]]; then
+                stable=0
+                npx --yes wrangler@4.125.0 rollback "$previous" --name "$ENGINE_SCRIPT" --yes \
+                  --message "Rollback failed Jumping Beans run $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT" || return 1
+              else
+                echo "Engine changed outside this release attempt; refusing to overwrite it" >&2
+                return 1
+              fi
+              sleep 5
+            done
+            echo "Engine did not remain on the saved version after cleanup" >&2
+            return 1
+          }
+
+          settle_pages_attempt() {
+            local project="$1" deployments pending stable=0
+            for _ in $(seq 1 66); do
+              deployments="$(cloudflare_get "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/deployments?env=production&per_page=25")" || return 1
+              pending="$(jq -er --arg sha "$RELEASE_SHA" --arg marker "$RELEASE_MARKER" '
+                [.result[]
+                  | select((.deployment_trigger.metadata.commit_hash // "") == $sha)
+                  | select((.deployment_trigger.metadata.commit_message // "") == $marker)
+                  | select((.latest_stage.status // "") != "success"
+                    and (.latest_stage.status // "") != "failure"
+                    and (.latest_stage.status // "") != "canceled")]
+                | length
+              ' <<<"$deployments")" || return 1
+              if [[ "$pending" == "0" ]]; then
+                stable=$((stable + 1))
+                (( stable >= 6 )) && return 0
+              else
+                stable=0
+              fi
+              sleep 5
+            done
+            echo "$project still has a nonterminal deployment from this release attempt" >&2
+            return 1
+          }
+
+          restore_pages() {
+            local project="$1" previous project_json current current_sha current_marker stable=0
+            previous="$(jq -er --arg project "$project" '.pages[$project]' "$state")" || return 1
+            settle_pages_attempt "$project" || return 1
+            project_json="$(cloudflare_get "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project")" || return 1
+            current="$(jq -er '.result.canonical_deployment.id' <<<"$project_json")" || return 1
+            current_sha="$(jq -r '.result.canonical_deployment.deployment_trigger.metadata.commit_hash // ""' <<<"$project_json")"
+            current_marker="$(jq -r '.result.canonical_deployment.deployment_trigger.metadata.commit_message // ""' <<<"$project_json")"
+            if [[ "$current" != "$previous" ]]; then
+              if [[ "$current_sha" != "$RELEASE_SHA" || "$current_marker" != "$RELEASE_MARKER" ]]; then
+                echo "$project changed outside this release attempt; refusing to overwrite it" >&2
+                return 1
+              fi
+              curl --fail-with-body --silent --show-error -X POST \
+                -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data '{}' \
+                "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project/deployments/$previous/rollback" \
+                | jq -e '.success == true' >/dev/null || return 1
+            fi
+
+            for _ in $(seq 1 60); do
+              project_json="$(cloudflare_get "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project")" || return 1
+              current="$(jq -er '.result.canonical_deployment.id' <<<"$project_json")" || return 1
+              current_sha="$(jq -r '.result.canonical_deployment.deployment_trigger.metadata.commit_hash // ""' <<<"$project_json")"
+              current_marker="$(jq -r '.result.canonical_deployment.deployment_trigger.metadata.commit_message // ""' <<<"$project_json")"
+              if [[ "$current" == "$previous" ]]; then
+                stable=$((stable + 1))
+                (( stable >= 3 )) && return 0
+              elif [[ "$current_sha" == "$RELEASE_SHA" && "$current_marker" == "$RELEASE_MARKER" ]]; then
+                stable=0
+              else
+                echo "$project changed outside this release attempt during cleanup" >&2
+                return 1
+              fi
+              sleep 5
+            done
+            echo "$project did not return to the saved deployment" >&2
+            return 1
+          }
+
+          restore_engine || rollback_failed=1
+          for project in watch coffee petsupply; do
+            restore_pages "$project" || rollback_failed=1
+          done
+          # Recheck the Engine after Pages settle in case a canceled upload was
+          # accepted immediately before the deploy job stopped.
+          restore_engine || rollback_failed=1
+
+          for project in petsupply coffee watch; do
+            previous="$(jq -er --arg project "$project" '.pages[$project]' "$state")" || { rollback_failed=1; continue; }
+            project_json="$(cloudflare_get "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$project")" || { rollback_failed=1; continue; }
+            current="$(jq -er '.result.canonical_deployment.id' <<<"$project_json")" || { rollback_failed=1; continue; }
+            [[ "$current" == "$previous" ]] || { echo "$project changed after cleanup verification" >&2; rollback_failed=1; }
+          done
+          exit "$rollback_failed"

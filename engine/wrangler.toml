@@ -4,6 +4,14 @@ name = "jumping-beans-engine"
 main = "index.mjs"
 compatibility_date = "2025-01-01"
 
+# The generated public catalog index is uploaded as a Static Asset rather
+# than embedded in the Worker bundle. This keeps the Worker below the free
+# plan script-size limit and gives catalog requests the free static-asset path.
+[assets]
+directory = "./inventory-assets"
+binding = "INVENTORY_ASSETS"
+run_worker_first = true
+
 [observability]
 enabled = true
 

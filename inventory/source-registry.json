@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "recommendation": {
+    "openRegistry": "open-products-facts",
+    "inventoryAuthority": "merchant-authorized-feed",
+    "reason": "Open registries expand product identity and attributes; only a merchant or approved affiliate network can authoritatively supply current price, availability, and a commissionable landing URL."
+  },
+  "woocommerceDiscoverySources": [
+    {
+      "id": "woocommerce-showcase",
+      "name": "WooCommerce Showcase",
+      "kind": "official-curated-directory",
+      "use": "Best first-party source for curated candidate merchants; not complete and not permission to aggregate.",
+      "url": "https://woocommerce.com/showcase/"
+    },
+    {
+      "id": "builtwith-woocommerce",
+      "name": "BuiltWith WooCommerce technology list",
+      "kind": "technology-directory",
+      "use": "Candidate discovery only; respect directory access limits and each merchant's terms.",
+      "url": "https://trends.builtwith.com/websitelist/WooCommerce"
+    },
+    {
+      "id": "storeleads-woocommerce",
+      "name": "Store Leads WooCommerce report",
+      "kind": "technology-directory",
+      "use": "Candidate discovery only; exports and commercial reuse may be restricted.",
+      "url": "https://storeleads.app/reports/woocommerce"
+    },
+    {
+      "id": "grips-top-woocommerce",
+      "name": "Grips Top WooCommerce stores",
+      "kind": "ranked-public-preview",
+      "use": "Public candidate seed list by category and country; verify the live public feed before attachment.",
+      "url": "https://gripsintelligence.com/insights/rankings/top-woocommerce-stores"
+    },
+    {
+      "id": "wappalyzer-woocommerce",
+      "name": "Wappalyzer WooCommerce technology lookup",
+      "kind": "technology-directory",
+      "use": "Useful for validating candidates; not a catalog or authorization source.",
+      "url": "https://www.wappalyzer.com/technologies/ecommerce/woocommerce/"
+    }
+  ],
+  "sources": [
+    {
+      "id": "open-products-facts",
+      "name": "Open Products Facts",
+      "kind": "open-product-registry",
+      "status": "planned-enrichment",
+      "license": "ODbL; product contents and images may have separate terms",
+      "provides": ["product identity", "brand", "categories", "barcodes", "community attributes"],
+      "doesNotProvide": ["live merchant stock", "reliable current price", "checkout URL", "affiliate tracking"],
+      "use": "Match and enrich authorized merchant records by GTIN/SKU; never render as a live offer by itself.",
+      "url": "https://openproductsfacts.org/"
+    },
+    {
+      "id": "open-food-facts",
+      "name": "Open Food Facts",
+      "kind": "open-product-registry",
+      "status": "planned-enrichment",
+      "license": "ODbL; images and product contents may have separate terms",
+      "provides": ["food product identity", "ingredients", "nutrition", "labels", "barcodes"],
+      "doesNotProvide": ["live merchant stock", "reliable current price", "checkout URL", "affiliate tracking"],
+      "use": "Optional coffee and pet-food enrichment only; use the documented User-Agent and rate limits.",
+      "url": "https://openfoodfacts.github.io/openfoodfacts-server/api/"
+    },
+    {
+      "id": "open-icecat",
+      "name": "Open Icecat",
+      "kind": "open-product-content",
+      "status": "planned-enrichment",
+      "license": "Open Content License; asset-level restrictions apply",
+      "provides": ["structured specifications", "brand/product content", "categories", "some media"],
+      "doesNotProvide": ["live merchant stock", "reliable current price", "commissionable landing URL"],
+      "use": "Optional specification enrichment after free registration and license review.",
+      "url": "https://icecat.com/content-subscription/"
+    },
+    {
+      "id": "merchant-authorized-feed",
+      "name": "Merchant-authorized Shopify/WooCommerce feed",
+      "kind": "live-inventory",
+      "status": "active",
+      "license": "Merchant-specific permission required",
+      "provides": ["current product data", "price", "availability", "images", "canonical checkout URL"],
+      "doesNotProvide": [],
+      "use": "Primary source for shoppable out-of-network inventory; affiliate URL is added only when supplied by an approved network.",
+      "url": "https://developer.woocommerce.com/docs/apis/store-api/"
+    }
+  ]
+}

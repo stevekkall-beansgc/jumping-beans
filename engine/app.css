@@ -200,6 +200,10 @@ h1 {
   background: var(--bl-theme-accent);
 }
 
+.source-marker.source-affiliate {
+  background: var(--bl-color-info);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
@@ -334,6 +338,12 @@ h1 {
   border-color: var(--bl-color-border-strong);
   background: var(--bl-color-surface-subtle);
   color: var(--bl-color-text);
+}
+
+.source-pill.source-affiliate {
+  border-color: var(--bl-color-info);
+  background: var(--bl-color-info-surface);
+  color: var(--bl-color-info);
 }
 
 .source-pill.source-optin,

@@ -1,5 +1,9 @@
 # Jumping Beans — Session Handoff
 
+> Historical session handoff. Current deployment and acceptance authority lives
+> in [`CLOUDFLARE_DEPLOY.md`](CLOUDFLARE_DEPLOY.md) and
+> [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md).
+
 State as of 2026-08-31. WebMCP Challenge (bet C1), deadline **Sep 3 2026 15:00 PT**, $0 budget.
 Authoritative design docs live in `~/beans/labs/beanlabs/ventures/05-concierge-webmcp/`
 (SESSION-BRIEF.md = start here; SPEC.md; RESEARCH.md). This repo is the public submission.
@@ -30,8 +34,9 @@ Authoritative design docs live in `~/beans/labs/beanlabs/ventures/05-concierge-w
   (each via `spikes/a-cross-origin/serve.py <port> <dir>`; sends COOP/COEP/CORP; no token on localhost).
 
 ## Key gotchas (do not re-derive)
-1. Chrome 151's live producer API accepted object inputs in this run; the engine
-   keeps a serialized-input retry for older WebMCP implementations.
+1. Chrome 151 accepted object inputs in this historical run. The current Engine
+   follows Chrome's JSON-string input contract first and keeps one narrowly
+   gated object fallback for older development implementations.
 2. CORP `cross-origin` header required on EVERY unit, or cross-origin partner iframe fails under COEP.
 3. WebMCP is **headed-Chrome only** (headless → `modelContext` undefined); enable via the flag.
 4. Tool `execute()` gets **no 2nd `{signal}` arg** — guard: `execute: async (input, {signal}={})=>…` + `(!signal||!signal.aborted)`.
@@ -60,6 +65,7 @@ Authoritative design docs live in `~/beans/labs/beanlabs/ventures/05-concierge-w
 ## Deploy commands (see docs/CLOUDFLARE_DEPLOY.md for full)
 ```bash
 npm i -g wrangler && wrangler login
+node scripts/build-inventory-index.mjs
 cd engine && node bundle-static.mjs && npx wrangler deploy
 npx wrangler pages deploy partners/petsupply --project-name petsupply
 npx wrangler pages deploy partners/coffee   --project-name coffee

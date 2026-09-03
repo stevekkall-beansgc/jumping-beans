@@ -105,6 +105,9 @@ for (const partner of partnerNames) {
   const partnerRoot = path.join(root, "partners", partner);
   outputs.set(path.join(partnerRoot, "storefront.css"), sharedCssHeader + storefrontCss);
   outputs.set(path.join(partnerRoot, "storefront.js"), sharedJsHeader + storefrontJs);
+  for (const module of ["preference-handoff.mjs", "preference-plane.mjs", "shopping-intent.mjs"]) {
+    outputs.set(path.join(partnerRoot, module), await readFile(path.join(root, "engine", module), "utf8"));
+  }
 }
 
 let stale = 0;

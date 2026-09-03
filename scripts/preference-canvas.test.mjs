@@ -83,6 +83,7 @@ context = vm.createContext({
   addMemory: () => !context.storageDenied, money: (value) => `$${Number(value).toFixed(2)}`,
   opaqueId: () => `rule-${++rule}`, escapeHtml: (value) => String(value),
   offerMarkup: (_deal, kind) => kind === 'open' ? 'Open inventory' : 'Opted-in partner', networkMarkup: () => 'Partner status',
+  selfServePreviewMarkup: () => 'Open storefront preview',
   renderJourney: () => { context.renderProductShell(); context.renderProductNetwork(); },
   rerunAppliedJourney: async () => { state.appliedJourneyRevision++; calls++; await new Promise((resolve) => { resolveRead = resolve; }); },
   invalidateAppliedJourney: () => { state.capabilityResolution = null; state.originOutcomes = {}; },
@@ -296,6 +297,7 @@ state.applied=true; state.productStage='results'; state.productReviewState='appl
 state.originOutcomes=base.outcomes;state.capabilityResolution={exposed:[]}; context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'no-match');
 assert.match(els.canvasResultsFeed.innerHTML,/Open inventory/);
+assert.match(els.canvasResultsFeed.innerHTML,/Open storefront preview/);
 assert.doesNotMatch(els.canvasResultsFeed.innerHTML,/Opted-in partner/);
 state.originOutcomes.two.status='timeout';state.capabilityResolution.exposed=[{}];context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'partial');
@@ -314,17 +316,29 @@ finishDiscovery([{name:'get_matching_deals',origin:'one'}]);
 await pendingNative;
 assert.equal(invocations,0,'revoked discovery cannot invoke a native partner tool');
 
-// The native serialized-argument compatibility retry has the same revocation boundary.
+// Chrome's native API receives JSON text first, while the legacy-object
+// compatibility retry keeps the same revocation boundary.
 load('async function executeTool(', 'function discoverGrant(');
 context.isCompatibilityInputError=isCompatibilityInputError;
 let rejectNative; let nativeCalls=0;
-context.document.modelContext.executeTool=async()=>{nativeCalls++; return new Promise((_resolve,reject)=>{rejectNative=reject;});};
+let nativeInputs=[];
+context.document.modelContext.executeTool=async(_tool,input)=>{nativeCalls++; nativeInputs.push(input); return new Promise((_resolve,reject)=>{rejectNative=reject;});};
 state.applied=true;state.networkSharingPaused=false;
 const initialNative=context.executeTool({name:'get_matching_deals'}, {maxPrice:200});
+assert.equal(nativeInputs[0],'{"maxPrice":200}','native Chrome input is serialized first');
 state.applied=false;state.appliedJourneyRevision++;
-rejectNative(new Error('Failed to parse input arguments'));
+rejectNative(new TypeError("parameter 2 is not of type 'object'"));
 await assert.rejects(initialNative);
 assert.equal(nativeCalls,1,'revocation blocks serialized compatibility retry');
+
+// A recognized legacy input-type error may retry once with the object while
+// the consent boundary is still valid.
+nativeInputs=[];nativeCalls=0;state.applied=true;
+context.document.modelContext.executeTool=async(_tool,input)=>{nativeCalls++;nativeInputs.push(input);if(typeof input==='string')throw new TypeError("parameter 2 is not of type 'object'");return JSON.stringify({deals:[]});};
+assert.equal(JSON.stringify(await context.executeTool({name:'get_matching_deals'}, {maxPrice:200})),'{"deals":[]}');
+assert.equal(nativeCalls,2);
+assert.equal(nativeInputs[0],'{"maxPrice":200}');
+assert.equal(nativeInputs[1].maxPrice,200);
 
 // A memory write failure leaves Forget retryable and does not imply deletion.
 saved.set('preferences',oldSaved); saved.set('memory',[{kind:'preference'}]);

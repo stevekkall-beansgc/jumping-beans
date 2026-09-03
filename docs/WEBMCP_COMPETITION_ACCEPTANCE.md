@@ -1,5 +1,10 @@
 # Jumping Beans — Native WebMCP Competition Acceptance
 
+> Historical native acceptance plan. The current release receipt is
+> [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md). This
+> document remains **STOP / NO-GO** until that receipt contains a fresh 3/3
+> headed Stable production run tied to the deployed commit SHA.
+
 Date: 2026-08-31
 Scope: browser/runtime and competition acceptance for the WebMCP Challenge.
 Current decision: **STOP / NO-GO**

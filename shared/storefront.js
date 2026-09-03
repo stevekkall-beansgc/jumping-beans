@@ -1,15 +1,30 @@
 // Shared renderer for the three independently deployed partner storefronts.
+import { readPreferenceHandoff, eligibleStorefrontOffer } from "./preference-handoff.mjs";
 
 const grid = document.getElementById("grid");
 const banner = document.getElementById("banner");
 const actionPreview = document.getElementById("action-chain-preview");
 const partnerName = document.body.dataset.partnerName || "Partner shop";
 const partnerState = globalThis.__JB_PARTNER_CONTEXT__ ??= { preferencePlane: null };
+const embeddedForDiscovery = window.self !== window.top;
+const PAGE_SIZE = 24;
+const configuredCatalogTimeout = Number(globalThis.__JB_CATALOG_TIMEOUT_MS__);
+const CATALOG_TIMEOUT_MS = Number.isFinite(configuredCatalogTimeout)
+  ? Math.max(1, Math.min(10000, configuredCatalogTimeout))
+  : 10000;
+let visibleCount = PAGE_SIZE;
+// Consume before any catalog render. Do not persist or propagate the fragment.
+const arrivedPlane = readPreferenceHandoff(window.location.hash);
+const rejectedHandoff = window.location.hash.startsWith("#jb_preferences=") && !arrivedPlane;
+if (arrivedPlane) partnerState.preferencePlane = arrivedPlane;
+if (window.location.hash.startsWith("#jb_preferences=")) {
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+}
 const ALLOWED_FORMATS = new Set(["testimonial", "price-proof", "video", "no-urgency"]);
 const ALLOWED_FEED_STYLES = new Set(["visual", "balanced", "compare", "custom"]);
 const formatLabels = {
   testimonial: "testimonials first",
-  video: "a short video first",
+  video: "a short video first when supplied",
   "price-proof": "price proof first",
   "no-urgency": "no urgency",
 };
@@ -67,6 +82,7 @@ function normalizePreferencePlane(value) {
 }
 
 function currentPreferencePlane() {
+  if (arrivedPlane && partnerState.preferencePlane === arrivedPlane) return arrivedPlane;
   partnerState.preferencePlane = normalizePreferencePlane(partnerState.preferencePlane);
   return partnerState.preferencePlane;
 }
@@ -76,7 +92,8 @@ function formatPreferencePlane(plane) {
   const parts = [];
   if (plane.feedStyle) parts.push(`feed style ${plane.feedStyle}`);
   if (plane.category) parts.push(`category ${plane.category}`);
-  if (Number.isFinite(plane.maxPrice)) parts.push(`max price ${money.format(plane.maxPrice)}`);
+  if (plane.intent?.budget?.maxPrice != null) parts.push(`${plane.intent.budget.maxInclusive ? "up to" : "under"} ${money.format(plane.intent.budget.maxPrice)}`);
+  else if (Number.isFinite(plane.maxPrice)) parts.push(`max price ${money.format(plane.maxPrice)}`);
   if (plane.formats.length) {
     const formats = plane.formats.map((format) => formatLabels[format]).filter(Boolean).join(" · ");
     if (formats) parts.push(formats);
@@ -100,6 +117,21 @@ function safeHttpUrl(value) {
   } catch {
     return null;
   }
+}
+
+function imageUrlAtWidth(value, width) {
+  const url = safeHttpUrl(value);
+  if (!url) return null;
+  if (url.hostname === "cdn.shopify.com") url.searchParams.set("width", String(width));
+  return url;
+}
+
+function responsiveImageSrcset(value, widths = [320, 480, 512, 640, 960]) {
+  const url = safeHttpUrl(value);
+  if (!url || url.hostname !== "cdn.shopify.com") return "";
+  return widths
+    .map((width) => `${imageUrlAtWidth(url.href, width).href} ${width}w`)
+    .join(", ");
 }
 
 function expiryLabel(value) {
@@ -143,6 +175,13 @@ function collateralForDeal(deal) {
       type: "testimonial",
       text: "A bright, easy everyday roast with a smooth finish.",
       source: "Coffee Co customer story",
+    });
+  }
+  if (deal.sku === "NIV-77007Q45") {
+    collateral.push({
+      type: "testimonial",
+      text: "The finishing and dial detail feel exceptional at this price.",
+      source: "Watch Co customer story",
     });
   }
   return collateral;
@@ -225,7 +264,8 @@ function productCard(deal, index, plane) {
   if (deal.expiresAt) time.dateTime = deal.expiresAt;
   expiry.append(time);
 
-  body.append(element("p", "bl-card__eyebrow category", category), heading, price, expiry);
+  body.append(element("p", "bl-card__eyebrow category", category), heading, price);
+  if (!plane?.formats.includes("no-urgency")) body.append(expiry);
   const notes = preferenceNotes(deal, plane);
   if (notes.length) {
     const adaptation = element("p", "bl-callout adaptation-note", notes.join(" "));
@@ -256,9 +296,17 @@ function productCard(deal, index, plane) {
   const imageUrl = safeHttpUrl(deal.imageUrl);
   if (imageUrl) {
     const image = element("img", "offer-card__media");
-    image.src = imageUrl.href;
+    const srcset = responsiveImageSrcset(imageUrl.href);
+    if (srcset) {
+      image.sizes = "(max-width: 42rem) calc(100vw - 2.5rem), 16rem";
+      image.srcset = srcset;
+    }
+    image.src = imageUrlAtWidth(imageUrl.href, 640).href;
     image.alt = `${deal.name || "Product"} product image`;
     image.loading = "lazy";
+    image.decoding = "async";
+    image.width = 640;
+    image.height = 480;
     image.crossOrigin = "anonymous";
     article.append(image);
   }
@@ -274,7 +322,7 @@ function actionDealFromCatalog(catalog) {
   const params = new URLSearchParams(window.location.search);
   if (params.get("jb_action") !== "chain") return null;
   const sku = params.get("jb_sku");
-  return catalog.find((deal) => deal.sku === sku && deal.availability !== "out-of-stock") || null;
+  return catalog.find((deal) => deal.sku === sku && eligibleStorefrontOffer(deal, null)) || null;
 }
 
 function renderActionStep() {
@@ -315,8 +363,15 @@ function renderActionPreview(catalog) {
   if (image) {
     const imageUrl = safeHttpUrl(deal.imageUrl);
     if (imageUrl) {
-      image.src = imageUrl.href;
+      const srcset = responsiveImageSrcset(imageUrl.href, [128, 192, 256, 320]);
+      if (srcset) {
+        image.sizes = "4rem";
+        image.srcset = srcset;
+      }
+      image.src = imageUrlAtWidth(imageUrl.href, 320).href;
       image.alt = `${deal.name || "Product"} product image`;
+      image.width = 128;
+      image.height = 128;
       image.hidden = false;
     } else {
       image.removeAttribute("src");
@@ -344,6 +399,7 @@ function completeActionPreview() {
   actionPreview.querySelector("[data-action-confirm]")?.setAttribute("hidden", "");
   const outcome = actionPreview.querySelector("[data-action-step=\"4\"] p:last-child");
   if (outcome) outcome.textContent = `The “${actionState.choice === "compare" ? "keep comparing" : actionState.choice === "adapt" ? "adapt preferences" : "prepare handoff"}” branch was approved in this demo. No order, payment, account change, or message was created.`;
+  actionPreview.querySelector('[data-action-step="4"] h3')?.focus({ preventScroll: true });
 }
 
 function bindActionPreview() {
@@ -359,6 +415,7 @@ function bindActionPreview() {
     if (actionState.step > 1) {
       actionState.step -= 1;
       renderActionStep();
+      actionPreview.querySelector(`[data-action-step="${actionState.step}"] h3`)?.focus({ preventScroll: true });
     }
   });
   actionPreview.querySelector("[data-action-confirm]")?.addEventListener("click", completeActionPreview);
@@ -370,11 +427,11 @@ function bindActionPreview() {
   });
 }
 
-function showAdaptation(plane) {
+function showAdaptation(plane, count) {
   if (!banner) return;
   if (!plane) {
     banner.replaceChildren(
-      element("strong", "", "Opted-in partner, public-feed inventory"),
+      element("strong", "", rejectedHandoff ? "Preference handoff could not be applied" : "Opted-in partner, public-feed inventory"),
       element("span", "", `${partnerName} exposes structured offers through WebMCP. The underlying catalog records came from a public feed and are not independently verified by Jumping Beans.`),
     );
     return;
@@ -382,8 +439,8 @@ function showAdaptation(plane) {
   const summary = formatPreferencePlane(plane);
   const rules = relevantRules(plane).slice(0, 3);
   banner.replaceChildren(
-    element("strong", "", "Opted-in partner preview"),
-    element("span", "", `${partnerName} received scoped presentation context: ${summary}. Product facts still come from the catalog source named on each offer.`),
+    element("strong", "", "Your Engine selection is applied"),
+    element("span", "", `${partnerName} is showing ${count ?? "matching"} eligible offers using: ${summary}. Product facts still come from the catalog source named on each offer.`),
   );
   if (rules.length) {
     banner.append(
@@ -396,10 +453,41 @@ function showAdaptation(plane) {
   }
 }
 
+function renderRankedCatalog(ranked, plane) {
+  if (!ranked.length) {
+    grid.replaceChildren(element("li", "bl-callout offer-grid__state", "No offers match this category and budget. Return to the Engine to change your selection."));
+    return;
+  }
+  const shown = ranked.slice(0, visibleCount);
+  const items = shown.map((deal, index) => productCard(deal, index, plane));
+  const remaining = ranked.length - shown.length;
+  if (remaining > 0) {
+    const more = element("li", "bl-callout offer-grid__state");
+    const button = element("button", "bl-button", `Show ${Math.min(PAGE_SIZE, remaining)} more (${remaining} remaining)`);
+    button.type = "button";
+    button.dataset.variant = "secondary";
+    button.addEventListener("click", () => {
+      const firstNewIndex = shown.length;
+      visibleCount += PAGE_SIZE;
+      renderRankedCatalog(ranked, plane);
+      const heading = grid.children[firstNewIndex]?.querySelector("h2");
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.focus();
+      }
+    });
+    more.append(element("p", "", `Showing ${shown.length} of ${ranked.length} eligible offers.`), button);
+    items.push(more);
+  }
+  grid.replaceChildren(...items);
+}
+
 async function renderCatalog() {
   grid.setAttribute("aria-busy", "true");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), CATALOG_TIMEOUT_MS);
   try {
-    const response = await fetch("./catalog.json");
+    const response = await fetch("./catalog.json", { signal: controller.signal });
     if (!response.ok) throw new Error(`Catalog request returned ${response.status}`);
     const catalog = await response.json();
     if (!Array.isArray(catalog) || !catalog.length) {
@@ -407,27 +495,36 @@ async function renderCatalog() {
       return;
     }
     const plane = currentPreferencePlane();
-    showAdaptation(plane);
-    const ranked = normalizeCatalog(catalog.filter((deal) => deal.availability !== "out-of-stock"))
+    const ranked = normalizeCatalog(catalog.filter((deal) => eligibleStorefrontOffer(deal, plane)))
       .sort((a, b) => presentationScore(b, plane) - presentationScore(a, plane) || Number(a.dealPrice || 0) - Number(b.dealPrice || 0));
-    grid.replaceChildren(...ranked.map((deal, index) => productCard(deal, index, plane)));
+    showAdaptation(plane, ranked.length);
+    grid.dataset.feedStyle = plane?.feedStyle || "balanced";
+    visibleCount = PAGE_SIZE;
+    renderRankedCatalog(ranked, plane);
     renderActionPreview(catalog);
   } catch {
-    grid.replaceChildren(
-      (() => {
-        const error = element("li", "bl-callout offer-grid__state", "The catalog did not load. No order or payment was attempted. Refresh the page to try again.");
-        error.dataset.tone = "danger";
-        return error;
-      })(),
+    const error = element("li", "bl-callout offer-grid__state");
+    error.dataset.tone = "danger";
+    const retry = element("button", "bl-button", "Try loading the catalog again");
+    retry.type = "button";
+    retry.dataset.variant = "secondary";
+    retry.addEventListener("click", () => { void renderCatalog(); });
+    error.append(
+      element("p", "", "The catalog did not load within 10 seconds. No order or payment was attempted."),
+      retry,
     );
+    grid.replaceChildren(error);
   } finally {
+    window.clearTimeout(timeout);
     grid.setAttribute("aria-busy", "false");
   }
 }
 
-showAdaptation(currentPreferencePlane());
-bindActionPreview();
-window.addEventListener("jb:preference-plane", () => {
-  void renderCatalog();
-});
-renderCatalog();
+if (!embeddedForDiscovery) {
+  showAdaptation(currentPreferencePlane());
+  bindActionPreview();
+  window.addEventListener("jb:preference-plane", () => {
+    void renderCatalog();
+  });
+  renderCatalog();
+}
