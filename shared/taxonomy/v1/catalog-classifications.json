@@ -1,0 +1,223 @@
+{
+  "schemaVersion": "1.0.0",
+  "taxonomyRegistry": {
+    "canonical": {
+      "id": "gs1-gpc",
+      "authority": "GS1",
+      "intendedBackbone": true,
+      "version": null,
+      "codeStatus": "not-loaded",
+      "provenance": {
+        "source": "docs/decisions/0001-versioned-taxonomy-foundation.md",
+        "observedAt": "2026-09-02",
+        "note": "GS1 GPC is the intended canonical backbone; no authoritative release or code set is bundled in this repository."
+      }
+    },
+    "adapters": [
+      {
+        "id": "partner-native",
+        "sourceTaxonomy": "partner-native",
+        "sourceVersion": null,
+        "status": "active-slot",
+        "provenance": { "source": "partner catalog snapshots", "observedAt": "2026-09-02" }
+      },
+      {
+        "id": "gs1-gpc",
+        "sourceTaxonomy": "GS1 Global Product Classification",
+        "sourceVersion": null,
+        "status": "unmapped",
+        "provenance": { "source": "no authoritative GPC release loaded", "observedAt": "2026-09-02" }
+      },
+      {
+        "id": "google-product-taxonomy",
+        "sourceTaxonomy": "Google Product Taxonomy",
+        "sourceVersion": null,
+        "status": "unmapped",
+        "provenance": { "source": "no authoritative Google Product Taxonomy release loaded", "observedAt": "2026-09-02" }
+      },
+      {
+        "id": "unspsc",
+        "sourceTaxonomy": "UNSPSC",
+        "sourceVersion": null,
+        "status": "unmapped",
+        "provenance": { "source": "no authoritative UNSPSC release loaded", "observedAt": "2026-09-02" }
+      }
+    ]
+  },
+  "classifications": [
+    {
+      "id": "coffee:LCCCML10",
+      "partnerId": "coffee",
+      "partnerSku": "LCCCML10",
+      "gtin": null,
+      "canonical": {
+        "key": "jb:temporary:coffee:single-serve-pods",
+        "keyStatus": "temporary",
+        "taxonomy": "gs1-gpc",
+        "taxonomyVersion": null,
+        "officialCode": null,
+        "officialCodeStatus": "unmapped"
+      },
+      "mappings": [
+        {
+          "adapterId": "partner-native",
+          "source": { "id": "partner-native", "version": null, "code": "coffee", "codeStatus": "verified" },
+          "relation": "related",
+          "confidence": 0.7,
+          "method": "manual-review",
+          "provenance": { "source": "partners/coffee/catalog.json#LCCCML10", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "gs1-gpc",
+          "source": { "id": "gs1-gpc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped",
+          "confidence": 0,
+          "method": "not-mapped",
+          "provenance": { "source": "authoritative GS1 GPC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "google-product-taxonomy",
+          "source": { "id": "google-product-taxonomy", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped",
+          "confidence": 0,
+          "method": "not-mapped",
+          "provenance": { "source": "authoritative Google Product Taxonomy code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "unspsc",
+          "source": { "id": "unspsc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped",
+          "confidence": 0,
+          "method": "not-mapped",
+          "provenance": { "source": "authoritative UNSPSC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        }
+      ],
+      "canonicalAttributes": [
+        {
+          "name": "product_form",
+          "value": "single-serve-pods",
+          "status": "observed",
+          "provenance": { "source": "partners/coffee/catalog.json#LCCCML10 name", "observedAt": "2026-09-02" }
+        }
+      ],
+      "bundle": { "kind": "single", "componentStatus": "not-applicable", "components": [] },
+      "effective": { "from": "2026-09-02", "to": null }
+    },
+    {
+      "id": "petsupply:WK-HRN-LSH-WV",
+      "partnerId": "petsupply",
+      "partnerSku": "WK-HRN-LSH-WV",
+      "gtin": null,
+      "canonical": {
+        "key": "jb:temporary:pet-supplies:dog-walk-kit",
+        "keyStatus": "temporary",
+        "taxonomy": "gs1-gpc",
+        "taxonomyVersion": null,
+        "officialCode": null,
+        "officialCodeStatus": "unmapped"
+      },
+      "mappings": [
+        {
+          "adapterId": "partner-native",
+          "source": { "id": "partner-native", "version": null, "code": "custom bundle", "codeStatus": "verified" },
+          "relation": "related",
+          "confidence": 0.7,
+          "method": "manual-review",
+          "provenance": { "source": "partners/petsupply/catalog.json#WK-HRN-LSH-WV", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "gs1-gpc",
+          "source": { "id": "gs1-gpc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative GS1 GPC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "google-product-taxonomy",
+          "source": { "id": "google-product-taxonomy", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative Google Product Taxonomy code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "unspsc",
+          "source": { "id": "unspsc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative UNSPSC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        }
+      ],
+      "canonicalAttributes": [
+        {
+          "name": "product_form",
+          "value": "walk-kit",
+          "status": "observed",
+          "provenance": { "source": "partners/petsupply/catalog.json#WK-HRN-LSH-WV name", "observedAt": "2026-09-02" }
+        }
+      ],
+      "bundle": { "kind": "bundle", "componentStatus": "not-provided", "components": [] },
+      "effective": { "from": "2026-09-02", "to": null }
+    },
+    {
+      "id": "watch:NIV-77007Q45",
+      "partnerId": "watch",
+      "partnerSku": "NIV-77007Q45",
+      "gtin": null,
+      "canonical": {
+        "key": "jb:temporary:timepieces:watch",
+        "keyStatus": "temporary",
+        "taxonomy": "gs1-gpc",
+        "taxonomyVersion": null,
+        "officialCode": null,
+        "officialCodeStatus": "unmapped"
+      },
+      "mappings": [
+        {
+          "adapterId": "partner-native",
+          "source": { "id": "partner-native", "version": null, "code": "watches", "codeStatus": "verified" },
+          "relation": "related",
+          "confidence": 0.7,
+          "method": "manual-review",
+          "provenance": { "source": "partners/watch/catalog.json#NIV-77007Q45", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "gs1-gpc",
+          "source": { "id": "gs1-gpc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative GS1 GPC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "google-product-taxonomy",
+          "source": { "id": "google-product-taxonomy", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative Google Product Taxonomy code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        },
+        {
+          "adapterId": "unspsc",
+          "source": { "id": "unspsc", "version": null, "code": null, "codeStatus": "unmapped" },
+          "relation": "unmapped", "confidence": 0, "method": "not-mapped",
+          "provenance": { "source": "authoritative UNSPSC code not verified", "observedAt": "2026-09-02" },
+          "effective": { "from": "2026-09-02", "to": null }
+        }
+      ],
+      "canonicalAttributes": [
+        {
+          "name": "product_form",
+          "value": "watch",
+          "status": "observed",
+          "provenance": { "source": "partners/watch/catalog.json#NIV-77007Q45 category", "observedAt": "2026-09-02" }
+        }
+      ],
+      "bundle": { "kind": "single", "componentStatus": "not-applicable", "components": [] },
+      "effective": { "from": "2026-09-02", "to": null }
+    }
+  ]
+}
