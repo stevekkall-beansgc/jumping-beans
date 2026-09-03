@@ -708,7 +708,7 @@ function renderProductReview(active = normalizePreferencePlane(state.preferences
   els.productReviewStateLabel.dataset.status = showingResults && !isApplying ? "success" : "info";
   const facts = [
     { id: "category", text: selection.category || "Any category", edit: "Shopping for" },
-    { id: "budget", text: selection.maxPrice == null ? "Any budget" : `Up to ${money(selection.maxPrice)}`, edit: "Budget" },
+    { id: "budget", text: selection.maxPrice == null ? "Any budget" : `${selection.maxPriceInclusive === false ? "Under" : "Up to"} ${money(selection.maxPrice)}`, edit: "Budget" },
     { id: "presentation", text: `${STARTER_STYLES[selection.feedStyle]?.label || "Custom"} · ${selection.formats.map((format) => formatLabels[format]).join(", ") || "Default presentation"}`, edit: "Presentation" },
     ...selection.rules.map((rule) => ({ id: rule.id, text: `${rule.text}${rule.scope === "category" ? ` · For ${rule.category}` : ""}${rule.active ? "" : " · Paused (not shared)"}`, edit: "priority" })),
   ];
@@ -788,11 +788,18 @@ function updateCanvasWords() {
     // A manual correction wins while the corresponding words stay unchanged.
     const previous = state.canvasParsedFacts?.[key];
     const corrected = previous !== undefined && current[key] !== previous;
-    if (!corrected && previous !== undefined) current[key] = state.canvasWordsBase[key];
-    if (interpretation[key] !== undefined && !(corrected && interpretation[key] === previous)) parsedFacts[key] = interpretation[key];
+    if (!corrected && previous !== undefined) {
+      current[key] = state.canvasWordsBase?.[key];
+      if (key === "maxPrice") current.maxPriceInclusive = state.canvasWordsBase?.maxPriceInclusive;
+    }
+    const changedInequality = key === "maxPrice" && interpretation.maxPriceInclusive !== state.canvasParsedFacts?.maxPriceInclusive;
+    if (interpretation[key] !== undefined && !(corrected && interpretation[key] === previous && !changedInequality)) {
+      parsedFacts[key] = interpretation[key];
+      if (key === "maxPrice") parsedFacts.maxPriceInclusive = interpretation.maxPriceInclusive;
+    }
   }
-  state.canvasWordsBase = { category: current.category, maxPrice: current.maxPrice };
-  state.canvasParsedFacts = { category: interpretation.category, maxPrice: interpretation.maxPrice };
+  state.canvasWordsBase = { category: current.category, maxPrice: current.maxPrice, maxPriceInclusive: current.maxPriceInclusive };
+  state.canvasParsedFacts = { category: interpretation.category, maxPrice: interpretation.maxPrice, maxPriceInclusive: interpretation.maxPriceInclusive };
   state.canvasRuleId ||= opaqueId("rule");
   const existing = current.rules.find((rule) => rule.id === state.canvasRuleId);
   const rules = current.rules.filter((rule) => rule.id !== state.canvasRuleId);
@@ -855,7 +862,7 @@ function editCanvasFact(id) {
 function removeCanvasFact(id) {
   markDraftEdited({ preferences: true });
   if (id === "category") state.preferences.category = "";
-  else if (id === "budget") state.preferences.maxPrice = null;
+  else if (id === "budget") { state.preferences.maxPrice = null; delete state.preferences.maxPriceInclusive; }
   else state.preferences.rules = state.preferences.rules.filter((rule) => rule.id !== id);
   settleCanvasWords();
   renderProductShell();
@@ -1480,8 +1487,8 @@ function restoreAccountDraft() {
   state.canvasClarification = restoredWords.clarification;
   // The restored summary remains authoritative. Unchanged prose must not undo
   // manual corrections after the existing account draft return.
-  state.canvasParsedFacts = { category: restoredWords.category, maxPrice: restoredWords.maxPrice };
-  state.canvasWordsBase = { category: state.preferences.category, maxPrice: state.preferences.maxPrice };
+  state.canvasParsedFacts = { category: restoredWords.category, maxPrice: restoredWords.maxPrice, maxPriceInclusive: restoredWords.maxPriceInclusive };
+  state.canvasWordsBase = { category: state.preferences.category, maxPrice: state.preferences.maxPrice, maxPriceInclusive: state.preferences.maxPriceInclusive };
   els.canvasClarification.textContent = state.canvasClarification;
   els.canvasClarification.hidden = !state.canvasClarification;
   state.productReturnStage = draft.productReturnStage;
@@ -1931,6 +1938,7 @@ for (const input of [els.productCategory, els.productMaxPrice, els.productStyle]
   input.addEventListener(input === els.productStyle ? "change" : "input", () => {
     markDraftEdited({ preferences: true });
     state.preferences = productPreferenceDraft();
+    if (input === els.productMaxPrice) delete state.preferences.maxPriceInclusive;
     if (input === els.productStyle) state.preferences = normalizePreferencePlane({ ...state.preferences, ...selectStarterStyle(input.value) });
     renderProductReview();
   });

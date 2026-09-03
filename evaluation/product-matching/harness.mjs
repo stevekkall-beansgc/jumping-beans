@@ -12,6 +12,7 @@ const names = { petsupply: 'Petsupply', coffee: 'Coffee Co', watch: 'Watch Co' }
 const origin = (partner) => `https://${partner}.example`;
 const sourceFiles = [
   'engine/preference-canvas.mjs', 'engine/preference-plane.mjs', 'engine/p0.js',
+  'engine/shopping-intent.mjs',
   'engine/app.js', ...partners.map((partner) => `partners/${partner}/tool.js`),
 ];
 const hash = (value) => createHash('sha256').update(value).digest('hex');
@@ -163,6 +164,7 @@ export async function createAdapter(root = defaultRoot, corpus) {
       feedStyle: 'balanced', category: '', maxPrice: null, formats: [], ...entry.manual,
       ...(parsed.category === undefined ? {} : { category: parsed.category }),
       ...(parsed.maxPrice === undefined ? {} : { maxPrice: parsed.maxPrice }),
+      ...(parsed.maxPriceInclusive === undefined ? {} : { maxPriceInclusive: parsed.maxPriceInclusive }),
       rules: parsed.remainder ? [{ id: 'synthetic-priority', text: parsed.remainder, scope: 'everywhere', category: '', active: true }] : [],
     });
     const context = engine.createContextSnapshot({ profile: null, preferences, applied: true });

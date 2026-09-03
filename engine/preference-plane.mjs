@@ -1,6 +1,7 @@
 // Pure preference-plane rules shared by the product shell, account storage,
 // and tests. Preference data is intentionally separate from identity and
 // execution evidence: only the fields emitted here may be persisted or shared.
+import { canonicalCategory, normalizeShoppingIntent, redactShoppingIntent, intentPolicyRules, partnerPriceCeiling } from "./shopping-intent.mjs";
 
 export const STARTER_STYLES = Object.freeze({
   visual: Object.freeze({
@@ -94,6 +95,7 @@ export function normalizePreferencePlane(value = {}) {
     feedStyle: ALLOWED_STYLES.has(source.feedStyle) ? source.feedStyle : "balanced",
     category: text(source.category, 80),
     maxPrice: normalizedPrice(source),
+    ...(source.maxPriceInclusive === false && normalizedPrice(source) !== null ? { maxPriceInclusive: false } : {}),
     formats: normalizedFormats(source),
     rules: [...uniqueRules.values()],
   };
@@ -161,16 +163,30 @@ export function forgetPreferenceRule(plane, ruleId) {
 export function preferenceSharingPayload(plane, { category } = {}) {
   const normalized = normalizePreferencePlane(plane);
   const appliedCategory = text(category, 80) || normalized.category;
+  const parsed = normalizeShoppingIntent(effectiveRules(normalized, appliedCategory).map((rule) => rule.text).join("; "), { category: canonicalCategory(appliedCategory) || "", maxLength: 8000 });
+  const intent = redactShoppingIntent(parsed.intent);
+  // Manual category is authoritative, including an unsupported category. Do
+  // not let an unrelated priority silently replace it or widen the request.
+  if (!canonicalCategory(appliedCategory)) {
+    intent.status = appliedCategory || parsed.unknown || parsed.intent.vertical ? "unknown" : intent.status;
+    intent.vertical = null; intent.category = null; intent.productType = null;
+  }
+  if (normalized.maxPrice !== null) {
+    intent.budget ||= { currency: "USD", minPrice: null, minInclusive: true, maxPrice: null, maxInclusive: true };
+    if (intent.budget.maxPrice === null || normalized.maxPrice < intent.budget.maxPrice) {
+      intent.budget.maxPrice = normalized.maxPrice;
+      intent.budget.maxInclusive = normalized.maxPriceInclusive !== false;
+    } else if (normalized.maxPrice === intent.budget.maxPrice && normalized.maxPriceInclusive === false) intent.budget.maxInclusive = false;
+  }
+  if (intent.budget?.minPrice != null && intent.budget.maxPrice != null && (intent.budget.minPrice > intent.budget.maxPrice || (intent.budget.minPrice === intent.budget.maxPrice && (!intent.budget.minInclusive || !intent.budget.maxInclusive)))) intent.status = "clarification";
+  const safeIntent = redactShoppingIntent(intent);
   return {
     feedStyle: normalized.feedStyle,
-    category: appliedCategory,
-    maxPrice: normalized.maxPrice,
+    category: safeIntent.category || "",
+    maxPrice: partnerPriceCeiling(safeIntent.budget),
     formats: [...normalized.formats],
-    rules: effectiveRules(normalized, appliedCategory).map((rule) => ({
-      text: rule.text,
-      scope: rule.scope,
-      category: rule.category,
-    })),
+    rules: intentPolicyRules(safeIntent),
+    intent: safeIntent,
   };
 }
 

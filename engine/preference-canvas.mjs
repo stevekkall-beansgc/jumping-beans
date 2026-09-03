@@ -1,20 +1,21 @@
 import { normalizePreferencePlane } from "./preference-plane.mjs";
+import { normalizeShoppingIntent } from "./shopping-intent.mjs";
 
 // Deterministic interpretation only. No requests, persistence, or inferred identity.
 export function interpretPreferenceWords(value) {
-  let remainder = String(value || "").trim().slice(0, 240);
-  // Negation, alternatives and open-ended categories remain literal priorities.
-  if (/\b(?:not|never|except|exclude|avoid)\s+(?:category:|(?:shopping for|under|below|up to)\b)/i.test(remainder)) return { remainder, clarification: "" };
-  if (/\bshopping for\s+(?:watches|dog gear|coffee)\s+(?:and|or)\s+(?:category:\s*)?(?:shopping for\s*)?(?:watches|dog gear|coffee)\b/i.test(remainder)) return { remainder, clarification: "Choose one category in your words, or use the manual form and remove the category list from your words." };
-  const budgets = [...remainder.matchAll(/\b(?:under|below|up to)\s*(?:\$|USD\s*)(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?![\d]|[.,]\d)/gi)];
-  const categories = [...remainder.matchAll(/\b(?:shopping for|category:)\s*(watches|dog gear|coffee)(?=\s*(?:$|[.;,]|(?:under|below|up to)\b))/gi)];
-  const prices = [...new Set(budgets.map((match) => Number(match[1].replaceAll(",", ""))))];
-  const names = [...new Set(categories.map((match) => match[1].toLowerCase()))];
-  const ambiguous = prices.length > 1 || prices.some((price) => price > 10000000) || names.length > 1;
-  if (ambiguous) return { remainder, clarification: "Use one category and budget in your words, or use the manual form and remove the conflicting amounts or categories from your words." };
-  for (const match of [...budgets, ...categories]) remainder = remainder.replace(match[0], "");
+  let remainder = typeof value === "string" ? value.trim().slice(0, 240) : "";
+  const { intent, clarification } = normalizeShoppingIntent(value);
+  if (clarification) return { remainder, clarification };
+  // Keep product/attribute wording as an editable local priority. Only broad
+  // canonical category phrases are consolidated into the manual category row.
+  // Projection reparses the active rules and never forwards their raw wording.
+  remainder = remainder.replace(/\b(?:shopping for|category:)\s*(watches|dog gear|coffee)(?=\s*(?:$|[.;,]|(?:under|below|up to)\b))/gi, (match, category) => intent.category === category.toLowerCase() ? "" : match);
+  const budget = intent.budget;
+  // Lower bounds/ranges remain visible priorities; the manual form has only a
+  // ceiling. A simple ceiling carries its inequality as an additive scalar.
+  if (budget?.maxPrice != null && budget.minPrice == null) remainder = remainder.replace(/\b(?:no more than|not more than|at most|up to|under|below|less than|budget(?: of|:)?|maximum(?: of|:)?|max(?:imum)? price:?)\s*(?:\$|USD\s*)\s*\d[\d,]*(?:\.\d+)?/gi, "");
   remainder = remainder.replace(/\s+/g, " ").replace(/^[\s,;:.—-]+|[\s,;:.—-]+$/g, "").replace(/^(?:and|with)\s+|\s+(?:and|with)$/gi, "").trim();
-  return { ...(prices.length ? { maxPrice: prices[0] } : {}), ...(names.length ? { category: names[0] } : {}), remainder, clarification: "" };
+  return { ...(budget?.maxPrice != null ? { maxPrice: budget.maxPrice, maxPriceInclusive: budget.maxInclusive } : {}), ...(intent.category ? { category: intent.category } : {}), remainder, clarification: "" };
 }
 
 // Older chat drafts repeated parsed facts in a raw rule. Consolidate only exact
@@ -23,14 +24,14 @@ export function canvasDraft(value) {
   const plane = normalizePreferencePlane(value);
   plane.rules = plane.rules.flatMap((rule) => {
     const parsed = interpretPreferenceWords(rule.text);
-    if ((parsed.maxPrice === undefined && parsed.category === undefined) || parsed.clarification || (parsed.maxPrice !== undefined && parsed.maxPrice !== plane.maxPrice) || (parsed.category !== undefined && parsed.category !== plane.category.toLowerCase())) return [rule];
+    if ((parsed.maxPrice === undefined && parsed.category === undefined) || parsed.clarification || (parsed.maxPrice !== undefined && (parsed.maxPrice !== plane.maxPrice || (parsed.maxPriceInclusive === false) !== (plane.maxPriceInclusive === false))) || (parsed.category !== undefined && parsed.category !== plane.category.toLowerCase())) return [rule];
     return parsed.remainder ? [{ ...rule, text: parsed.remainder }] : [];
   });
   return plane;
 }
 
 export function selectionSummary(plane) {
-  return [plane.category || "Any category", plane.maxPrice == null ? "Any budget" : `Up to $${plane.maxPrice.toFixed(2)}`, ...plane.rules.filter((rule) => rule.active).map((rule) => rule.text)].join(" · ");
+  return [plane.category || "Any category", plane.maxPrice == null ? "Any budget" : `${plane.maxPriceInclusive === false ? "Under" : "Up to"} $${plane.maxPrice.toFixed(2)}`, ...plane.rules.filter((rule) => rule.active).map((rule) => rule.text)].join(" · ");
 }
 
 export function canvasResultState({ applying, applied, paused, supported, outcomes = {}, deals = [], expectedOrigins = [] }) {

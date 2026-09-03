@@ -119,6 +119,6 @@ test("normalized and shared preference payloads redact identity and execution fi
   const shared = preferenceSharingPayload(input);
   const serialized = JSON.stringify({ normalized, shared });
   for (const secret of [...sensitiveValues, "csrf-secret"]) assert.equal(serialized.includes(secret), false, secret);
-  assert.deepEqual(Object.keys(shared), ["feedStyle", "category", "maxPrice", "formats", "rules"]);
+  assert.deepEqual(Object.keys(shared), ["feedStyle", "category", "maxPrice", "formats", "rules", "intent"]);
   assert.deepEqual(Object.keys(shared.rules[0]), ["text", "scope", "category"]);
 });

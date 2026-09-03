@@ -2,6 +2,7 @@
 // WebMCP tool names adapt into this boundary; they do not bypass it.
 
 import { normalizePreferencePlane, preferenceSharingPayload } from "./preference-plane.mjs";
+import { canonicalCategory, redactShoppingIntent, intentPartnerRules, partnerPriceCeiling } from "./shopping-intent.mjs";
 
 export const CAPABILITIES = Object.freeze([
   Object.freeze({ id: "offers.discover", version: "1.0.0", title: "Discover eligible offers", mode: "read", requiredScope: "offers:read", outcomeType: "offer_set_ready" }),
@@ -70,9 +71,23 @@ export function createContextSnapshot({ profile, preferences, applied, demoConte
 }
 export function projectPartnerContext(context, origin) {
   const values = context?.values || {}; const approved = ["explicit-applied-demo-context", "explicit-applied-preference-context"].includes(context?.source) && values.applied === true && values.preferencePlane && typeof values.preferencePlane === "object";
-  const fields = { categories: approved ? [...(values.recurringCategories || [])] : [] };
-  if (approved && Number.isFinite(values.maxPrice)) fields.maxPrice = values.maxPrice;
-  if (approved) fields.preferencePlane = { ...values.preferencePlane, formats: [...(values.preferencePlane.formats || [])], rules: (values.preferencePlane.rules || []).map((rule) => ({ text: rule.text, scope: rule.scope, category: rule.category })) };
+  const fields = { categories: [] };
+  if (approved) {
+    const plane = values.preferencePlane;
+    const intent = redactShoppingIntent(plane.intent);
+    const ceiling = partnerPriceCeiling(intent.budget);
+    const unresolved = ["clarification", "unknown"].includes(intent.status) || ceiling === -1;
+    if (!unresolved) fields.categories = [...new Set((Array.isArray(values.recurringCategories) ? values.recurringCategories : []).map(canonicalCategory).filter(Boolean))];
+    if (!unresolved && intent.category) fields.categories = [intent.category];
+    if (ceiling !== null && ceiling >= 0) fields.maxPrice = ceiling;
+    fields.preferencePlane = {
+      feedStyle: ["visual", "balanced", "compare", "custom"].includes(plane.feedStyle) ? plane.feedStyle : "balanced",
+      category: intent.category || "",
+      maxPrice: ceiling !== null && ceiling >= 0 ? ceiling : null,
+      formats: Array.isArray(plane.formats) ? [...new Set(plane.formats.filter((format) => ["testimonial", "price-proof", "video", "no-urgency"].includes(format)))] : [],
+      rules: intentPartnerRules(intent),
+    };
+  }
   return { recipient: origin, purpose: "find eligible offer records", retention: "request-only", approved, fields, fieldProvenance: { categories: approved ? "explicitly-approved preference context" : "not-transmitted", maxPrice: approved ? "user-entered" : "not-transmitted", preferencePlane: approved ? "user-approved canonical preference plane" : "not-transmitted" } };
 }
 export function createEvent(journey, type, payload = {}) { return { eventId: opaqueId("event"), journeyId: journey.journeyId, occurredAt: new Date().toISOString(), type, source: "jumping-beans-engine", observedOrInferred: "observed", schemaVersion: "1.0.0", ...payload }; }

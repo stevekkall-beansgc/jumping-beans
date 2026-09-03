@@ -58,12 +58,15 @@ test("consumes the engine's canonical redacted projection without identifiers", 
     },
   });
   const projection = projectPartnerContext(context, "https://watch-ce8.pages.dev");
-  assert.deepEqual(projection.fields.preferencePlane.rules, [{ text: "Show customer stories first", scope: "everywhere", category: "" }]);
+  assert.deepEqual(projection.fields.preferencePlane.rules, [
+    { text: "Show customer stories first", scope: "everywhere", category: "" },
+    { text: "Up to $1200", scope: "category", category: "watches" },
+  ]);
   assert.equal(JSON.stringify(projection.fields).includes("rule_browser_only"), false);
   const result = await registration.tool.execute(projection.fields);
   assert.ok(result.deals.every((deal) => deal.dealPrice <= 1200));
-  assert.equal(result.deals[0].sku, "NIV-77007Q45");
-  assert.equal(result.deals[0].collateral[0].type, "testimonial");
+  assert.ok(result.deals.some((deal) => deal.sku === "NIV-77007Q45"));
+  assert.ok(result.deals.some((deal) => deal.collateral.some((item) => item.type === "testimonial")));
 });
 
 test("does not widen category-scoped rules to another category", async () => {

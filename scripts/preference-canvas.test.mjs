@@ -8,8 +8,8 @@ import { canvasDraft, interpretPreferenceWords, selectionSummary, canvasResultSt
 const parsed = interpretPreferenceWords('Show repair options first under $200');
 assert.equal(parsed.maxPrice, 200);
 assert.equal(parsed.remainder, 'Show repair options first');
-assert.deepEqual(interpretPreferenceWords('Shopping for watches under $200'), { category: 'watches', maxPrice: 200, remainder: '', clarification: '' });
-assert.equal(interpretPreferenceWords('Show watches I can repair').category, undefined, 'do not guess categories');
+assert.deepEqual(interpretPreferenceWords('Shopping for watches under $200'), { category: 'watches', maxPrice: 200, maxPriceInclusive: false, remainder: '', clarification: '' });
+assert.equal(interpretPreferenceWords('Show watches I can repair').category, 'watches', 'explicit product nouns identify a vertical');
 assert.equal(interpretPreferenceWords('under 40 inches').maxPrice, undefined, 'do not guess money from measurements');
 assert.equal(interpretPreferenceWords('under $1,200.50').maxPrice, 1200.50);
 assert.ok(interpretPreferenceWords('under $200 or below $80').clarification);
@@ -21,8 +21,8 @@ for (const words of ['under $200.', 'under $200,', 'under $200!']) assert.equal(
 assert.equal(interpretPreferenceWords('Not shopping for watches').category, undefined);
 assert.equal(interpretPreferenceWords('Not category: watches').category, undefined);
 assert.ok(interpretPreferenceWords('shopping for watches and coffee').clarification);
-assert.equal(interpretPreferenceWords('shopping for coffee grinders').category, undefined);
-const oldSaved = normalizePreferencePlane({ maxPrice: 200, category: 'watches', rules: [{id:'old',text:'Show repair options first under $200',scope:'everywhere'}] });
+assert.equal(interpretPreferenceWords('shopping for coffee grinders').category, 'coffee');
+const oldSaved = normalizePreferencePlane({ maxPrice: 200, maxPriceInclusive: false, category: 'watches', rules: [{id:'old',text:'Show repair options first under $200',scope:'everywhere'}] });
 assert.equal(canvasDraft(oldSaved).rules[0].text, 'Show repair options first');
 assert.equal(oldSaved.rules[0].text, 'Show repair options first under $200', 'migration edits only the draft copy');
 assert.equal(canvasDraft({...oldSaved,maxPrice:100}).rules[0].text, oldSaved.rules[0].text, 'conflicting older rule needs explicit review');
@@ -163,6 +163,27 @@ assert.equal(state.preferences.maxPrice,80);
 els.canvasWords.value=els.canvasWords.value.replace('$200','$100'); context.updateCanvasWords();
 assert.equal(state.preferences.maxPrice,100,'explicitly changed words can change the budget');
 assert.equal(state.preferences.category,'coffee');
+context.startFreshProductDraft();
+
+// Inequalities travel with the amount through manual corrections and edits.
+els.canvasWords.value='Shopping for watches under $200'; context.updateCanvasWords();
+assert.equal(state.preferences.maxPriceInclusive,false);
+assert.match(els.productReviewRules.innerHTML,/Under \$200/);
+state.preferences={...state.preferences,maxPrice:80};
+delete state.preferences.maxPriceInclusive;
+els.canvasWords.value += ' please'; context.updateCanvasWords();
+assert.equal(state.preferences.maxPrice,80);
+assert.equal(state.preferences.maxPriceInclusive,undefined);
+els.canvasWords.value=els.canvasWords.value.replace('$200','$100'); context.updateCanvasWords();
+assert.equal(state.preferences.maxPrice,100);
+assert.equal(state.preferences.maxPriceInclusive,false);
+els.canvasWords.value=els.canvasWords.value.replace('under','up to'); context.updateCanvasWords();
+assert.equal(state.preferences.maxPrice,100);
+assert.equal(state.preferences.maxPriceInclusive,undefined);
+assert.match(els.productReviewRules.innerHTML,/Up to \$100/);
+context.removeCanvasFact('budget');
+assert.equal(state.preferences.maxPrice,null);
+assert.equal(state.preferences.maxPriceInclusive,undefined);
 context.startFreshProductDraft();
 
 els.canvasWords.value='Show repair options first under $200'; context.updateCanvasWords();
