@@ -40,7 +40,7 @@ catalog, preference-handoff, tool, and action-link paths.
 
 | Gate | Current result |
 |---|---|
-| Deterministic product gate | PASS locally: 741 assertions |
+| Deterministic product gate | PASS locally: 746 assertions |
 | Native response-contract regression | PASS locally: all three checked-in partner catalogs produce schema-valid bounded envelopes and strip catalog-only fields |
 | Native local four-origin journey | PASS in headed Chrome Stable 152.0.7977.65: exact 3/3 discovery, JSON-string execution, green readiness, and three terminal receipt outcomes |
 | Generated UI, Engine bundle, and inventory index | PASS locally; current in the isolated worktree |
