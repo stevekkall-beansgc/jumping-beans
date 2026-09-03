@@ -167,6 +167,9 @@ includesAll(engineHtml, [
   'id="account-import-confirm"',
   "Import selected browser memory",
 ], "engine consent journey");
+const browserReadinessIndex = engineHtml.indexOf('id="browser-readiness"');
+const canvasDraftIndex = engineHtml.indexOf('id="canvas-draft"');
+check(browserReadinessIndex !== -1 && browserReadinessIndex < canvasDraftIndex, "Native browser readiness is nested inside the setup panel that becomes hidden after results");
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [

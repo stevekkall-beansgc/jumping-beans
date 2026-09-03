@@ -427,20 +427,24 @@ function updateConnections() {
 
 function renderBrowserReadiness() {
   if (!els.browserReadiness) return;
-  els.browserReadiness.replaceChildren();
   const title = document.createElement("strong");
   const copy = document.createElement("p");
   title.className = "bl-callout__title";
   const respondingOrigins = PARTNER_ORIGINS.filter((origin) => ["ready", "no-match"].includes(state.originOutcomes?.[origin]?.status));
   const connectedOrigins = new Set(state.connectedTools.map((tool) => tool.origin));
-  const verified = state.applied && state.discoveryComplete
+  const verified = state.applied && !state.networkSharingPaused
+    && state.productReviewState !== "applying" && state.discoveryComplete
     && respondingOrigins.length === PARTNER_ORIGINS.length
     && PARTNER_ORIGINS.every((origin) => connectedOrigins.has(origin));
   if (verified) {
     title.textContent = `Native WebMCP verified with all ${PARTNER_ORIGINS.length} member sites`;
     copy.textContent = "Each allowlisted site completed the current read-only offer check. Matched cards and the separate storefront preview can now show the same approved selection.";
     els.browserReadiness.dataset.tone = "success";
-  } else if (SUPPORTED && state.applied && !state.discoveryComplete) {
+  } else if (SUPPORTED && state.applied && state.networkSharingPaused) {
+    title.textContent = "Native WebMCP sharing is paused";
+    copy.textContent = "No selection is being sent to member sites. Resume network sharing to run a new native check with the current approved selection.";
+    els.browserReadiness.dataset.tone = "info";
+  } else if (SUPPORTED && state.applied && (!state.discoveryComplete || state.productReviewState === "applying")) {
     title.textContent = "Checking native WebMCP";
     copy.textContent = `Waiting for responses from ${PARTNER_ORIGINS.length} allowlisted member sites. The ordinary-browser storefront preview remains available in the results.`;
     els.browserReadiness.dataset.tone = "info";
@@ -457,7 +461,10 @@ function renderBrowserReadiness() {
     copy.textContent = "This browser cannot run native WebMCP. Apply a Coffee, Dog gear, or Watches selection to open the same visit-only preference handoff on its member storefront. The preview stays clearly separate from a WebMCP match.";
     els.browserReadiness.dataset.tone = "info";
   }
-  els.browserReadiness.append(title, copy);
+  const renderKey = JSON.stringify([els.browserReadiness.dataset.tone, title.textContent, copy.textContent]);
+  if (state.browserReadinessRenderKey === renderKey) return;
+  state.browserReadinessRenderKey = renderKey;
+  els.browserReadiness.replaceChildren(title, copy);
 }
 
 function hasSuccessfulPartnerApplication() {
@@ -658,6 +665,9 @@ function observeNativeToolChanges() {
     window.setTimeout(async () => {
       nativeToolchangeReconciliationQueued = false;
       if (!state.applied || revision !== state.appliedJourneyRevision) return;
+      state.discoveryComplete = false;
+      state.originOutcomes = {};
+      renderBrowserReadiness();
       const result = await discoverPartnerDeals();
       if (!state.applied || revision !== state.appliedJourneyRevision) return;
       applyPartnerDiscovery(result);
@@ -953,6 +963,7 @@ function renderProductShell() {
     state.ruleRenderKey = ruleRenderKey;
   }
   renderProductReview(active);
+  renderBrowserReadiness();
 }
 
 function updateCanvasWords() {
@@ -1315,7 +1326,10 @@ async function retryCanvasResults() {
   renderProductNetwork();
   const revision = state.appliedJourneyRevision + 1;
   try { await rerunAppliedJourney(); }
-  catch { state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }])); }
+  catch {
+    state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }]));
+    state.discoveryComplete = true;
+  }
   if (!state.applied || revision !== state.appliedJourneyRevision) return;
   state.productReviewState = "applied";
   renderJourney();
@@ -1982,6 +1996,7 @@ async function applyPreferences({ persist }) {
     await rerunAppliedJourney();
   } catch {
     state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }]));
+    state.discoveryComplete = true;
   }
   if (state.appliedJourneyRevision !== revision || !state.applied) return;
   if (hasSuccessfulPartnerApplication()) {
@@ -2010,6 +2025,7 @@ function invalidateAppliedJourney() {
   state.catalogStatus = "idle";
   state.catalogMeta = null;
   state.sourceB = null;
+  state.discoveryComplete = false;
   state.originOutcomes = {};
   state.capabilityResolution = null;
   state.decisionReceipt = null;

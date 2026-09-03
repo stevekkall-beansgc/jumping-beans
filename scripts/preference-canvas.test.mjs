@@ -62,9 +62,10 @@ const state = {
   canvasRetention: 'once', canvasClarification: '', canvasRuleId: null,
   draftRevision: 0, appliedJourneyRevision: 0, memory: [], currentView: 'product',
   savedPreferences: null, hasSavedPreferences: false, originOutcomes: {}, sourceA: {},
+  connectedTools: [], discoveryComplete: false, networkSharingPaused: false,
 };
 const writes = []; const records = []; const saved = new Map();
-let rule = 0; let resolveRead; let calls = 0;
+let rule = 0; let resolveRead; let rejectRead; let calls = 0;
 context = vm.createContext({
   state, els, valid: true, DEFAULT_PREFERENCES: defaults, STARTER_STYLES,
   normalizePreferencePlane: (value) => normalizePreferencePlane(JSON.parse(JSON.stringify(value))),
@@ -85,11 +86,11 @@ context = vm.createContext({
   offerMarkup: (_deal, kind) => kind === 'open' ? 'Open inventory' : 'Opted-in partner', networkMarkup: () => 'Partner status',
   selfServePreviewMarkup: () => 'Open storefront preview',
   renderJourney: () => { context.renderProductShell(); context.renderProductNetwork(); },
-  rerunAppliedJourney: async () => { state.appliedJourneyRevision++; calls++; await new Promise((resolve) => { resolveRead = resolve; }); },
+  rerunAppliedJourney: async () => { state.appliedJourneyRevision++; state.discoveryComplete = false; state.originOutcomes = {}; calls++; await new Promise((resolve, reject) => { resolveRead = resolve; rejectRead = reject; }); },
   invalidateAppliedJourney: () => { state.capabilityResolution = null; state.originOutcomes = {}; },
 });
 function load(start, end) { const a=source.indexOf(start), b=source.indexOf(end,a); assert.ok(a>=0 && b>a); vm.runInContext(source.slice(a,b),context); }
-load('function hasSuccessfulPartnerApplication()', 'function createPartnerFrames(');
+load('function renderBrowserReadiness()', 'function createPartnerFrames(');
 load('function renderProductReview(', 'function ruleScopeLabel(');
 load('function ruleScopeLabel(', 'function currentProductCategory(');
 load('function currentProductCategory(', 'function productPreferenceDraft(');
@@ -97,6 +98,7 @@ load('function productPreferenceDraft()', 'function renderOfferCard(');
 load('function markDraftEdited(', 'function hydrateAccountJourney(');
 load('async function applyPreferences(', 'function invalidateAppliedJourney(');
 context.renderProductShell();
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP check is available');
 assert.equal(els.canvasDraft.hidden,false);
 assert.equal(els.canvasChat.hidden,false);
 assert.equal(els.canvasManual.hidden,true);
@@ -302,6 +304,32 @@ assert.doesNotMatch(els.canvasResultsFeed.innerHTML,/Opted-in partner/);
 state.originOutcomes.two.status='timeout';state.capabilityResolution.exposed=[{}];context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'partial');
 assert.match(els.canvasResultsFeed.innerHTML,/Opted-in partner/);
+// The persistent readiness callout must reflect the current result, retry, and
+// pause states instead of retaining an earlier green verdict.
+state.originOutcomes={one:{status:'ready'},two:{status:'no-match'}};
+state.connectedTools=[{origin:'one'},{origin:'two'}];
+state.discoveryComplete=true;
+state.productReviewState='applied';
+context.renderProductShell();
+assert.equal(els.browserReadiness.dataset.tone,'success');
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP verified with all 2 member sites');
+state.productReviewState='applying';
+context.renderProductShell();
+assert.equal(els.browserReadiness.children[0].textContent,'Checking native WebMCP');
+state.productReviewState='applied';state.networkSharingPaused=true;state.originOutcomes={};
+context.renderProductShell();
+assert.equal(els.browserReadiness.dataset.tone,'info');
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP sharing is paused');
+state.networkSharingPaused=false;
+state.applied=true;state.productReviewState='applied';state.discoveryComplete=true;
+state.originOutcomes={one:{status:'ready'},two:{status:'no-match'}};
+const failedRetry=context.retryCanvasResults();
+assert.equal(els.browserReadiness.children[0].textContent,'Checking native WebMCP');
+rejectRead(new Error('partner discovery failed'));
+await failedRetry;
+assert.equal(state.discoveryComplete,true);
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['failed','failed']);
+assert.equal(els.browserReadiness.children[0].textContent,'Native member check is incomplete');
 // The actual native discovery path must stop if Forget revokes while getTools waits.
 load('async function discoverPartnerDeals(', 'function applyPartnerDiscovery(');
 let finishDiscovery; let invocations=0;
