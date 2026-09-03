@@ -2,7 +2,8 @@
 // partners. Multiple backends; each returns items in a canonical Deal shape:
 //
 //   {
-//     sku, name, category, listPrice, listPriceSource, dealPrice, imageUrl, expiresAt,
+//     sku, name, category, listPrice, listPriceSource, merchantPageDiscountPercent,
+//     merchantPageDiscountEvidence, dealPrice, imageUrl, expiresAt,
 //     landing, vendor, source
 //   }
 //
@@ -63,6 +64,10 @@ function canonical(item) {
     category: mapCat(item.category || CATEGORY),
     listPrice,
     listPriceSource: hasMerchantListPrice ? "merchant" : null,
+    // A feed compare-at field is a price fact, not proof that a percentage was
+    // displayed on the product page. A separate audited capture must set these.
+    merchantPageDiscountPercent: null,
+    merchantPageDiscountEvidence: null,
     dealPrice,
     imageUrl: item.imageUrl || "",
     expiresAt: ex,

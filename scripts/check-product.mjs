@@ -74,6 +74,8 @@ runNode("engine identity contracts", ["engine/identity.test.mjs"]);
 runNode("personal experience hydration contracts", ["engine/personal-experience.test.mjs"]);
 runNode("account access contracts", ["scripts/account-access.test.mjs"]);
 runNode("preference canvas contracts", ["scripts/preference-canvas.test.mjs"]);
+runNode("catalog matching contracts", ["partners/catalog-matching.test.mjs"]);
+runNode("Watch Co tool contracts", ["partners/watch/tool.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -174,8 +176,11 @@ includesAll(engineApp, [
   "mergeAccountResponse",
   "draftRevision",
   "hasBrowserPersistence",
-  "hasMerchantListPrice",
-  "% below merchant comparison price",
+  "hasExplicitMerchantPageDiscount",
+  "merchant-page-displayed-percent",
+  'WebMCP · not requested',
+  'WebMCP · sharing paused',
+  'status: "partner_acknowledged"',
 ], "engine WebMCP, provenance, and consent contract");
 includesAll(engineHtml, [
   'class="product-workspace bl-stack"', 'class="bl-disclosure engine-details"',
@@ -382,11 +387,12 @@ check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverG
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, scopes: [] }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "insufficient-scope", "Capability boundary permits insufficient scope");
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: { ...discoverGrant, expiresAt: new Date(0).toISOString() }, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).code === "expired-grant", "Capability boundary permits an expired grant");
 check(p0.authorizeInvocation({ capabilityId: "offers.discover", grant: discoverGrant, callerOrigin: engineOrigin, expectedOrigin: engineOrigin, purpose: "test-discovery" }).allowed, "Capability boundary rejects a valid scoped grant");
-const contractDeal = (sku, price, origin) => ({ sku, name: `Offer ${sku}`, category: "coffee", listPrice: price + 10, listPriceSource: "merchant", dealPrice: price, partnerId: origin, partnerName: origin, collateral: [{ type: "price-proof" }] });
+const contractDeal = (sku, price, origin) => ({ sku, name: `Offer ${sku}`, category: "coffee", listPrice: price + 10, listPriceSource: "merchant", dealPrice: price, partnerId: origin, partnerName: origin, collateral: [] });
 const noComparisonDeal = { ...contractDeal("no-comparison", 10, "one"), listPrice: null, listPriceSource: null, collateral: [] };
 check(p0.validateOffer(noComparisonDeal), "Partner contract rejects an offer with no merchant comparison price");
 check(!p0.validateOffer({ ...noComparisonDeal, listPrice: 12 }), "Partner contract accepts a comparison price without merchant evidence");
-check(!p0.validateOffer({ ...noComparisonDeal, collateral: [{ type: "price-proof", text: "unsupported savings" }] }), "Partner contract accepts price-proof collateral without merchant comparison evidence");
+check(!p0.validateOffer({ ...contractDeal("unsupported-percent", 10, "one"), collateral: [{ type: "price-proof", text: "25% off" }] }), "Partner contract accepts a derived percentage claim without page evidence");
+check(p0.validateOffer({ ...contractDeal("page-percent", 10, "one"), merchantPageDiscountPercent: 25, merchantPageDiscountEvidence: "merchant-page-displayed-percent", collateral: [{ type: "price-proof", text: "25% off shown on the merchant product page", source: "merchant product page" }] }), "Partner contract rejects an explicit merchant-page percentage claim");
 check(!p0.validateOffer({ ...contractDeal("bad-comparison", 10, "one"), listPriceSource: null }), "Partner contract accepts a merchant comparison without its source marker");
 check(!p0.validateOffer({ ...contractDeal("bad-order", 10, "one"), listPrice: 9 }), "Partner contract accepts a comparison price below the current price");
 const contractOrigins = ["https://one.invalid", "https://two.invalid", "https://three.invalid", "https://four.invalid"];
@@ -423,6 +429,7 @@ const sameSkuDifferentOrigins = p0.resolveOfferDeals([
 check(sameSkuDifferentOrigins.considered.length === 2 && new Set(sameSkuDifferentOrigins.considered.map((record) => record.offerId)).size === 2, "Equal SKUs from different origins collapse into one offer identity");
 const invalidPartnerResponses = [
   { deals: [{ ...contractDeal("bad-extra", 10, "one"), unexpected: true }] },
+  { deals: [{ ...contractDeal("bad-interest-marker", 10, "one"), interestEligible: "true" }] },
   { deals: [{ ...contractDeal("bad-collateral", 10, "one"), collateral: [{ type: "image", nested: { unsafe: true } }] }] },
   { deals: [{ ...contractDeal("bad-string", 10, "one"), name: "x".repeat(p0.PARTNER_STRING_MAX_LENGTH + 1) }] },
 ];
@@ -469,6 +476,7 @@ const comparisonBlock = engineApp.slice(
 );
 includesAll(comparisonBlock, [
   "deal?.partnerOrigin === ORIGINS.watch",
+  "deal.interestEligible === true",
   'id="watch-handoff-offer"',
   "state.selectedWatchOfferId",
   "watchHandoffOffers().find",
@@ -551,15 +559,15 @@ for (const partner of ["petsupply", "coffee", "watch"]) {
   ), `${partner} catalog contains a comparison price without valid merchant evidence`);
 }
 const ingestSource = await readFile(path.join(root, "scripts/ingest-feed.mjs"), "utf8");
-includesAll(ingestSource, ['listPriceSource: v.compare_at_price ? "merchant" : null', "const hasMerchantListPrice", "listPriceSource: hasMerchantListPrice"], "catalog comparison-price provenance contract");
+includesAll(ingestSource, ['listPriceSource: v.compare_at_price ? "merchant" : null', "const hasMerchantListPrice", "listPriceSource: hasMerchantListPrice", "merchantPageDiscountPercent: null", "merchantPageDiscountEvidence: null"], "catalog comparison-price provenance contract");
 check(!ingestSource.includes("dealPrice * 1.2"), "Catalog ingestion still fabricates comparison prices");
 const storefrontSource = await readFile(path.join(root, "shared/storefront.js"), "utf8");
-includesAll(storefrontSource, ['deal.listPriceSource === "merchant"', "% below merchant comparison price"], "storefront comparison-price evidence contract");
-check(!storefrontSource.includes("% below list") && !storefrontSource.includes("Listed price"), "Storefront renders an unsupported generic list-price claim");
+includesAll(storefrontSource, ["merchantPageDiscountEvidence === \"merchant-page-displayed-percent\"", "% off shown on merchant page"], "storefront percentage evidence contract");
+check(!storefrontSource.includes("% below merchant comparison price") && !storefrontSource.includes("% below list"), "Storefront derives a percentage discount from price fields");
 for (const partner of ["petsupply", "coffee", "watch"]) {
   const toolSource = await readFile(path.join(root, `partners/${partner}/tool.js`), "utf8");
-  includesAll(toolSource, ['deal.listPriceSource === "merchant"', "...priceProof", "% below merchant comparison price"], `${partner} WebMCP comparison-price evidence contract`);
-  check(!toolSource.includes("% below list price"), `${partner} WebMCP tool emits an unsupported generic list-price claim`);
+  includesAll(toolSource, ["merchantPageDiscountEvidence === \"merchant-page-displayed-percent\"", "...priceProof", "% off shown on the merchant product page"], `${partner} WebMCP percentage evidence contract`);
+  check(!toolSource.includes("% below merchant comparison price") && !toolSource.includes("% below list price"), `${partner} WebMCP tool derives a percentage from price fields`);
 }
 const watchCatalog = partnerCatalogs.get("watch");
 const productModule = await import(`${pathToFileURL(path.join(root, "partners/watch/interest-products.js")).href}?check=${Date.now()}`);

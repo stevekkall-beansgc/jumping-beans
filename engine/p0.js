@@ -114,8 +114,14 @@ function validProvenance(value) {
   if (!Object.hasOwn(value, "expiresAt")) return true;
   return canonicalFutureTimestamp(value.expiresAt);
 }
+function hasExplicitMerchantPageDiscount(deal) {
+  return deal?.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
+}
 export function validateOffer(deal) {
-  if (!plainRecord(deal) || !hasOnlyKeys(deal, new Set(["sku", "name", "category", "listPrice", "listPriceSource", "dealPrice", "imageUrl", "expiresAt", "landing", "vendor", "source", "partnerId", "partnerName", "collateral", "provenance"]))) return false;
+  if (!plainRecord(deal) || !hasOnlyKeys(deal, new Set(["sku", "name", "category", "listPrice", "listPriceSource", "dealPrice", "imageUrl", "expiresAt", "landing", "vendor", "source", "partnerId", "partnerName", "interestEligible", "merchantPageDiscountPercent", "merchantPageDiscountEvidence", "collateral", "provenance"]))) return false;
   if (!["sku", "name", "category", "partnerId"].every((key) => boundedString(deal[key], 256))) return false;
   if (["imageUrl", "landing"].some((key) => deal[key] != null && (!boundedString(deal[key]) || !validUrl(deal[key])))) return false;
   if (["vendor", "source", "partnerName"].some((key) => deal[key] != null && !boundedString(deal[key], 256))) return false;
@@ -124,7 +130,10 @@ export function validateOffer(deal) {
   const hasMerchantListPrice = deal.listPriceSource === "merchant";
   if (hasMerchantListPrice && (!Number.isFinite(deal.listPrice) || deal.listPrice <= deal.dealPrice || deal.listPrice > 10_000_000)) return false;
   if (!hasMerchantListPrice && (deal.listPriceSource !== null || deal.listPrice !== null)) return false;
-  if (!hasMerchantListPrice && deal.collateral?.some((item) => item?.type === "price-proof")) return false;
+  const hasDiscountEvidence = hasExplicitMerchantPageDiscount(deal);
+  if ((deal.merchantPageDiscountPercent != null || deal.merchantPageDiscountEvidence != null) && !hasDiscountEvidence) return false;
+  if (deal.collateral?.some((item) => item?.type === "price-proof") && !hasDiscountEvidence) return false;
+  if (deal.interestEligible != null && typeof deal.interestEligible !== "boolean") return false;
   if (Object.hasOwn(deal, "expiresAt") && !canonicalFutureTimestamp(deal.expiresAt)) return false;
   return (!deal.collateral || (Array.isArray(deal.collateral) && deal.collateral.length <= PARTNER_COLLATERAL_LIMIT && deal.collateral.every(validCollateral))) && validProvenance(deal.provenance);
 }

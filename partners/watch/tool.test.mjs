@@ -93,7 +93,7 @@ test("visual preferences lead with source-backed customer imagery and testimony"
   assert.equal(result.deals[0].collateral[0].source, "Watch Co customer story");
 });
 
-test("compare preferences prioritize merchant-backed savings without fabricating proof", async () => {
+test("compare preferences may rank merchant price facts without fabricating percentage proof", async () => {
   const result = await registration.tool.execute({
     categories: ["watches"],
     preferencePlane: plane({ feedStyle: "compare", formats: ["price-proof", "no-urgency"] }),
@@ -102,8 +102,16 @@ test("compare preferences prioritize merchant-backed savings without fabricating
   assert.equal(returnedSavings[0], Math.max(...catalog.map((deal) => deal.listPriceSource === "merchant" ? deal.listPrice - deal.dealPrice : 0)));
   for (const deal of result.deals) {
     const proof = deal.collateral.find((item) => item.type === "price-proof");
-    assert.equal(Boolean(proof), deal.listPriceSource === "merchant" && deal.listPrice > deal.dealPrice);
+    assert.equal(Boolean(proof), false);
   }
+});
+
+test("does not return unavailable FORZO records and marks only supported target-price products", async () => {
+  const result = await registration.tool.execute({ categories: ["watches"], maxPrice: 1200, preferencePlane: plane({ maxPrice: 1200, formats: ["testimonial"] }) });
+  assert.equal(result.deals.some((deal) => /^FZO-/.test(deal.sku)), false);
+  assert.equal(result.deals.some((deal) => deal.interestEligible === true && !/^NIV-/.test(deal.sku)), false);
+  assert.ok(result.deals.some((deal) => deal.sku === "NIV-77007Q45" && deal.interestEligible === true));
+  assert.ok(catalog.filter((deal) => /^FZO-/.test(deal.sku)).every((deal) => deal.listPrice === null && deal.listPriceSource === null && deal.availability === "out-of-stock"));
 });
 
 test("rejects non-canonical or sensitive preference input", async () => {

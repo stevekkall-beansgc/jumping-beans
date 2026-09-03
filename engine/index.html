@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
+  <meta name="impact-site-verification" value="3b49d02f-2b33-455f-8034-4655bc892f46">
   <title>Jumping Beans — your offer memory</title>
   <link rel="stylesheet" href="./design-system/tokens.css">
   <link rel="stylesheet" href="./design-system/primitives.css">
@@ -36,10 +37,52 @@
   <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
     <section class="product-view bl-stack" id="product-view" aria-labelledby="product-title">
       <div class="product-hero bl-measure" id="product-hero">
-        <p class="eyebrow">Your offer concierge</p>
+        <p class="eyebrow">A personal action layer</p>
         <h1 id="product-title" tabindex="-1">Tell me what you’re looking for</h1>
-        <p class="lede">Describe what matters. Review the interpretation, then approve what’s shared.</p>
+        <p class="lede">Start with a request from anywhere, then let one permissioned action unlock the next across independent sites. Jumping Beans carries the intent; each partner keeps its own actions and authority.</p>
       </div>
+
+      <section class="anywhere-actions bl-card bl-stack" id="anywhere-actions" aria-labelledby="anywhere-actions-title">
+        <div class="anywhere-actions__heading">
+          <div>
+            <p class="section-label">WebMCP action chain</p>
+            <h2 id="anywhere-actions-title">Actions can begin outside the store</h2>
+          </div>
+          <span class="bl-badge" data-status="success">User-triggered</span>
+        </div>
+        <p class="anywhere-actions__lede">The same request can travel from a conversation, an article, or a partner product page into a sequence of allowed actions. There is no search ad to click, and every consequential step still waits for the user.</p>
+        <div class="anywhere-actions__body">
+          <div class="anywhere-trigger">
+            <p class="section-label">Choose the starting point</p>
+            <div class="anywhere-trigger__options" role="group" aria-label="Action chain starting point">
+              <button class="bl-button" data-variant="secondary" data-action-trigger="message" type="button" aria-pressed="true">A message</button>
+              <button class="bl-button" data-variant="secondary" data-action-trigger="article" type="button" aria-pressed="false">An article</button>
+              <button class="bl-button" data-variant="secondary" data-action-trigger="product" type="button" aria-pressed="false">A product page</button>
+            </div>
+            <p class="anywhere-trigger__quote" id="action-trigger-quote">“Get the coffee I liked last week, ground, and keep it under $15.”</p>
+          </div>
+          <ol class="anywhere-steps" aria-label="Allowed action chain">
+            <li><span>1</span><div><strong>Discover</strong><small>find a partner offer through WebMCP</small><code>get_matching_deals</code></div></li>
+            <li><span>2</span><div><strong>Adapt</strong><small>carry the approved preference plane</small><code>set_display_preferences</code></div></li>
+            <li><span>3</span><div><strong>Continue</strong><small>stage a partner-owned next action</small><code>set_deal_watch</code></div></li>
+          </ol>
+        </div>
+        <div class="anywhere-actions__preview">
+          <div class="anywhere-actions__product">
+            <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" crossorigin="anonymous">
+            <div>
+              <p class="section-label">Illustrative partner action</p>
+              <h3 id="action-preview-name">Light Roast Coffee (10oz Ground)</h3>
+              <p id="action-preview-copy">Coffee Co will receive the selected product and open its action-chain preview.</p>
+            </div>
+          </div>
+          <div class="anywhere-actions__action">
+            <strong>$11.99</strong>
+            <a class="bl-button" id="action-preview-link" href="https://coffee-amk.pages.dev/?jb_action=chain&amp;jb_sku=LGLIGT10&amp;jb_trigger=message&amp;jb_source=jumping-beans" target="_blank" rel="noopener noreferrer">Open action-chain preview</a>
+          </div>
+        </div>
+        <p class="field-hint anywhere-actions__note">Demo only: the partner owns the next action. No order, payment, account, or message is created by this preview.</p>
+      </section>
 
       <div class="product-workspace bl-stack">
         <section class="product-card preference-canvas" id="product-preview" aria-labelledby="product-title">

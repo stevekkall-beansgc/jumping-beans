@@ -35,6 +35,21 @@
       <span>Coffee Co exposes structured offers through WebMCP. The underlying catalog records came from a public Shopify feed and are not independently verified by Jumping Beans.</span>
     </aside>
 
+    <section class="action-chain-preview bl-card bl-stack" id="action-chain-preview" aria-labelledby="action-chain-title" hidden>
+      <div class="action-chain-preview__heading">
+        <div><p class="eyebrow">Native action chain</p><h2 id="action-chain-title">A user request arrived from outside this store</h2></div>
+        <span class="bl-badge" data-status="info" data-action-partner>Coffee Co · action preview</span>
+      </div>
+      <p class="action-chain-preview__context" data-action-context></p>
+      <ol class="action-chain-progress" aria-label="Action chain progress"><li data-action-indicator="1"><span>1</span>Review</li><li data-action-indicator="2"><span>2</span>Choose next action</li><li data-action-indicator="3"><span>3</span>Confirm</li></ol>
+      <section data-action-step="1" class="action-chain-step bl-stack" aria-labelledby="action-step-one-title"><p class="section-label">Step 1 · Resolve</p><h3 id="action-step-one-title" tabindex="-1">Review the item this chain selected</h3><div class="action-chain-product"><img data-action-image alt="" loading="lazy" crossorigin="anonymous"><div><strong data-action-name>Selected offer</strong><span data-action-price></span><p>Facts remain owned by Coffee Co. Only the request context crossed the boundary.</p></div></div></section>
+      <section data-action-step="2" class="action-chain-step bl-stack" aria-labelledby="action-step-two-title" hidden><p class="section-label">Step 2 · Branch</p><h3 id="action-step-two-title" tabindex="-1">Choose what should happen next</h3><fieldset class="action-choice"><legend>Allowed next action</legend><label><input type="radio" name="action-choice" value="compare" checked> Keep comparing eligible offers</label><label><input type="radio" name="action-choice" value="adapt"> Adapt this page to my approved preferences</label><label><input type="radio" name="action-choice" value="handoff"> Prepare a merchant handoff for review</label></fieldset><p class="field-hint">This branch is staged locally. It does not place an order, send a message, or save a preference.</p></section>
+      <section data-action-step="3" class="action-chain-step bl-stack" aria-labelledby="action-step-three-title" hidden><p class="section-label">Step 3 · Approval</p><h3 id="action-step-three-title" tabindex="-1">Confirm the next action</h3><div class="bl-callout" data-tone="warning"><strong class="bl-callout__title">Needs approval</strong><p data-action-confirm-copy>Review the selected action, then approve this demo step. The partner owns the effect.</p></div></section>
+      <section data-action-step="4" class="action-chain-step bl-stack" aria-labelledby="action-step-four-title" hidden><p class="section-label">Chain complete</p><h3 id="action-step-four-title" tabindex="-1">The next action is ready</h3><div class="bl-callout" data-tone="success"><strong class="bl-callout__title">Demo action completed</strong><p>This preview shows the handoff boundary only. No order, payment, account change, or message was created.</p></div></section>
+      <div class="bl-actions action-chain-actions"><button class="bl-button" data-action-next type="button">Continue to choose an action</button><button class="bl-button" data-variant="secondary" data-action-confirm type="button" hidden>Approve demo action</button><button class="bl-button" data-variant="quiet" data-action-back type="button" hidden>Back</button></div>
+      <p class="field-hint action-chain-preview__note">This is an illustrative action-chain preview. Native partner actions remain allowlisted, scoped, and user-approved.</p>
+    </section>
+
     <ul class="bl-grid offer-grid" id="grid" aria-live="polite" aria-busy="true">
       <li class="bl-callout offer-grid__state">Loading the catalog…</li>
     </ul>

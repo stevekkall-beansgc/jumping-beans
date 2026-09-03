@@ -2,6 +2,7 @@
 
 const grid = document.getElementById("grid");
 const banner = document.getElementById("banner");
+const actionPreview = document.getElementById("action-chain-preview");
 const partnerName = document.body.dataset.partnerName || "Partner shop";
 const partnerState = globalThis.__JB_PARTNER_CONTEXT__ ??= { preferencePlane: null };
 const ALLOWED_FORMATS = new Set(["testimonial", "price-proof", "video", "no-urgency"]);
@@ -11,6 +12,24 @@ const formatLabels = {
   video: "a short video first",
   "price-proof": "price proof first",
   "no-urgency": "no urgency",
+};
+
+const actionTriggerLabels = {
+  message: "a message",
+  article: "an article",
+  product: "a product page",
+};
+
+const actionState = {
+  deal: null,
+  step: 1,
+  choice: "compare",
+};
+
+const actionChoiceCopy = {
+  compare: "Keep comparing eligible offers. This read-only branch stays inside the current journey.",
+  adapt: "Adapt this partner page to the approved preference plane. The partner owns the presentation change.",
+  handoff: "Prepare a merchant handoff for review. The partner owns the next action and will ask again before anything consequential.",
 };
 
 const money = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" });
@@ -98,16 +117,17 @@ function expiryLabel(value) {
 }
 
 function collateralForDeal(deal) {
-  const hasMerchantListPrice = deal.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > deal.dealPrice;
+  const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
   const collateral = [
     { type: "image", url: deal.imageUrl, label: "Merchant product image" },
-    ...(hasMerchantListPrice
+    ...(hasExplicitMerchantPageDiscount
       ? [{
           type: "price-proof",
-          text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
-          source: `${partnerName} catalog compare-at price`,
+          text: `${deal.merchantPageDiscountPercent}% off shown on the merchant product page`,
+          source: `${partnerName} merchant product page`,
         }]
       : []),
   ];
@@ -184,34 +204,21 @@ function productCard(deal, index, plane) {
   const headingId = `offer-${index}`;
   article.setAttribute("aria-labelledby", headingId);
 
-  const image = element("img", "offer-card__media");
-  image.src = deal.imageUrl || "";
-  image.alt = "";
-  image.loading = "lazy";
-  image.crossOrigin = "anonymous";
-
   const body = element("div", "bl-card__body offer-card__body");
   const category = String(deal.category || "Offer").replaceAll("-", " ");
   const heading = element("h2", "", deal.name || "Unnamed offer");
   heading.id = headingId;
   const dealPrice = Number(deal.dealPrice || 0);
-  const hasMerchantListPrice = deal.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > dealPrice;
-  const savedPercent = hasMerchantListPrice
-    ? Math.round((1 - dealPrice / deal.listPrice) * 100)
-    : null;
+  const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
 
   const price = element("p", "offer-card__price");
-  if (hasMerchantListPrice) {
-    const listed = element("span", "list-price", money.format(deal.listPrice));
-    listed.setAttribute("aria-label", `Merchant comparison price ${money.format(deal.listPrice)}`);
-    price.append(listed);
-  }
   const current = element("strong", "deal-price", money.format(dealPrice));
   current.setAttribute("aria-label", `Current catalog price ${money.format(dealPrice)}`);
   price.append(current);
-  if (savedPercent > 0) price.append(element("span", "discount", `${savedPercent}% below merchant comparison price`));
+  if (hasExplicitMerchantPageDiscount) price.append(element("span", "discount", `${deal.merchantPageDiscountPercent}% off shown on merchant page`));
 
   const expiry = element("p", "expiry");
   const time = element("time", "", expiryLabel(deal.expiresAt));
@@ -236,11 +243,131 @@ function productCard(deal, index, plane) {
     link.dataset.variant = "secondary";
     footer.append(link);
   }
-  article.append(image, body);
+  const actionLink = new URL(window.location.href);
+  actionLink.search = "";
+  actionLink.searchParams.set("jb_action", "chain");
+  actionLink.searchParams.set("jb_sku", deal.sku || "");
+  actionLink.searchParams.set("jb_trigger", "product");
+  actionLink.searchParams.set("jb_source", "partner-storefront");
+  const previewLink = element("a", "bl-button action-card-link", "Try an action chain");
+  previewLink.href = actionLink.href;
+  previewLink.dataset.variant = "secondary";
+  footer.append(previewLink);
+  const imageUrl = safeHttpUrl(deal.imageUrl);
+  if (imageUrl) {
+    const image = element("img", "offer-card__media");
+    image.src = imageUrl.href;
+    image.alt = `${deal.name || "Product"} product image`;
+    image.loading = "lazy";
+    image.crossOrigin = "anonymous";
+    article.append(image);
+  }
+  article.append(body);
   if (footer.childElementCount) article.append(footer);
   article.append(provenanceDetails(deal, destination));
   item.append(article);
   return item;
+}
+
+function actionDealFromCatalog(catalog) {
+  if (!actionPreview) return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("jb_action") !== "chain") return null;
+  const sku = params.get("jb_sku");
+  return catalog.find((deal) => deal.sku === sku && deal.availability !== "out-of-stock") || null;
+}
+
+function renderActionStep() {
+  if (!actionPreview || !actionState.deal) return;
+  const step = actionState.step;
+  actionPreview.querySelectorAll("[data-action-step]").forEach((panel) => {
+    panel.hidden = Number(panel.dataset.actionStep) !== step;
+  });
+  actionPreview.querySelectorAll("[data-action-indicator]").forEach((indicator) => {
+    const indicatorStep = Number(indicator.dataset.actionIndicator);
+    indicator.dataset.current = String(indicatorStep === step);
+    indicator.setAttribute("aria-current", indicatorStep === step ? "step" : "false");
+  });
+  const back = actionPreview.querySelector("[data-action-back]");
+  const next = actionPreview.querySelector("[data-action-next]");
+  if (back) back.hidden = step === 1;
+  if (next) next.hidden = step === 3;
+  if (next) next.textContent = step === 2 ? "Review approval" : "Continue to choose an action";
+  actionPreview.querySelector("[data-action-confirm]")?.toggleAttribute("hidden", step !== 3);
+  const confirmation = actionPreview.querySelector("[data-action-confirm-copy]");
+  if (confirmation) confirmation.textContent = actionChoiceCopy[actionState.choice] || actionChoiceCopy.compare;
+}
+
+function renderActionPreview(catalog) {
+  const deal = actionDealFromCatalog(catalog);
+  if (!actionPreview || !deal) return;
+  actionState.deal = deal;
+  actionPreview.hidden = false;
+  const params = new URLSearchParams(window.location.search);
+  const trigger = actionTriggerLabels[params.get("jb_trigger")] || "another page";
+  const title = actionPreview.querySelector("[data-action-name]");
+  const price = actionPreview.querySelector("[data-action-price]");
+  const context = actionPreview.querySelector("[data-action-context]");
+  const image = actionPreview.querySelector("[data-action-image]");
+  if (title) title.textContent = deal.name || "Selected item";
+  if (price) price.textContent = money.format(Number(deal.dealPrice || 0));
+  if (context) context.textContent = `This chain was triggered from ${trigger}. The partner received one selected item; no search or ad click was required.`;
+  if (image) {
+    const imageUrl = safeHttpUrl(deal.imageUrl);
+    if (imageUrl) {
+      image.src = imageUrl.href;
+      image.alt = `${deal.name || "Product"} product image`;
+      image.hidden = false;
+    } else {
+      image.removeAttribute("src");
+      image.alt = "";
+      image.hidden = true;
+    }
+  }
+  const partnerLabel = actionPreview.querySelector("[data-action-partner]");
+  if (partnerLabel) partnerLabel.textContent = `${partnerName} · action preview`;
+  renderActionStep();
+}
+
+function completeActionPreview() {
+  if (!actionPreview || !actionState.deal) return;
+  actionState.step = 4;
+  actionPreview.querySelectorAll("[data-action-step]").forEach((panel) => {
+    panel.hidden = panel.dataset.actionStep !== "4";
+  });
+  actionPreview.querySelectorAll("[data-action-indicator]").forEach((indicator) => {
+    indicator.dataset.current = "false";
+    indicator.removeAttribute("aria-current");
+  });
+  actionPreview.querySelector("[data-action-back]")?.setAttribute("hidden", "");
+  actionPreview.querySelector("[data-action-next]")?.setAttribute("hidden", "");
+  actionPreview.querySelector("[data-action-confirm]")?.setAttribute("hidden", "");
+  const outcome = actionPreview.querySelector("[data-action-step=\"4\"] p:last-child");
+  if (outcome) outcome.textContent = `The “${actionState.choice === "compare" ? "keep comparing" : actionState.choice === "adapt" ? "adapt preferences" : "prepare handoff"}” branch was approved in this demo. No order, payment, account change, or message was created.`;
+}
+
+function bindActionPreview() {
+  if (!actionPreview) return;
+  actionPreview.querySelector("[data-action-next]")?.addEventListener("click", () => {
+    if (actionState.step < 3) {
+      actionState.step += 1;
+      renderActionStep();
+      actionPreview.querySelector(`[data-action-step="${actionState.step}"] h3`)?.focus({ preventScroll: true });
+    }
+  });
+  actionPreview.querySelector("[data-action-back]")?.addEventListener("click", () => {
+    if (actionState.step > 1) {
+      actionState.step -= 1;
+      renderActionStep();
+    }
+  });
+  actionPreview.querySelector("[data-action-confirm]")?.addEventListener("click", completeActionPreview);
+  actionPreview.querySelectorAll("input[name=\"action-choice\"]").forEach((input) => {
+    input.addEventListener("change", () => {
+      actionState.choice = input.value;
+      renderActionStep();
+    });
+  });
 }
 
 function showAdaptation(plane) {
@@ -281,9 +408,10 @@ async function renderCatalog() {
     }
     const plane = currentPreferencePlane();
     showAdaptation(plane);
-    const ranked = normalizeCatalog(catalog)
+    const ranked = normalizeCatalog(catalog.filter((deal) => deal.availability !== "out-of-stock"))
       .sort((a, b) => presentationScore(b, plane) - presentationScore(a, plane) || Number(a.dealPrice || 0) - Number(b.dealPrice || 0));
     grid.replaceChildren(...ranked.map((deal, index) => productCard(deal, index, plane)));
+    renderActionPreview(catalog);
   } catch {
     grid.replaceChildren(
       (() => {
@@ -298,6 +426,7 @@ async function renderCatalog() {
 }
 
 showAdaptation(currentPreferencePlane());
+bindActionPreview();
 window.addEventListener("jb:preference-plane", () => {
   void renderCatalog();
 });

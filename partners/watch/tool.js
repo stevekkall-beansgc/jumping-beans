@@ -107,6 +107,11 @@ const TESTIMONIALS = {
     source: "Watch Co customer story",
   },
 };
+// This marker is the bounded read-side half of Watch Co's target-price
+// contract. The write flow remains authoritative and accepts this same set in
+// interest-products.js; unmarked catalog records can never be selected by the
+// engine for a target-price handoff.
+const INTEREST_ELIGIBLE_SKUS = new Set(["NIV-77007Q45", "NIV-77006Q45", "NIV-77005Q45", "NIV-77004Q45"]);
 const partnerState = globalThis.__JB_PARTNER_CONTEXT__ ??= { preferencePlane: null };
 
 function normalizePreferencePlane(value) {
@@ -148,18 +153,20 @@ function setPreferencePlane(value) {
 }
 
 function enrich(deal) {
-  const hasMerchantListPrice = deal.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > deal.dealPrice;
-  const priceProof = hasMerchantListPrice
+  const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
+  const priceProof = hasExplicitMerchantPageDiscount
     ? [{
         type: "price-proof",
-        text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
-        source: `${PARTNER_NAME} catalog compare-at price`,
+        text: `${deal.merchantPageDiscountPercent}% off shown on the merchant product page`,
+        source: `${PARTNER_NAME} merchant product page`,
       }]
     : [];
   return {
     ...deal,
+    interestEligible: INTEREST_ELIGIBLE_SKUS.has(deal.sku),
     collateral: [
       { type: "image", url: deal.imageUrl, label: "Merchant product image" },
       ...priceProof,
@@ -253,7 +260,9 @@ await document.modelContext.registerTool(
       const now = Date.now();
       const matches = [];
       for (const deal of catalog) {
-        if (!categoryMatch(categories, rules, deal) || (ceiling != null && deal.dealPrice > ceiling) || (signal && signal.aborted)) continue;
+        // A catalog record explicitly marked unavailable is not an offer. This
+        // avoids presenting stale merchant inventory as a usable WebMCP result.
+        if (deal.availability === "out-of-stock" || !categoryMatch(categories, rules, deal) || (ceiling != null && deal.dealPrice > ceiling) || (signal && signal.aborted)) continue;
         const expiry = deal.expiresAt == null ? null : Date.parse(deal.expiresAt);
         if (deal.expiresAt != null && (!Number.isFinite(expiry) || expiry <= now)) continue;
         if ((normalized.expiresAfter != null || normalized.expiresBefore != null) && expiry == null) continue;

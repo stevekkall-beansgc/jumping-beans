@@ -145,14 +145,15 @@ function setPreferencePlane(value) {
 }
 
 function enrich(deal) {
-  const hasMerchantListPrice = deal.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > deal.dealPrice;
-  const priceProof = hasMerchantListPrice
+  const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
+  const priceProof = hasExplicitMerchantPageDiscount
     ? [{
         type: "price-proof",
-        text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
-        source: `${PARTNER_NAME} catalog compare-at price`,
+        text: `${deal.merchantPageDiscountPercent}% off shown on the merchant product page`,
+        source: `${PARTNER_NAME} merchant product page`,
       }]
     : [];
   return {

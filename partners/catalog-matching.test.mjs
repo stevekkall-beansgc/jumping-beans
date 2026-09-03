@@ -49,3 +49,29 @@ for (const [partner, category, name, rule, expectedSku] of [
     assert.deepEqual(await tool.execute({ categories: [category], maxPrice: -1 }), { deals: [] });
   });
 }
+
+test("Petsupply maps canonical dog gear only into local dog inventory and preserves the price ceiling", async () => {
+  const tool = await partnerTool("petsupply", [
+    { sku: "dog-toy", name: "Playful Plush Dog Toy", category: "toys", dealPrice: 11.25, listPrice: 15, listPriceSource: "merchant", imageUrl: "https://petsupply.example/dog-toy.png", landing: "https://petsupply.example/dog-toy", source: "fixture", expiresAt: future },
+    { sku: "dog-tag", name: "Custom Dog Tag", category: "dog tags", dealPrice: 17, listPrice: 20, listPriceSource: "merchant", imageUrl: "https://petsupply.example/dog-tag.png", landing: "https://petsupply.example/dog-tag", source: "fixture", expiresAt: future },
+    { sku: "dog-leash-over-budget", name: "Lightweight Dog Leash", category: "leash", dealPrice: 24, listPrice: 30, listPriceSource: "merchant", imageUrl: "https://petsupply.example/dog-leash.png", landing: "https://petsupply.example/dog-leash", source: "fixture", expiresAt: future },
+    { sku: "cat-toy", name: "Playful Plush Cat Toy", category: "toys", dealPrice: 8.5, listPrice: 10, listPriceSource: "merchant", imageUrl: "https://petsupply.example/cat-toy.png", landing: "https://petsupply.example/cat-toy", source: "fixture", expiresAt: future },
+    { sku: "coffee", name: "Coffee Beans", category: "coffee", dealPrice: 12, listPrice: null, listPriceSource: null, imageUrl: "https://petsupply.example/coffee.png", landing: "https://petsupply.example/coffee", source: "fixture", expiresAt: future },
+  ]);
+  const toys = await tool.execute({ categories: ["dog gear"], maxPrice: 20, preferencePlane: plane("dog toys") });
+  const dog = await tool.execute({ categories: ["dog gear"], maxPrice: 20, preferencePlane: plane("dog") });
+  assert.deepEqual(toys.deals.map((deal) => deal.sku), ["dog-toy"]);
+  assert.deepEqual(dog.deals.map((deal) => deal.sku), ["dog-toy", "dog-tag"]);
+  assert.ok([...toys.deals, ...dog.deals].every((deal) => deal.dealPrice <= 20));
+});
+
+test("percentage price proof requires an explicit merchant-page display marker", async () => {
+  const tool = await partnerTool("petsupply", [
+    { sku: "page-percent", name: "Dog Toy With Page Evidence", category: "toys", dealPrice: 15, listPrice: 20, listPriceSource: "merchant", merchantPageDiscountPercent: 25, merchantPageDiscountEvidence: "merchant-page-displayed-percent", imageUrl: "https://petsupply.example/page-percent.png", landing: "https://petsupply.example/page-percent", source: "fixture", expiresAt: future },
+    { sku: "compare-only", name: "Dog Toy With Compare-at Only", category: "toys", dealPrice: 15, listPrice: 20, listPriceSource: "merchant", imageUrl: "https://petsupply.example/compare-only.png", landing: "https://petsupply.example/compare-only", source: "fixture", expiresAt: future },
+  ]);
+  const result = await tool.execute({ categories: ["dog gear"], preferencePlane: plane("dog toys") });
+  const proof = (sku) => result.deals.find((deal) => deal.sku === sku)?.collateral.find((item) => item.type === "price-proof");
+  assert.equal(proof("compare-only"), undefined);
+  assert.equal(proof("page-percent")?.text, "25% off shown on the merchant product page");
+});

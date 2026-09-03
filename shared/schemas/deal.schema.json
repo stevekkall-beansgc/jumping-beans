@@ -7,6 +7,8 @@
     "category": { "type": "string" },
     "listPrice": { "type": ["number", "null"] },
     "listPriceSource": { "type": ["string", "null"], "enum": ["merchant", null] },
+    "merchantPageDiscountPercent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+    "merchantPageDiscountEvidence": { "type": ["string", "null"], "enum": ["merchant-page-displayed-percent", null] },
     "dealPrice": { "type": "number" },
     "imageUrl": { "type": "string" },
     "partnerId": { "type": "string" },

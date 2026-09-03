@@ -137,6 +137,10 @@ const els = {
   canvasRetry: document.getElementById("canvas-retry"),
   canvasSync: document.getElementById("canvas-sync"),
   canvasWords: document.getElementById("product-prompt-input"),
+  actionTriggerQuote: document.getElementById("action-trigger-quote"),
+  actionPreviewName: document.getElementById("action-preview-name"),
+  actionPreviewCopy: document.getElementById("action-preview-copy"),
+  actionPreviewLink: document.getElementById("action-preview-link"),
   connectionStatus: document.querySelector(".connection-status"),
 };
 
@@ -146,6 +150,20 @@ const STORAGE = {
   networkSharing: "jumping-beans-network-sharing",
 };
 const DEFAULT_PREFERENCES = normalizePreferencePlane({ formats: ["price-proof"], tone: "calm" });
+const ACTION_TRIGGER_COPY = {
+  message: {
+    quote: "“Get the coffee I liked last week, ground, and keep it under $15.”",
+    description: "A request in a conversation can start the chain without sending the user to a storefront first.",
+  },
+  article: {
+    quote: "“That setup looks right. Find the matching item and show me proof before I decide.”",
+    description: "An article can become an action surface: the assistant can resolve the referenced item and ask what to do next.",
+  },
+  product: {
+    quote: "“I’m looking at this now. Compare it, adapt the presentation, and let me choose the next action.”",
+    description: "A product page can hand off a focused action chain instead of adding another ad or duplicate search box.",
+  },
+};
 const loadedAt = new Date().toISOString();
 const OPEN_INVENTORY = {
   sku: "open-wildone-walk-kit",
@@ -163,13 +181,7 @@ const OPEN_INVENTORY = {
   sourceDescription: "Publicly listed inventory bundled with this demo. No merchant tool or account connection was required.",
   observedAt: loadedAt,
   verificationLabel: "Unverified snapshot; the merchant price may have changed",
-  collateral: [
-    {
-      type: "price-proof",
-      text: "Save $4 versus the merchant comparison price",
-      source: "Bundled public catalog compare-at price",
-    },
-  ],
+  collateral: [],
 };
 
 function readStored(key, fallback) {
@@ -300,15 +312,11 @@ function money(value) {
   return `$${Number(value || 0).toFixed(2)}`;
 }
 
-function hasMerchantListPrice(deal) {
-  return deal?.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > Number(deal.dealPrice);
-}
-
-function percent(deal) {
-  if (!hasMerchantListPrice(deal)) return null;
-  return Math.round((1 - Number(deal.dealPrice) / deal.listPrice) * 100);
+function hasExplicitMerchantPageDiscount(deal) {
+  return deal?.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
 }
 
 function safeUrl(value) {
@@ -345,11 +353,39 @@ function updateConnections() {
     els.statusDot.dataset.on = "0";
     return;
   }
+  if (!state.applied) {
+    els.status.textContent = "Open inventory ready. Member sites have not been asked for preferences.";
+    els.protocol.textContent = "WebMCP · not requested";
+    els.sourceCount.textContent = "No partner request sent";
+    els.statusDot.dataset.on = "0";
+    return;
+  }
+  if (state.networkSharingPaused) {
+    els.status.textContent = "Open inventory ready. Network sharing is paused; no preferences were sent to member sites.";
+    els.protocol.textContent = "WebMCP · sharing paused";
+    els.sourceCount.textContent = "No partner request sent while paused";
+    els.statusDot.dataset.on = "0";
+    return;
+  }
   if (!state.discoveryComplete) {
     els.status.textContent = "Open inventory ready. Checking opted-in partner sites.";
     els.protocol.textContent = "WebMCP · checking partner sites";
     els.sourceCount.textContent = `Checking ${PARTNER_ORIGINS.length} sites`;
     els.statusDot.dataset.on = "0";
+    return;
+  }
+  const outcomes = Object.values(state.originOutcomes || {});
+  const ready = outcomes.filter((outcome) => outcome.status === "ready").length;
+  const noMatch = outcomes.filter((outcome) => outcome.status === "no-match").length;
+  if (ready || noMatch) {
+    const responses = ready + noMatch;
+    const resultLabel = ready
+      ? `${ready} site${ready === 1 ? "" : "s"} returned offers${noMatch ? `; ${noMatch} returned no match` : ""}`
+      : `${noMatch} site${noMatch === 1 ? "" : "s"} responded with no matching offers`;
+    els.status.textContent = `Open inventory ready. ${resultLabel}.`;
+    els.protocol.textContent = `WebMCP · ${responses} partner response${responses === 1 ? "" : "s"}`;
+    els.sourceCount.textContent = resultLabel;
+    els.statusDot.dataset.on = ready ? "1" : "0";
     return;
   }
   els.status.textContent = discovered
@@ -362,6 +398,10 @@ function updateConnections() {
     ? `${discovered} connected: ${names.join(", ")}`
     : "0 connected";
   els.statusDot.dataset.on = discovered ? "1" : "0";
+}
+
+function hasSuccessfulPartnerApplication() {
+  return Object.values(state.originOutcomes || {}).some((outcome) => ["ready", "no-match"].includes(outcome?.status));
 }
 
 function createPartnerFrames() {
@@ -548,8 +588,8 @@ function selectedCollateral(deal, preferences) {
   const collateral = Array.isArray(deal.collateral) ? deal.collateral : [];
   const formats = preferences.formats || [];
   const wanted = [
-    ...preferredFormats.filter((format) => formats.includes(format) && (format !== "price-proof" || hasMerchantListPrice(deal))),
-    ...(hasMerchantListPrice(deal) ? ["price-proof"] : []),
+    ...preferredFormats.filter((format) => formats.includes(format) && (format !== "price-proof" || hasExplicitMerchantPageDiscount(deal))),
+    ...(hasExplicitMerchantPageDiscount(deal) ? ["price-proof"] : []),
   ];
   for (const type of wanted) {
     const item = collateral.find((entry) => entry.type === type);
@@ -572,7 +612,7 @@ function selectedCollateral(deal, preferences) {
   }
   return {
     type: "offer-fact",
-    text: `Current catalog price ${money(deal.dealPrice)}. No merchant comparison price was supplied.`,
+    text: `Current catalog price ${money(deal.dealPrice)}. No merchant-page percentage was supplied.`,
     source: "Offer record",
   };
 }
@@ -580,7 +620,7 @@ function selectedCollateral(deal, preferences) {
 function offerImage(deal) {
   const source = safeUrl(deal.imageUrl);
   return source
-    ? `<img src="${escapeHtml(source.href)}" alt="" loading="lazy" crossorigin="anonymous">`
+    ? `<img src="${escapeHtml(source.href)}" alt="${escapeHtml(deal.name || "Offer")} product image" loading="lazy" crossorigin="anonymous">`
     : '<div class="art-placeholder" aria-hidden="true">Offer image unavailable</div>';
 }
 
@@ -633,8 +673,8 @@ function offerMarkup(deal, sourceKind, label, preferences) {
         : escapeHtml(collateral.text);
   const sourceClass = sourceKind === "open" ? "source-open" : "source-optin";
   const sourceLabel = sourceKind === "open" ? "Open inventory" : "Opted-in partner";
-  const comparisonPrice = hasMerchantListPrice(deal)
-    ? `<del aria-label="Merchant comparison price ${money(deal.listPrice)}">${money(deal.listPrice)}</del><span>${percent(deal)}% below merchant comparison price</span>`
+  const comparisonPrice = hasExplicitMerchantPageDiscount(deal)
+    ? `<span>${escapeHtml(deal.merchantPageDiscountPercent)}% off shown on the merchant product page</span>`
     : "";
   const reason =
     sourceKind === "open"
@@ -704,8 +744,9 @@ function renderProductReview(active = normalizePreferencePlane(state.preferences
   els.productReview.dataset.reviewState = state.productReviewState;
   els.productReview.setAttribute("aria-busy", String(isApplying));
   els.productReviewTitle.textContent = showingResults ? "Using your selection" : "We’ll use";
-  els.productReviewStateLabel.textContent = showingResults ? (isApplying ? "Finding offers" : "Applied") : "Draft";
-  els.productReviewStateLabel.dataset.status = showingResults && !isApplying ? "success" : "info";
+  const appliedSuccessfully = showingResults && !isApplying && hasSuccessfulPartnerApplication();
+  els.productReviewStateLabel.textContent = showingResults ? (isApplying ? "Finding offers" : appliedSuccessfully ? "Applied" : "Ready to retry") : "Draft";
+  els.productReviewStateLabel.dataset.status = appliedSuccessfully ? "success" : "info";
   const facts = [
     { id: "category", text: selection.category || "Any category", edit: "Shopping for" },
     { id: "budget", text: selection.maxPrice == null ? "Any budget" : `${selection.maxPriceInclusive === false ? "Under" : "Up to"} ${money(selection.maxPrice)}`, edit: "Budget" },
@@ -748,6 +789,21 @@ function renderProductReview(active = normalizePreferencePlane(state.preferences
 function renderProductFocus() {
   els.engineHeader.hidden = false;
   els.productHero.hidden = false;
+}
+
+function updateActionChain(trigger = "message") {
+  const copy = ACTION_TRIGGER_COPY[trigger] || ACTION_TRIGGER_COPY.message;
+  if (els.actionTriggerQuote) els.actionTriggerQuote.textContent = copy.quote;
+  if (els.actionPreviewCopy) els.actionPreviewCopy.textContent = `Coffee Co will receive the selected product from this context. ${copy.description}`;
+  document.querySelectorAll("[data-action-trigger]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.actionTrigger === trigger));
+  });
+  if (els.actionPreviewLink) {
+    const url = new URL(els.actionPreviewLink.href);
+    url.origin = ORIGINS.coffee;
+    url.searchParams.set("jb_trigger", trigger);
+    els.actionPreviewLink.href = url.href;
+  }
 }
 
 function renderProductShell() {
@@ -1152,6 +1208,7 @@ function isWatchHandoffOffer(deal) {
     && typeof deal.sku === "string"
     && typeof deal.name === "string"
     && Number.isFinite(deal.dealPrice)
+    && deal.interestEligible === true
     && typeof deal.resolution?.offerId === "string";
 }
 
@@ -1735,20 +1792,15 @@ async function applyPreferences({ persist }) {
     state.pendingRemember = false;
     setAgent(
       preferencesSaved
-        ? "Saved in this browser and applied to Site B. Only the approved preference plane travels in the native WebMCP request."
-        : "Applied to Site B for this visit, but this browser did not allow the preference to be saved.",
+        ? "Saved in this browser. Checking member sites with only the approved preference plane."
+        : "This browser could not save the preference. Checking member sites for this visit only.",
     );
-    showToast(preferencesSaved ? (memorySaved ? "Display rules saved and applied" : "Preferences saved; offer note could not be saved") : "Applied once; browser storage unavailable");
+    showToast(preferencesSaved ? (memorySaved ? "Display rules saved; checking offers" : "Preferences saved; checking offers") : "Checking offers for this visit only");
   } else {
     state.pendingRemember = false;
-    setAgent("Applied once to Site B without saving a display preference or offer note.");
-    showToast("Display rules applied once without saving");
+    setAgent("Checking member sites with this one-time selection. No display preference or offer note was saved.");
+    showToast("Checking offers for this visit only");
   }
-  recordEvent("journey.outcome", {
-    outcomeType: "preference_applied",
-    status: "user_confirmed",
-    mode: state.appliedMode,
-  });
   state.productDraftDirty = false;
   renderJourney();
   const revision = state.appliedJourneyRevision + 1;
@@ -1759,6 +1811,16 @@ async function applyPreferences({ persist }) {
     state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }]));
   }
   if (state.appliedJourneyRevision !== revision || !state.applied) return;
+  if (hasSuccessfulPartnerApplication()) {
+    recordEvent("journey.outcome", {
+      outcomeType: "preference_applied",
+      status: "partner_acknowledged",
+      mode: state.appliedMode,
+    });
+    const appliedTo = Object.values(state.originOutcomes).filter((outcome) => ["ready", "no-match"].includes(outcome?.status)).length;
+    setAgent(`Your approved selection was applied to ${appliedTo} member site${appliedTo === 1 ? "" : "s"}. ${state.appliedMode === "saved" ? "Your preference remains saved in this browser." : "Nothing was saved."}`);
+    showToast("Member-site preferences applied");
+  }
   state.productReviewState = "applied";
   state.productApplyMode = null;
   renderJourney();
@@ -2104,6 +2166,11 @@ document.getElementById("preference-prompt-form").addEventListener("submit", (ev
 document.querySelectorAll("[data-prompt]").forEach((button) => {
   button.addEventListener("click", () => handlePrompt(button.dataset.prompt));
 });
+
+document.querySelectorAll("[data-action-trigger]").forEach((button) => {
+  button.addEventListener("click", () => updateActionChain(button.dataset.actionTrigger));
+});
+updateActionChain("message");
 
 document.getElementById("edit-preferences").addEventListener("click", () => {
   state.productStage = "preview";

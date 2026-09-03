@@ -27,7 +27,7 @@ const MAX_CATEGORIES = 12;
 const MAX_RULES = 30;
 const ALLOWED_INPUT_KEYS = new Set(["categories", "maxPrice", "preferencePlane", "match", "expiresAfter", "expiresBefore", "explain"]);
 const ALLOWED_MATCH_KEYS = new Set(["include", "exclude", "bundle"]);
-const LOCAL_ALIASES = Object.freeze({ canine: "dog", canines: "dog", puppy: "dog", java: "coffee", timepiece: "watch", timepieces: "watch", leads: "lead", harnesses: "harness", watches: "watch" });
+const LOCAL_ALIASES = Object.freeze({ canine: "dog", canines: "dog", puppy: "dog", java: "coffee", timepiece: "watch", timepieces: "watch", leads: "lead", harnesses: "harness", toys: "toy", watches: "watch" });
 const STOP_WORDS = new Set(["a", "and", "for", "only", "show", "shopping", "the", "with", "from", "gear", "equipment", "coffee", "watches", "watch", "dog", "cat", "no", "not", "exclude", "excluding", "prefer", "customer", "stories", "story", "first", "images", "image", "photos", "photo", "visual"]);
 
 function plainRecord(value) { return Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype); }
@@ -84,8 +84,16 @@ function parseMatch(value, rules) {
   if (has("beans") && has("coffee") && !requested.bundle) requested.kind = "beans";
   return { include: requested, exclude: blocked, query: rules.join(" ") };
 }
+const DOG_GEAR_LOCAL_CATEGORIES = new Set(["dog", "toys", "leash", "dog tags", "bowl", "collar", "harness", "carrier", "poop bags", "poop bag carrier", "wipes"]);
 function categoryMatch(categories, rules, deal) {
-  if (categories.length) return categories.includes(deal.category);
+  if (categories.length) {
+    if (categories.includes(deal.category)) return true;
+    // The engine's canonical dog-gear category maps only to Petsupply's own
+    // dog-related catalog labels. A local dog signal keeps shared labels (such
+    // as toys and bowls) from widening into cat or unrelated inventory.
+    if (categories.includes("dog gear") && DOG_GEAR_LOCAL_CATEGORIES.has(text(deal.category))) return deriveFacts(deal).dog === true;
+    return false;
+  }
   const words = tokens(rules.join(" "));
   const localCategory = words.includes("dog") ? "dog gear" : words.includes("cat") ? "cat gear" : words.includes("coffee") ? "coffee" : words.includes("watch") ? "watches" : null;
   return localCategory === deal.category;
@@ -145,14 +153,15 @@ function setPreferencePlane(value) {
 }
 
 function enrich(deal) {
-  const hasMerchantListPrice = deal.listPriceSource === "merchant"
-    && Number.isFinite(deal.listPrice)
-    && deal.listPrice > deal.dealPrice;
-  const priceProof = hasMerchantListPrice
+  const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
+    && Number.isFinite(deal.merchantPageDiscountPercent)
+    && deal.merchantPageDiscountPercent > 0
+    && deal.merchantPageDiscountPercent <= 100;
+  const priceProof = hasExplicitMerchantPageDiscount
     ? [{
         type: "price-proof",
-        text: `${Math.round((1 - deal.dealPrice / deal.listPrice) * 100)}% below merchant comparison price`,
-        source: `${PARTNER_NAME} catalog compare-at price`,
+        text: `${deal.merchantPageDiscountPercent}% off shown on the merchant product page`,
+        source: `${PARTNER_NAME} merchant product page`,
       }]
     : [];
   return {

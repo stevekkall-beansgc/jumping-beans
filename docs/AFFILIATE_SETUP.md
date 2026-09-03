@@ -35,15 +35,19 @@ Ingester flags: `--host` (shopify domain), `--out` (target file), `--max`,
 ## Deal shape (the contract the engine expects — unchanged from before)
 
 ```jsonc
-{ "sku","name","category","listPrice","listPriceSource","dealPrice","imageUrl","expiresAt",
+{ "sku","name","category","listPrice","listPriceSource","merchantPageDiscountPercent","merchantPageDiscountEvidence","dealPrice","imageUrl","expiresAt",
   "landing",   // NEW: real product URL (the goto / affiliate deep-link target)
   "vendor","source" }
 ```
 
 `listPrice` is the merchant's compare-at price only when it is present and
 higher than the current price; `listPriceSource` is then `"merchant"`.
-Otherwise both fields are `null`. Storefronts and WebMCP tools must not infer a
-comparison price or render savings claims without that explicit evidence.
+Otherwise both fields are `null`. A compare-at price is a price fact only: it
+does not authorize a percentage or discount claim. Set
+`merchantPageDiscountPercent` and
+`merchantPageDiscountEvidence: "merchant-page-displayed-percent"` only when a
+captured merchant product page explicitly displays that exact percentage.
+Storefronts and WebMCP tools must otherwise suppress percentage/discount copy.
 
 ## Cross-origin note
 

@@ -88,6 +88,7 @@ context = vm.createContext({
   invalidateAppliedJourney: () => { state.capabilityResolution = null; state.originOutcomes = {}; },
 });
 function load(start, end) { const a=source.indexOf(start), b=source.indexOf(end,a); assert.ok(a>=0 && b>a); vm.runInContext(source.slice(a,b),context); }
+load('function hasSuccessfulPartnerApplication()', 'function createPartnerFrames(');
 load('function renderProductReview(', 'function ruleScopeLabel(');
 load('function ruleScopeLabel(', 'function currentProductCategory(');
 load('function currentProductCategory(', 'function productPreferenceDraft(');
@@ -250,6 +251,7 @@ resolveRead(); await visit;
 assert.equal(context.focused,'account-back','async completion never steals focus from Account');
 assert.equal(els.canvasResults.dataset.state,'partial');
 assert.equal(els.canvasSync.hidden,true);
+assert.equal(records.some(({type,payload})=>type==='journey.outcome'&&payload.outcomeType==='preference_applied'),false,'a failed or unacknowledged lookup cannot claim preferences were applied');
 state.currentView='product'; context.returnToProductEntry();
 assert.equal(state.preferences.category,'watches');
 state.preferences={...state.preferences, category:'coffee'}; context.markDraftEdited({preferences:true});
@@ -289,6 +291,7 @@ assert.equal(canvasResultState({...base,deals:[{}]}).kind,'results');
 assert.equal(canvasResultState({...base,outcomes:{one:{status:'ready'},two:{status:'timeout'}},deals:[{}]}).kind,'partial');
 assert.equal(canvasResultState({...base,supported:false}).kind,'unavailable');
 assert.equal(canvasResultState({...base,paused:true}).kind,'paused');
+assert.equal(canvasResultState({...base,applied:false,paused:false}).kind,'idle');
 state.applied=true; state.productStage='results'; state.productReviewState='applied';
 state.originOutcomes=base.outcomes;state.capabilityResolution={exposed:[]}; context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'no-match');
