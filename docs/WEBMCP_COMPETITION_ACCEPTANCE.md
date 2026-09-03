@@ -1,13 +1,14 @@
 # Jumping Beans — Native WebMCP Competition Acceptance
 
 > Historical native acceptance plan. The current release receipt is
-> [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md). This
-> document remains **STOP / NO-GO** until that receipt contains a fresh 3/3
-> headed Stable production run tied to the deployed commit SHA.
+> [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md).
+> v0.10.6 produced a valid 3/3 headed Stable receipt, but later cold-start QA
+> exposed a coverage gap. The v0.10.7 candidate remains on production hold
+> until repeated first-action-before-probe runs pass at its deployed SHA.
 
 Date: 2026-08-31
 Scope: browser/runtime and competition acceptance for the WebMCP Challenge.
-Current decision: **STOP / NO-GO**
+Current decision: **v0.10.7 PRODUCTION HOLD**
 
 This is the acceptance record for the cross-origin WebMCP claim. The only
 accepted capability path is the browser-native WebMCP surface:
@@ -38,11 +39,12 @@ of the following in one engine journey:
    discovery output, three execution outputs or hashes, personalization state,
    and exported receipt.
 
-The minimal two-origin checkpoint now passes in both clean local lanes: Chrome
-Canary `151.0.7922.174` and Chrome Stable `152.0.7977.65`. Both captures show
-the native surface, exact partner discovery, a `toolchange` event, and
-successful native execution. The full embedded 3/3 claim remains NO-GO until
-the same evidence is captured for all three partner origins.
+The minimal two-origin checkpoint passes in both clean local lanes: Chrome
+Canary `151.0.7922.174` and Chrome Stable `152.0.7977.65`. The v0.10.6 full
+production receipt also proves exact three-partner discovery and execution in
+Stable. Final QA then found that a shopper acting before registry settlement
+could remain partial in 2 of 5 un-warmed sessions. The current acceptance adds
+repeated cold starts before any direct registry probe.
 
 ## Minimal native cross-origin reproduction
 
@@ -409,7 +411,9 @@ compatibility.
 **NO-GO** if direct tools work but the embedded engine returns only its
 top-level tools, if any required production origin lacks the correct policy or
 trial token, if fewer than three partner executions complete, or if the
-receipt/personalization evidence is missing. This is the current state.
+receipt/personalization evidence is missing. v0.10.7 must also fail if any of
+at least ten fresh Stable profiles misses the exact green result when the first
+shopper action occurs before a registry probe.
 
 ## Source records
 

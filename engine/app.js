@@ -471,6 +471,10 @@ function hasSuccessfulPartnerApplication() {
   return Object.values(state.originOutcomes || {}).some((outcome) => ["ready", "no-match"].includes(outcome?.status));
 }
 
+const NATIVE_DISCOVERY_ATTEMPTS = 6;
+let partnerFramesReady = Promise.resolve([]);
+let nativeDiscoveryRequestSequence = 0;
+
 function createPartnerFrames() {
   if (!SUPPORTED) return Promise.resolve([]);
   const waits = PARTNER_ORIGINS.map((origin, index) => {
@@ -532,13 +536,27 @@ function discoverGrant() {
   });
 }
 
+function beginPartnerDiscovery(preferences = state.appliedPreferences) {
+  const request = {
+    id: ++nativeDiscoveryRequestSequence,
+    appliedJourneyRevision: state.appliedJourneyRevision,
+  };
+  request.promise = discoverPartnerDeals(preferences);
+  return request;
+}
+
 async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   const requestRevision = state.appliedJourneyRevision;
   // Native discovery is deferred until the page applies an explicit choice.
   // This keeps draft preferences and a merely toggled demo control in-page.
-  if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])) };
-  if (state.networkSharingPaused) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "paused", count: 0, reason: "network sharing is paused by the user" }])) };
-  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {} };
+  if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])), connectedTools: [] };
+  if (state.networkSharingPaused) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "paused", count: 0, reason: "network sharing is paused by the user" }])), connectedTools: [] };
+  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {}, connectedTools: [] };
+  // An immediate user action can arrive while the partner frames are still
+  // booting. Wait for their load/registration boundary before reading the
+  // browser registry so the first approved journey is authoritative.
+  await partnerFramesReady;
+  if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {}, connectedTools: [] };
   recordEvent("capability.invocation.started", {
     capabilityId: "offers.discover",
     capabilityVersion: "1.0.0",
@@ -546,20 +564,19 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   });
   let matching = [];
   let lastError = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < NATIVE_DISCOVERY_ATTEMPTS; attempt += 1) {
     try {
       const tools = await document.modelContext.getTools({ fromOrigins: PARTNER_ORIGINS });
-      if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {} };
+      if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {}, connectedTools: [] };
       matching = tools
         .filter((tool) => tool.name === TOOL_NAMES.matchingDeals && PARTNER_ORIGINS.includes(tool.origin))
         .filter((tool, index, all) => all.findIndex((candidate) => candidate.origin === tool.origin) === index);
-      if (matching.length || attempt === 2) break;
+      if (matching.length === PARTNER_ORIGINS.length || attempt === NATIVE_DISCOVERY_ATTEMPTS - 1) break;
     } catch (error) {
       lastError = error;
     }
     await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
   }
-  state.connectedTools = matching;
   matching.forEach((tool) => recordEvent("capability.exposed", {
     capabilityId: "offers.discover",
     capabilityVersion: "1.0.0",
@@ -572,7 +589,7 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
       capabilityVersion: "1.0.0",
       reason: "partner discovery failed after compatibility retries",
     });
-    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: "partner discovery failed" }])) };
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: "partner discovery failed" }])), connectedTools: [] };
   }
   const grant = discoverGrant();
   const invocation = await invokeCapability({
@@ -590,10 +607,10 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   });
   if (!invocation.ok) {
     recordEvent("capability.invocation.denied", { capabilityId: "offers.discover", reason: invocation.authorization?.code || invocation.code });
-    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: invocation.authorization?.code || invocation.code }])) };
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: invocation.authorization?.code || invocation.code }])), connectedTools: matching };
   }
   Object.entries(invocation.value.originOutcomes).forEach(([origin, outcome]) => recordEvent(`capability.invocation.${outcome.status}`, { capabilityId: "offers.discover", capabilityVersion: "1.0.0", origin, ...outcome }));
-  return invocation.value;
+  return { ...invocation.value, connectedTools: matching };
 }
 
 async function fetchRakutenDeals(preferences = state.appliedPreferences) {
@@ -638,7 +655,9 @@ async function fetchCatalogDeals(preferences = state.appliedPreferences) {
   return { deals: payload.items, meta: payload.meta || null };
 }
 
-function applyPartnerDiscovery(result) {
+function applyPartnerDiscovery(result, request) {
+  if (request?.id !== nativeDiscoveryRequestSequence || request.appliedJourneyRevision !== state.appliedJourneyRevision) return false;
+  state.connectedTools = Array.isArray(result.connectedTools) ? result.connectedTools : [];
   state.partnerDeals = result.deals;
   state.originOutcomes = result.originOutcomes;
   // The decision receipt and its event must describe the tools discovered for
@@ -652,30 +671,60 @@ function applyPartnerDiscovery(result) {
   state.discoveryComplete = true;
   updateConnections();
   renderJourney();
+  return true;
 }
 
 let nativeToolchangeReconciliationQueued = false;
+let nativeToolchangeReconciliationActive = false;
+let nativeToolchangeReconciliationPending = false;
+let nativeForegroundDiscoveryCount = 0;
+
+function queueNativeToolchangeReconciliation() {
+  if (nativeForegroundDiscoveryCount > 0 || nativeToolchangeReconciliationActive) {
+    nativeToolchangeReconciliationPending = true;
+    return;
+  }
+  if (nativeToolchangeReconciliationQueued) return;
+  nativeToolchangeReconciliationQueued = true;
+  window.setTimeout(() => { void reconcileNativeToolChanges(); }, 0);
+}
+
+async function reconcileNativeToolChanges() {
+  nativeToolchangeReconciliationQueued = false;
+  if (nativeForegroundDiscoveryCount > 0 || nativeToolchangeReconciliationActive) {
+    nativeToolchangeReconciliationPending = true;
+    return;
+  }
+  nativeToolchangeReconciliationActive = true;
+  try {
+    do {
+      if (nativeForegroundDiscoveryCount > 0) {
+        nativeToolchangeReconciliationPending = true;
+        break;
+      }
+      nativeToolchangeReconciliationPending = false;
+      const revision = state.appliedJourneyRevision;
+      if (!state.applied) break;
+      state.discoveryComplete = false;
+      state.originOutcomes = {};
+      renderBrowserReadiness();
+      const request = beginPartnerDiscovery();
+      const result = await request.promise;
+      if (!state.applied || revision !== state.appliedJourneyRevision) continue;
+      applyPartnerDiscovery(result, request);
+    } while (nativeToolchangeReconciliationPending && state.applied);
+  } finally {
+    nativeToolchangeReconciliationActive = false;
+    if (nativeToolchangeReconciliationPending) queueNativeToolchangeReconciliation();
+  }
+}
 
 function observeNativeToolChanges() {
   if (!SUPPORTED || typeof document.modelContext?.addEventListener !== "function") return;
   // `toolchange` only tells us that the browser registry changed. Reconcile it
   // through a fresh, allowlisted native discovery rather than treating the
   // event as a tool registry or reusing a cached RegisteredTool.
-  document.modelContext.addEventListener("toolchange", () => {
-    if (nativeToolchangeReconciliationQueued) return;
-    nativeToolchangeReconciliationQueued = true;
-    const revision = state.appliedJourneyRevision;
-    window.setTimeout(async () => {
-      nativeToolchangeReconciliationQueued = false;
-      if (!state.applied || revision !== state.appliedJourneyRevision) return;
-      state.discoveryComplete = false;
-      state.originOutcomes = {};
-      renderBrowserReadiness();
-      const result = await discoverPartnerDeals();
-      if (!state.applied || revision !== state.appliedJourneyRevision) return;
-      applyPartnerDiscovery(result);
-    }, 0);
-  });
+  document.modelContext.addEventListener("toolchange", queueNativeToolchangeReconciliation);
 }
 
 function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
@@ -2040,34 +2089,41 @@ async function rerunAppliedJourney() {
   state.rakutenStatus = "loading";
   state.catalogStatus = "loading";
   renderJourney();
-  const [partnerResult, rakutenResult, catalogResult] = await Promise.allSettled([
-    discoverPartnerDeals(state.appliedPreferences),
-    fetchRakutenDeals(state.appliedPreferences),
-    fetchCatalogDeals(state.appliedPreferences),
-  ]);
-  if (revision !== state.appliedJourneyRevision) return;
-  applyPartnerDiscovery(partnerResult.status === "fulfilled"
-    ? partnerResult.value
-    : { deals: [], originOutcomes: {} });
-  if (rakutenResult.status === "fulfilled") {
-    state.rakutenDeals = rakutenResult.value.deals;
-    state.rakutenMeta = rakutenResult.value.meta;
-    state.rakutenStatus = "ready";
-  } else {
-    state.rakutenDeals = [];
-    state.rakutenMeta = null;
-    state.rakutenStatus = "error";
+  const partnerRequest = beginPartnerDiscovery(state.appliedPreferences);
+  nativeForegroundDiscoveryCount += 1;
+  try {
+    const [partnerResult, rakutenResult, catalogResult] = await Promise.allSettled([
+      partnerRequest.promise,
+      fetchRakutenDeals(state.appliedPreferences),
+      fetchCatalogDeals(state.appliedPreferences),
+    ]);
+    if (revision !== state.appliedJourneyRevision) return;
+    applyPartnerDiscovery(partnerResult.status === "fulfilled"
+      ? partnerResult.value
+      : { deals: [], originOutcomes: {}, connectedTools: [] }, partnerRequest);
+    if (rakutenResult.status === "fulfilled") {
+      state.rakutenDeals = rakutenResult.value.deals;
+      state.rakutenMeta = rakutenResult.value.meta;
+      state.rakutenStatus = "ready";
+    } else {
+      state.rakutenDeals = [];
+      state.rakutenMeta = null;
+      state.rakutenStatus = "error";
+    }
+    if (catalogResult.status === "fulfilled") {
+      state.catalogDeals = catalogResult.value.deals;
+      state.catalogMeta = catalogResult.value.meta;
+      state.catalogStatus = "ready";
+    } else {
+      state.catalogDeals = [];
+      state.catalogMeta = null;
+      state.catalogStatus = "error";
+    }
+    renderJourney();
+  } finally {
+    nativeForegroundDiscoveryCount = Math.max(0, nativeForegroundDiscoveryCount - 1);
+    if (nativeForegroundDiscoveryCount === 0 && nativeToolchangeReconciliationPending) queueNativeToolchangeReconciliation();
   }
-  if (catalogResult.status === "fulfilled") {
-    state.catalogDeals = catalogResult.value.deals;
-    state.catalogMeta = catalogResult.value.meta;
-    state.catalogStatus = "ready";
-  } else {
-    state.catalogDeals = [];
-    state.catalogMeta = null;
-    state.catalogStatus = "error";
-  }
-  renderJourney();
 }
 
 function handlePrompt(value) {
@@ -2742,6 +2798,7 @@ function hydrateEntryPreference() {
 }
 
 async function init() {
+  const initializationRevision = state.appliedJourneyRevision;
   restoreAccountDraft();
   hydrateEntryPreference();
   renderBrowserReadiness();
@@ -2759,17 +2816,22 @@ async function init() {
   // Attach before the first partner navigation so registration cannot race the
   // native lifecycle observer. Initial discovery below remains authoritative.
   observeNativeToolChanges();
-  await createPartnerFrames();
+  partnerFramesReady = createPartnerFrames();
+  await partnerFramesReady;
   renderJourney();
   void loadAccount();
   registerEngineTools();
   updateConnections();
-  const result = await discoverPartnerDeals();
-  applyPartnerDiscovery(result);
-  if (result.deals.length) {
-    setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
-  } else if (SUPPORTED) {
-    setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B shows an honest no-result outcome.");
+  if (initializationRevision === state.appliedJourneyRevision) {
+    const request = beginPartnerDiscovery();
+    const result = await request.promise;
+    if (applyPartnerDiscovery(result, request)) {
+      if (result.deals.length) {
+        setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
+      } else if (SUPPORTED) {
+        setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B shows an honest no-result outcome.");
+      }
+    }
   }
   switchView(location.hash.slice(1) || "product");
 }

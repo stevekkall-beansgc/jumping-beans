@@ -44,13 +44,13 @@ Jumping Beans currently includes:
 - P0 capability, journey, context, ranking, and decision-receipt primitives;
 - network visibility showing connected origins and eligible/exposed counts.
 
-The local product gate is green at 413 assertions. The minimal native
-cross-origin fixture and the full-engine response-policy paths are mechanically
-checked. Direct native WebMCP partner execution works in headed Chrome 151,
-but embedded 3/3 discovery and execution still require a clean, extension-free
-Stable and Canary run before the competition claim can be accepted. The
-2026-09-01 attempt is recorded in
-`docs/WEBMCP_NATIVE_RUN_EVIDENCE_2026-09-01.md`.
+The current product gate is green and includes the minimal native fixture,
+full-engine response policy, all three partner contracts, registry bootstrap,
+same-revision discovery ownership, and foreground/toolchange interleavings.
+The deployed v0.10.6 receipt proves exact 3/3 execution in clean headed Stable
+Chrome. Final QA found that its probe order could hide an intermittent cold
+start, so v0.10.7 adds repeated user-action-first acceptance before the deeper
+native probes.
 
 ## 3. Model ownership
 
@@ -197,11 +197,11 @@ asset/rights review are complete.
 
 | Priority | Deliverable | Owner | Status |
 |---|---|---|---|
-| P0.1 | WebMCP-only architecture/security contract | GPT-5.6-Sol | Complete; STOP/NO-GO; see `docs/WEBMCP_ONLY_ARCHITECTURE_SECURITY_REVIEW.md` |
-| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; gate green at 413 assertions |
-| P0.3 | Native WebMCP runtime and competition acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/WEBMCP_COMPETITION_ACCEPTANCE.md` |
+| P0.1 | WebMCP-only architecture/security contract | GPT-5.6-Sol | Complete; native-only boundary retained; see `docs/WEBMCP_ONLY_ARCHITECTURE_SECURITY_REVIEW.md` |
+| P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; current gate green |
+| P0.3 | Native WebMCP runtime and competition acceptance | GPT-5.6-Luna | v0.10.6 receipt complete; v0.10.7 cold-start receipt pending; see `docs/WEBMCP_COMPETITION_ACCEPTANCE.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
-| P0.5 | Main-session integration and release decision | Main Codex session | Recovery path integrated; native embedded 3/3 remains open |
+| P0.5 | Main-session integration and release decision | Main Codex session | Native 3/3 integrated; v0.10.7 release held for exact production cold-start evidence |
 | P0.6 | Consequential-write contract, D1 repository, and request boundary | GPT-5.6-Terra | Code complete; approved D1 provisioned/migrated; local Pages+D1 HTTP matrix green |
 | P0.7 | Write-boundary adversarial acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_WRITE_ACCEPTANCE_REVIEW.md` |
 
@@ -228,9 +228,9 @@ then provisioned, migrated remotely, and exercised through local Pages
 Functions against SQLite D1: session bootstrap, stage, commit, replay,
 changed-payload conflict, same-key concurrency, and summary all passed. The
 request-boundary checkpoint added exact origin policy, cookie/CSRF session
-binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters (369
-assertions in the current configuration). Real deployed native WebMCP
-evidence remains required. Future
+binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters. The
+v0.10.6 production native receipt passed; v0.10.7 must repeat that evidence with
+the cold-start action ordered before any direct registry polling. Future
 parallel implementation tasks must use actual isolated product worktrees or
 run serially through the main session.
 

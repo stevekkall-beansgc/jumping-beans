@@ -407,17 +407,28 @@ includesAll(spikeServer, [
   "elif PORT == 8182",
 ], "minimal native response-policy contract");
 includesAll(engineApp, [
+  "const NATIVE_DISCOVERY_ATTEMPTS = 6",
+  "let partnerFramesReady = Promise.resolve([])",
+  "function beginPartnerDiscovery(",
+  "request?.id !== nativeDiscoveryRequestSequence",
+  "state.connectedTools = Array.isArray(result.connectedTools)",
+  "matching.length === PARTNER_ORIGINS.length",
+  "partnerFramesReady = createPartnerFrames()",
+  "await partnerFramesReady",
   "function observeNativeToolChanges()",
   'document.modelContext.addEventListener("toolchange"',
+  "function queueNativeToolchangeReconciliation()",
+  "function reconcileNativeToolChanges()",
+  "nativeToolchangeReconciliationPending = true",
   "const revision = state.appliedJourneyRevision",
-  "if (!state.applied || revision !== state.appliedJourneyRevision) return",
+  "if (!state.applied || revision !== state.appliedJourneyRevision) continue",
   "observeNativeToolChanges();",
 ], "engine native toolchange reconciliation contract");
 const toolchangeBlock = engineApp.slice(
-  engineApp.indexOf("function observeNativeToolChanges()"),
+  engineApp.indexOf("function queueNativeToolchangeReconciliation()"),
   engineApp.indexOf("function choosePartnerOffer("),
 );
-check((toolchangeBlock.match(/revision !== state\.appliedJourneyRevision/g) || []).length === 2, "Native toolchange reconciliation does not reject stale pre- and post-discovery results");
+check((toolchangeBlock.match(/revision !== state\.appliedJourneyRevision/g) || []).length === 1, "Native toolchange reconciliation does not reject a stale discovery result");
 const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
 includesAll(p0Source, [
   "offers.discover",
@@ -547,6 +558,24 @@ includesAll(engineConfig, [
   "watch: localOrigin(8086)",
   "ORIGINS = ORIGIN_SETS[RUNTIME_MODE]",
 ], "engine local/production origin contract");
+
+const nativeColdStartBrowser = await readFile(path.join(root, "scripts/native-cold-start.browser.mjs"), "utf8");
+includesAll(nativeColdStartBrowser, [
+  "launchPersistentContext",
+  "runCount >= 5",
+  'headless: false',
+  'args: ["--no-first-run", "--disable-extensions"',
+  '"--enable-features=WebMCP,WebMCPTesting"',
+  "actionBeforeRegistryProbe: true",
+  "acknowledgedOutcomeCount === 1",
+  "Native WebMCP cold-start acceptance failed",
+], "native cold-start browser acceptance contract");
+const coldStartActionIndex = nativeColdStartBrowser.indexOf('await page.locator(`[data-self-serve-prompt=');
+const coldStartProbeIndex = nativeColdStartBrowser.indexOf("const evidence = await page.evaluate");
+check(
+  coldStartActionIndex >= 0 && coldStartProbeIndex > coldStartActionIndex,
+  "Native cold-start acceptance warms the registry before the first user action",
+);
 
 for (const partner of ["petsupply", "coffee", "watch"]) {
   const file = `partners/${partner}/tool.js`;
