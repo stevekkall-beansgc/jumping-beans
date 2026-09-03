@@ -3,12 +3,12 @@
 > Historical native acceptance plan. The current release receipt is
 > [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md).
 > v0.10.6 produced a valid 3/3 headed Stable receipt, but later cold-start QA
-> exposed a coverage gap. The v0.10.7 candidate remains on production hold
-> until repeated first-action-before-probe runs pass at its deployed SHA.
+> exposed a coverage gap. v0.10.7 closed it with 10/10 fresh production
+> first-action-before-probe runs and a separate 38/38 deep native audit.
 
-Date: 2026-08-31
+Date: 2026-09-03
 Scope: browser/runtime and competition acceptance for the WebMCP Challenge.
-Current decision: **v0.10.7 PRODUCTION HOLD**
+Current decision: **v0.10.7 PRODUCTION GO**
 
 This is the acceptance record for the cross-origin WebMCP claim. The only
 accepted capability path is the browser-native WebMCP surface:
@@ -41,10 +41,11 @@ of the following in one engine journey:
 
 The minimal two-origin checkpoint passes in both clean local lanes: Chrome
 Canary `151.0.7922.174` and Chrome Stable `152.0.7977.65`. The v0.10.6 full
-production receipt also proves exact three-partner discovery and execution in
+production receipt also proved exact three-partner discovery and execution in
 Stable. Final QA then found that a shopper acting before registry settlement
-could remain partial in 2 of 5 un-warmed sessions. The current acceptance adds
-repeated cold starts before any direct registry probe.
+could remain partial in 2 of 5 un-warmed sessions. v0.10.7 passed 10/10 fresh
+production cold starts before any direct registry probe in Stable
+`152.0.7977.76`, followed by a separate 38/38 deep native audit.
 
 ## Minimal native cross-origin reproduction
 
@@ -163,15 +164,15 @@ page loaded.
 
 | Lane | Enablement | Required proof | Current result | Disposition |
 |---|---|---|---|---|
-| Chrome Stable, local | Headed; `--enable-features=WebMCP,WebMCPTesting`; local COOP/COEP/CORP and engine policy | Direct partner registration/execution, then embedded 3/3 discovery/execution | Minimal 8182/8183 fixture passes natively; full 3/3 still open | **OPEN / full-network run required** |
-| Chrome Stable, deployed HTTPS | Headed; valid WebMCP origin-trial token on engine and every partner | Header check, direct checks, embedded 3/3, personalization, receipt | Production behavior is older and has no current 3/3 proof | **NOT PROVEN** |
+| Chrome Stable, local | Headed; `--enable-features=WebMCP,WebMCPTesting`; local COOP/COEP/CORP and engine policy | Direct partner registration/execution, then embedded 3/3 discovery/execution | v0.10.7 full-product cold-start gate passed 10/10 fresh profiles | **PASS** |
+| Chrome Stable, deployed HTTPS | Headed; valid WebMCP origin-trial token on engine and every partner | Header check, direct checks, embedded 3/3, personalization, receipt | v0.10.7 passed 10/10 action-before-probe starts and 38/38 deep assertions in Stable 152.0.7977.76 | **GO** |
 | Chrome Canary, local | Headed; same WebMCP testing flag and local headers | Reproduce the minimal test and record API/policy differences | Minimal 8182/8183 fixture passes natively; full 3/3 still open | **OPEN / full-network run required** |
 | Chrome Canary, deployed HTTPS | Headed; valid origin-trial enrollment | Reproduce the production checkpoint if Canary is used for the demo or video | Not yet recorded | **OPEN** |
 
-The competition minimum is a fresh Stable production pass. Canary is required
-before making a broad “Chrome-compatible” statement; a Canary regression in the
-build selected for judging is a NO-GO for that build. A local pass alone does
-not promote the production deployment to GO.
+The competition minimum is a fresh Stable production pass, and v0.10.7 meets
+that requirement. Canary remains required before making a broad
+“Chrome-compatible” statement; a Canary regression in the build selected for
+judging is a NO-GO for that build.
 
 ## Required browser and origin policy
 

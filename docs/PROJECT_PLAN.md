@@ -1,7 +1,7 @@
 # Jumping Beans — Expanded WebMCP Product Plan
 
 Status: active execution plan
-Last updated: 2026-08-31
+Last updated: 2026-09-03
 
 ## 1. Product vision
 
@@ -47,10 +47,10 @@ Jumping Beans currently includes:
 The current product gate is green and includes the minimal native fixture,
 full-engine response policy, all three partner contracts, registry bootstrap,
 same-revision discovery ownership, and foreground/toolchange interleavings.
-The deployed v0.10.6 receipt proves exact 3/3 execution in clean headed Stable
-Chrome. Final QA found that its probe order could hide an intermittent cold
-start, so v0.10.7 adds repeated user-action-first acceptance before the deeper
-native probes.
+The deployed v0.10.7 receipt proves exact 3/3 execution in clean headed Stable
+Chrome. Its repeated user-action-first gate passed 10/10 fresh production
+profiles before a separate deep native audit passed 38/38 assertions. This
+closes the intermittent cold start and receipt-order gap found after v0.10.6.
 
 ## 3. Model ownership
 
@@ -199,9 +199,9 @@ asset/rights review are complete.
 |---|---|---|---|
 | P0.1 | WebMCP-only architecture/security contract | GPT-5.6-Sol | Complete; native-only boundary retained; see `docs/WEBMCP_ONLY_ARCHITECTURE_SECURITY_REVIEW.md` |
 | P0.2 | Core resolver and multi-offer network slice | GPT-5.6-Terra | Complete locally; current gate green |
-| P0.3 | Native WebMCP runtime and competition acceptance | GPT-5.6-Luna | v0.10.6 receipt complete; v0.10.7 cold-start receipt pending; see `docs/WEBMCP_COMPETITION_ACCEPTANCE.md` |
+| P0.3 | Native WebMCP runtime and competition acceptance | GPT-5.6-Luna | Complete for v0.10.7: production 10/10 cold-start and 38/38 deep native receipts; see `docs/WEBMCP_COMPETITION_ACCEPTANCE.md` |
 | P0.4 | Mechanical gate, fixtures, and provenance maintenance | Main Codex session | Completed locally |
-| P0.5 | Main-session integration and release decision | Main Codex session | Native 3/3 integrated; v0.10.7 release held for exact production cold-start evidence |
+| P0.5 | Main-session integration and release decision | Main Codex session | Complete for v0.10.7: exact tagged release deployed, ordinary 9/9 and native production evidence passed, single monitor clock moved to the release pin |
 | P0.6 | Consequential-write contract, D1 repository, and request boundary | GPT-5.6-Terra | Code complete; approved D1 provisioned/migrated; local Pages+D1 HTTP matrix green |
 | P0.7 | Write-boundary adversarial acceptance | GPT-5.6-Luna | Complete; STOP/NO-GO; see `docs/P0_WRITE_ACCEPTANCE_REVIEW.md` |
 
@@ -229,8 +229,10 @@ Functions against SQLite D1: session bootstrap, stage, commit, replay,
 changed-payload conflict, same-key concurrency, and summary all passed. The
 request-boundary checkpoint added exact origin policy, cookie/CSRF session
 binding, bounded JSON, and D1-backed stage/commit/failed-grant limiters. The
-v0.10.6 production native receipt passed; v0.10.7 must repeat that evidence with
-the cold-start action ordered before any direct registry polling. Future
+v0.10.6 production native receipt passed but its probe order masked a cold-start
+race. v0.10.7 repeated that evidence with the shopper action ordered before any
+direct registry polling: 10/10 fresh production profiles and a separate 38/38
+deep native audit passed at the exact tagged release. Future
 parallel implementation tasks must use actual isolated product worktrees or
 run serially through the main session.
 

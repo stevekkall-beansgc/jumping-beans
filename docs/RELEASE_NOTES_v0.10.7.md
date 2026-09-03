@@ -25,6 +25,15 @@ any `getTools()` probe; every run must show exact 3/3 readiness, three terminal
 receipt origins, one acknowledged preference outcome, and no page errors.
 
 The separately labeled ordinary storefront handoff and its visit-only privacy
-contract are unchanged. Production native acceptance remains pending until the
-exact v0.10.7 deployment passes the repeated cold-start gate and deeper native
-receipt audit.
+contract are unchanged. The exact v0.10.7 production deployment passed all 768
+product assertions, 72/72 public asset checks, and all nine ordinary browser
+journeys. Native acceptance then passed 10/10 fresh Stable 152.0.7977.76
+profiles with the shopper action before any registry probe, followed by a
+separate 38/38 deep native receipt audit.
+
+The redacted evidence archive is
+`jumping-beans-v0.10.7-self-serve-receipt.zip`, SHA-256
+`8de04b5864d36adeac96333a30db5cac9f3f46763863282281cb2f999dc2e339`.
+It binds deployment run `33811064006`, the four production deployment IDs,
+the ordinary 9/9 receipt, and both native receipts. The GitHub Release asset
+list is authoritative for its current attachment status.
