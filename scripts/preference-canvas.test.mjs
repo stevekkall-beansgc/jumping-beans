@@ -331,7 +331,7 @@ assert.equal(state.discoveryComplete,true);
 assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['failed','failed']);
 assert.equal(els.browserReadiness.children[0].textContent,'Native member check is incomplete');
 // The actual native discovery path must stop if Forget revokes while getTools waits.
-load('async function discoverPartnerDeals(', 'function applyPartnerDiscovery(');
+load('function createPartnerFrames(', 'async function fetchRakutenDeals(');
 let finishDiscovery; let invocations=0;
 context.document.modelContext={ getTools: async () => new Promise(resolve => {finishDiscovery=resolve;}) };
 context.TOOL_NAMES={matchingDeals:'get_matching_deals'};
@@ -339,15 +339,51 @@ context.discoverGrant=()=>{invocations++; return {};};
 context.executeTool=()=>{invocations++; return {};};
 state.applied=true; state.appliedJourneyRevision++;
 const pendingNative=context.discoverPartnerDeals();
+await Promise.resolve();
 state.applied=false;state.appliedJourneyRevision++;
 finishDiscovery([{name:'get_matching_deals',origin:'one'}]);
 await pendingNative;
 assert.equal(invocations,0,'revoked discovery cannot invoke a native partner tool');
 
-// A completed discovery must refresh its derived origin state before the
-// decision receipt and capability.decision event are created.
+// A partial native registry must be retried until every allowlisted origin is
+// present. Discovery returns the tools without mutating live readiness state.
+context.window.setTimeout=(resolve)=>resolve();
+context.location={origin:'engine'};
+context.discoverGrant=()=>({});
+context.projectPartnerContext=()=>({fields:{}});
+context.resolvePartnerTools=async({tools,allowedOrigins})=>({
+  deals:[],
+  originOutcomes:Object.fromEntries(allowedOrigins.map(origin=>[origin,{status:tools.some(tool=>tool.origin===origin)?'ready':'failed',count:0}])),
+});
+context.invokeCapability=async({handler})=>({ok:true,value:await handler()});
+let toolReads=0;
+context.document.modelContext.getTools=async()=>++toolReads===1
+  ? [{name:'get_matching_deals',origin:'one'}]
+  : [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+state.applied=true;state.networkSharingPaused=false;state.appliedJourneyRevision++;
+state.connectedTools=[{origin:'previous'}];
+const completeNative=await context.discoverPartnerDeals();
+assert.equal(toolReads,2,'a partial registry is never accepted as terminal while an allowlisted origin is still booting');
+assert.deepEqual(completeNative.connectedTools.map(({origin})=>origin),['one','two']);
+assert.deepEqual(state.connectedTools.map(({origin})=>origin),['previous'],'discovery cannot mutate authoritative readiness before ownership is checked');
+
+// An immediate approval must wait for partner frame bootstrap before reading
+// the native registry.
+let releasePartnerFrames;
+context.bootstrapPromise=new Promise(resolve=>{releasePartnerFrames=resolve;});
+vm.runInContext('partnerFramesReady = bootstrapPromise',context);
+toolReads=0;
+context.document.modelContext.getTools=async()=>{toolReads++;return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];};
+const bootstrapNative=context.discoverPartnerDeals();
+await Promise.resolve();
+assert.equal(toolReads,0,'native registry is not read before partner frames finish booting');
+releasePartnerFrames([]);
+await bootstrapNative;
+assert.equal(toolReads,1);
+
+// A newer discovery at the same applied-journey revision owns readiness. A
+// late partial result from an older request cannot overwrite the full result.
 load('function applyPartnerDiscovery(', 'let nativeToolchangeReconciliationQueued');
-state.connectedTools=[{origin:'one'},{origin:'two'},{origin:'two'}];
 state.connectedOrigins=[];
 state.selectedWatchOfferId=null;
 let originsSeenByDecision;
@@ -355,9 +391,96 @@ context.choosePartnerOffer=()=>{originsSeenByDecision=[...state.connectedOrigins
 context.watchHandoffOffers=()=>[];
 context.updateConnections=()=>{};
 context.renderJourney=()=>{};
-context.applyPartnerDiscovery({deals:[],originOutcomes:{one:{status:'ready'},two:{status:'no-match'}}});
+let releaseStaleTools;
+toolReads=0;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseStaleTools=resolve;});
+  if(toolReads===2)return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+  return [{name:'get_matching_deals',origin:'one'}];
+};
+const staleRequest=context.beginPartnerDiscovery();
+await Promise.resolve();
+const currentRequest=context.beginPartnerDiscovery();
+const currentResult=await currentRequest.promise;
+assert.equal(context.applyPartnerDiscovery(currentResult,currentRequest),true);
+releaseStaleTools([{name:'get_matching_deals',origin:'one'}]);
+const staleResult=await staleRequest.promise;
+assert.equal(context.applyPartnerDiscovery(staleResult,staleRequest),false,'an older same-revision discovery cannot overwrite a newer result');
 assert.equal(JSON.stringify(originsSeenByDecision),'["one","two"]','decision evidence sees every unique origin from the current native discovery');
 assert.equal(JSON.stringify(state.connectedOrigins),'["one","two"]');
+assert.equal(JSON.stringify(state.connectedTools.map(({origin})=>origin)),'["one","two"]');
+
+// A queued toolchange timer cannot supersede a foreground applied journey if
+// that journey starts before the timer runs. It is replayed after the current
+// journey has published its complete result.
+load('let nativeToolchangeReconciliationQueued', 'function choosePartnerOffer(');
+load('async function rerunAppliedJourney()', 'function handlePrompt(');
+let toolchangeListener;let scheduledReconciliation;
+context.window.setTimeout=(callback)=>{scheduledReconciliation=callback;};
+context.document.modelContext.addEventListener=(type,listener)=>{if(type==='toolchange')toolchangeListener=listener;};
+context.observeNativeToolChanges();
+context.fetchRakutenDeals=async()=>({deals:[],meta:null});
+context.fetchCatalogDeals=async()=>({deals:[],meta:null});
+context.invalidateAppliedJourney=()=>{state.discoveryComplete=false;state.originOutcomes={};};
+const acceptedDiscoveries=[];
+const applyDiscovery=context.applyPartnerDiscovery;
+context.applyPartnerDiscovery=(result,request)=>{
+  const accepted=applyDiscovery(result,request);
+  if(accepted)acceptedDiscoveries.push(result.connectedTools.map(({origin})=>origin));
+  return accepted;
+};
+toolReads=0;
+let releaseForegroundTools;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseForegroundTools=resolve;});
+  return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+};
+toolchangeListener();
+const queuedBeforeForeground=scheduledReconciliation;
+const foregroundJourney=context.rerunAppliedJourney();
+for(let flush=0;flush<10&&!releaseForegroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseForegroundTools,'function');
+queuedBeforeForeground();
+await Promise.resolve();
+assert.equal(toolReads,1,'a queued toolchange cannot start a competing discovery after a foreground journey begins');
+releaseForegroundTools([{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}]);
+await foregroundJourney;
+assert.deepEqual(acceptedDiscoveries[0],['one','two'],'the foreground journey remains authoritative and can report partner acknowledgement');
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['ready','ready']);
+const replayAfterForeground=scheduledReconciliation;
+replayAfterForeground();
+for(let flush=0;flush<20&&acceptedDiscoveries.length<2;flush++)await Promise.resolve();
+assert.ok(toolReads>=2,'a coalesced toolchange is replayed after the foreground journey completes');
+assert.ok(acceptedDiscoveries.every(origins=>JSON.stringify(origins)==='["one","two"]'));
+
+// An already-active reconciliation with another event pending also yields to
+// a newer foreground journey instead of starting a second background request.
+let releaseBackgroundTools;let releaseSecondForegroundTools;
+toolReads=0;scheduledReconciliation=null;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseBackgroundTools=resolve;});
+  if(toolReads===2)return new Promise(resolve=>{releaseSecondForegroundTools=resolve;});
+  return [{name:'get_matching_deals',origin:'one'}];
+};
+toolchangeListener();
+const startBackground=scheduledReconciliation;
+startBackground();
+for(let flush=0;flush<10&&!releaseBackgroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseBackgroundTools,'function');
+toolchangeListener();
+const foregroundDuringReconciliation=context.rerunAppliedJourney();
+for(let flush=0;flush<10&&!releaseSecondForegroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseSecondForegroundTools,'function');
+releaseBackgroundTools([{name:'get_matching_deals',origin:'one'}]);
+for(let flush=0;flush<10;flush++)await Promise.resolve();
+assert.equal(toolReads,2,'pending reconciliation yields instead of superseding a newly active foreground journey');
+releaseSecondForegroundTools([{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}]);
+await foregroundDuringReconciliation;
+assert.deepEqual(state.connectedTools.map(({origin})=>origin),['one','two']);
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['ready','ready']);
 
 // Chrome's native API receives JSON text first, while the legacy-object
 // compatibility retry keeps the same revocation boundary.

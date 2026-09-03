@@ -1,7 +1,12 @@
 # Self-serve release acceptance
 
 Prepared: 2026-09-03
-Current verdict: **v0.10.5 PREPARED LOCALLY / PRODUCTION HOLD**
+Current verdict: **v0.10.7 CANDIDATE / PRODUCTION HOLD**
+
+The deployed v0.10.6 ordinary-browser and recorded native receipts are valid.
+Final QA subsequently reproduced an intermittent native cold-start race when a
+shopper approved a selection before the three partner registrations settled.
+v0.10.7 is held until the fix passes the cold-start-first production receipt.
 
 This is the current release receipt for the Jumping Beans Engine and its three
 member storefronts. Historical acceptance notes remain useful background, but
@@ -40,35 +45,36 @@ catalog, preference-handoff, tool, and action-link paths.
 
 | Gate | Current result |
 |---|---|
-| Deterministic product gate | PASS locally: 747 assertions |
+| Deterministic product gate | PASS locally, including partial-registry, frame-bootstrap, same-revision ownership, and foreground/toolchange interleaving regressions |
 | Native response-contract regression | PASS locally: all three checked-in partner catalogs produce schema-valid bounded envelopes and strip catalog-only fields |
-| Native local four-origin journey | PASS in headed Chrome Stable 152.0.7977.65: exact 3/3 discovery, JSON-string execution, green readiness, and three terminal receipt outcomes |
+| Native local four-origin cold start | PASS 10/10 in fresh persistent headed Chrome Stable 152.0.7977.76 profiles: user action preceded every registry probe; each run had exact 3/3 discovery, receipt outcomes, and one acknowledged journey outcome |
 | Native readiness visibility | PASS locally: the live native status remains outside the setup panel and visible after results replace that panel |
 | Generated UI, Engine bundle, and inventory index | PASS locally; current in the isolated worktree |
 | Chromium local journey | PASS in Chrome 152.0.7977.65: all 9 product/viewport cases; strict prices, category and presentation behavior, fragments, responsive images, hidden actions, page errors, and overflow checked |
 | Partner paging and keyboard focus | PASS locally: Watch 24 → 48 cards; focus moved to the first new heading; action forward/back/approval focused the active heading |
 | Current public runway preflight | PASS read-only on 2026-09-03: all four tokens valid through 2026-11-17; Petsupply 12, Coffee 16, and Watch 11 qualifying scenario offers |
-| Exact production bytes and headers | PENDING until the approved SHA is deployed |
-| Production ordinary-browser matrix | PENDING; the workflow runs all three recipes at 1280×900, 390×844, and 320×568 and uploads its JSON receipt |
-| Production native WebMCP | PENDING; current competition verdict remains NO-GO until the 3/3 headed Stable run below passes |
-| BeanSched read-only monitor cutover | v0.10.3 remains active; v0.10.5 cutover is PENDING its exact tag, isolated worktree, and successful manual dry cycle |
+| Exact production bytes and headers | v0.10.6 PASS: 72 exact assets; v0.10.7 PENDING deployment |
+| Production ordinary-browser matrix | v0.10.6 PASS: all 9 recipe/viewport cases, Watch paging/focus, and visit-only storage boundary; v0.10.7 PENDING deployment |
+| Production native WebMCP | v0.10.6 recorded receipt PASS, but final QA found 2/5 un-warmed starts could remain partial; v0.10.7 PENDING a cold-start-first repeated run |
+| BeanSched read-only monitor | v0.10.6 active on the single six-hour clock; canonical manual cycle PASS on 2026-09-03 at the exact tag/SHA |
 
 ## Immutable release identity
 
-Complete these fields from the successful release run. A branch name or a dirty
-checkout is not release identity.
+The current production baseline is v0.10.6. The v0.10.7 candidate receives a
+new immutable identity only after its approved release run. A branch name or a
+dirty checkout is not release identity.
 
 | Field | Value |
 |---|---|
-| Commit SHA | PENDING |
-| Annotated tag | PENDING |
-| GitHub Release | PENDING |
-| Deploy workflow run | PENDING |
-| Engine Worker version | PENDING |
-| Petsupply deployment ID | PENDING |
-| Coffee deployment ID | PENDING |
-| Watch deployment ID | PENDING |
-| Ordinary-browser artifact | PENDING |
+| Commit SHA | `dadb62c1fbe2944057ba6eb5ca787556216f6cc7` |
+| Annotated tag | `v0.10.6` |
+| GitHub Release | `https://github.com/stevekkall-beansgc/jumping-beans/releases/tag/v0.10.6` |
+| Deploy workflow run | `33806782935`, attempt 1, success |
+| Engine Worker version | `dab0b155-0cc9-4a69-852d-b92ccd4a96e4` |
+| Petsupply deployment ID | `37ae05e5-4b46-4aca-a78e-619dfa379228` |
+| Coffee deployment ID | `a3ae017f-cbbd-4072-87f1-ef9c7e709464` |
+| Watch deployment ID | `8c3feb38-1cdf-4f2b-8e27-e4af651bba74` |
+| Public receipt bundle | `jumping-beans-v0.10.6-self-serve-receipt.zip`, SHA-256 `ac3c592a2daeed7e626c4023599fe85b02500ea916da5618e071165992f1cf15` |
 
 ## Required post-deploy evidence
 
@@ -101,31 +107,34 @@ platform is available.
 
 ## Required headed Chrome native receipt
 
-The v0.10.3 production diagnostic found the native surface, isolation, and all
-three exact partner tools, then exposed a producer-boundary defect: matched
-catalog records retained the internal `availability` field and the Engine
-correctly classified the non-contract envelope as invalid. v0.10.4 projects an
-explicit public offer allowlist at every producer and adds an actual-catalog
-regression for all three sites. Its production protocol probe reached 3/3, but
-the exact green readiness message remained nested in the setup panel that the
-result view hides. v0.10.5 keeps that live status visible through the result
-state. The table below remains pending until the exact v0.10.5 production
-deployment is captured.
+The v0.10.6 production receipt proves one complete native run, including the
+native surface, exact three-origin execution, visible green state, and coherent
+decision receipt. The later cold-start QA showed why the receipt protocol must
+perform the shopper action before any direct `getTools()` polling: polling can
+warm the registry and hide a startup race. v0.10.7 therefore adds a repeated
+cold-start-first acceptance before the deeper protocol probe.
 
 Run this immediately after the workflow succeeds, using a clean Stable profile
 against the exact production URLs. Record:
 
 | Native field | Required value | Recorded value |
 |---|---|---|
-| Chrome channel and full version | Stable, full version | PENDING |
-| Engine URL | `https://jumping-beans-engine.steve-k-kall.workers.dev/` | PENDING |
-| Isolation | `crossOriginIsolated === true` | PENDING |
-| Native surface | `getTools`, `executeTool`, `registerTool`; no `codex*` adapter members | PENDING |
-| Partner discovery | exactly Petsupply, Coffee Co, and Watch Co | PENDING |
-| Partner execution | 3/3 successful JSON-string-input calls with schema-valid bounded results | PENDING |
-| Engine readiness | “Native WebMCP verified with all 3 member sites” | PENDING |
-| Journey receipt | three requested origins and three ready/no-match outcomes; no sensitive fields | PENDING |
-| Raw-output hashes / screenshots | attached to the release receipt | PENDING |
+| Chrome channel and full version | Stable, full version | v0.10.6 PASS: Stable `152.0.7977.65` |
+| Engine URL | `https://jumping-beans-engine.steve-k-kall.workers.dev/` | v0.10.6 PASS |
+| Isolation | `crossOriginIsolated === true` | v0.10.6 PASS |
+| Native surface | `getTools`, `executeTool`, `registerTool`; no `codex*` adapter members | v0.10.6 PASS |
+| Partner discovery | exactly Petsupply, Coffee Co, and Watch Co | v0.10.6 PASS |
+| Partner execution | 3/3 successful JSON-string-input calls with schema-valid bounded results | v0.10.6 PASS: 2 / 24 / 24 raw offers |
+| Engine readiness | “Native WebMCP verified with all 3 member sites” | v0.10.6 PASS |
+| Journey receipt | three requested origins and three ready/no-match outcomes; no sensitive fields | v0.10.6 PASS |
+| Raw-output hashes / screenshots | attached to the release receipt | v0.10.6 PASS in the public receipt bundle |
+
+For v0.10.7, run at least ten fresh persistent Stable profiles. In every run,
+choose and approve the Coffee recipe immediately after `DOMContentLoaded`,
+before any direct registry call. All ten must reach the exact green state within
+15 seconds, expose the exact three partner origins, record three terminal
+receipt outcomes and exactly one acknowledged preference outcome, and report no
+page errors. Run the deeper native surface and raw-output probes only afterward.
 
 Any missing origin, adapter-injected browser surface, parse failure, stale asset,
 or incomplete receipt keeps the native claim at **NO-GO**. It does not invalidate
@@ -133,13 +142,11 @@ the separately tested ordinary-browser storefront handoff.
 
 ## Ongoing readiness
 
-The existing BeanSched `jumping-beans-merchant-refresh` job remains the single
-clock and stays active on v0.10.3 while this candidate is reviewed. After
-deployment, provision a detached worktree at the exact v0.10.5 tag, build its
-ignored deterministic index once, and pin a disabled candidate run to that
-worktree, SHA, and annotated tag. The manual run must prove the checkout and
-index stay unchanged while the product gate, exact four-origin smoke, and
-token/scenario runway checks pass. Only then may the live job move atomically
-from v0.10.3 to v0.10.5 and retain the six-hour monitoring claim.
+The existing BeanSched `jumping-beans-merchant-refresh` job is the single clock
+and is pinned to the detached exact v0.10.6 tag/SHA. Its canonical manual cycle
+proved the checkout and ignored index unchanged while the product gate, exact
+four-origin smoke, and token/scenario runway checks passed. After v0.10.7 is
+released and its receipts pass, move this same job atomically to the new exact
+tag/SHA and repeat the dry cycle before claiming ongoing v0.10.7 monitoring.
 Catalog refresh remains a separate manual candidate-preparation step whose
 tracked changes require a reviewed immutable release.
