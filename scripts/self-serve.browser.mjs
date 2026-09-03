@@ -99,6 +99,16 @@ try {
       await page.getByRole("button", { name: /^Show matching offers/ }).click();
       const preview = page.getByRole("link", { name: "Open storefront preview", exact: true });
       await preview.waitFor({ timeout: 1500 });
+      const readiness = page.locator("#browser-readiness");
+      await readiness.waitFor({ state: "visible" });
+      assert.equal(await readiness.getAttribute("role"), "status");
+      const nativeSupported = await page.evaluate(() => typeof document.modelContext === "object");
+      if (nativeSupported) {
+        await readiness.getByText("Native WebMCP verified with all 3 member sites", { exact: true }).waitFor({ timeout: 15000 });
+        assert.equal(await readiness.getAttribute("data-tone"), "success");
+      } else {
+        assert.match(await readiness.textContent(), /Storefront preview is ready/);
+      }
       const engineImages = await responsiveImageEvidence(page);
       const previewHref = await preview.getAttribute("href");
       assert.ok(previewHref);
