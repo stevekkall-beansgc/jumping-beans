@@ -739,7 +739,9 @@ const failingD1 = d1Double({ failCommit: true }); const failingEnv = { WATCH_DB:
 check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: failingAction, grantId: failingClient.body.grantId, confirmationGrant: failingClient.body.confirmationGrant }, { origin: failingClient.origin, cookie: failingClient.cookie, csrf: failingClient.csrf }), env: failingEnv })).status === 503 && failingD1.state.interests.length === 0 && !failingD1.state.actions.size, "D1 batch failure does not roll back receipt claim and interest insert");
 const expiryD1 = d1Double(); expiryD1.state.interests.push({ product: sku, target_price_minor: 10000, expires_at: new Date(Date.now() - 1000).toISOString() });
 const expirySummary = await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: { WATCH_DB: expiryD1 } });
-check(expirySummary.status === 200 && (await expirySummary.json()).count === 0, "D1 summary includes expired interest records");
+const expirySummaryBody = await expirySummary.json();
+check(expirySummaryBody.product === sku, "D1 summary does not preserve the requested product");
+check(expirySummary.status === 200 && expirySummaryBody.count === 0, "D1 summary includes expired interest records");
 check((await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: {} })).status === 503, "D1 summary does not fail closed without the binding");
 const migration = await readFile(path.join(root, "partners/watch/migrations/0001_write_actions.sql"), "utf8"); const watchWrangler = await readFile(path.join(root, "partners/watch/wrangler.toml"), "utf8");
 includesAll(migration, ["watch_pending_actions", "watch_action_receipts", "watch_interests", "watch_write_sessions", "watch_rate_limits", "UNIQUE", "target_price_minor"], "Watch D1 migration contract");
