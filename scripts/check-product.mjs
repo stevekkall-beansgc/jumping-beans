@@ -799,6 +799,13 @@ const scaffoldSource = await readFile(path.join(root, "scripts/scaffold-partner.
 check(!/(?:#[0-9a-f]{3,8}|rgba?\()/i.test(scaffoldSource), "Partner scaffold reintroduces raw authored colors");
 check(!/live and verified|verified by the shop/i.test(scaffoldSource), "Partner scaffold reintroduces unsupported verification claims");
 includesAll(scaffoldSource, ["design-system/tokens.css", "design-system/primitives.css", "class=\"bl-skip-link\"", "not independently verified by Jumping Beans"], "partner scaffold standard output");
+includesAll(scaffoldSource, [
+  "const MAX_RESPONSE_DEALS = 24",
+  "const OUTPUT_DEAL_KEYS = new Set",
+  "function outputDeal(value)",
+  ".slice(0, MAX_RESPONSE_DEALS)",
+  "...outputDeal(d)",
+], "partner scaffold native response contract");
 check((scaffoldSource.match(/listPrice: null/g) || []).length === 2 && (scaffoldSource.match(/listPriceSource: null/g) || []).length === 2, "Partner scaffold invents comparison evidence for demo products");
 
 const prohibited = [engineApp, scaffoldSource, await readFile(path.join(root, "shared/storefront.js"), "utf8")];

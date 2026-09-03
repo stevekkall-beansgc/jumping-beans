@@ -1,7 +1,7 @@
 # Self-serve release acceptance
 
 Prepared: 2026-09-03
-Current verdict: **PREPARED LOCALLY / PRODUCTION HOLD**
+Current verdict: **v0.10.4 PREPARED LOCALLY / PRODUCTION HOLD**
 
 This is the current release receipt for the Jumping Beans Engine and its three
 member storefronts. Historical acceptance notes remain useful background, but
@@ -40,7 +40,9 @@ catalog, preference-handoff, tool, and action-link paths.
 
 | Gate | Current result |
 |---|---|
-| Deterministic product gate | PASS locally: 741 assertions |
+| Deterministic product gate | PASS locally: 746 assertions |
+| Native response-contract regression | PASS locally: all three checked-in partner catalogs produce schema-valid bounded envelopes and strip catalog-only fields |
+| Native local four-origin journey | PASS in headed Chrome Stable 152.0.7977.65: exact 3/3 discovery, JSON-string execution, green readiness, and three terminal receipt outcomes |
 | Generated UI, Engine bundle, and inventory index | PASS locally; current in the isolated worktree |
 | Chromium local journey | PASS in Chrome 152.0.7977.65: all 9 product/viewport cases; strict prices, category and presentation behavior, fragments, responsive images, hidden actions, page errors, and overflow checked |
 | Partner paging and keyboard focus | PASS locally: Watch 24 → 48 cards; focus moved to the first new heading; action forward/back/approval focused the active heading |
@@ -48,7 +50,7 @@ catalog, preference-handoff, tool, and action-link paths.
 | Exact production bytes and headers | PENDING until the approved SHA is deployed |
 | Production ordinary-browser matrix | PENDING; the workflow runs all three recipes at 1280×900, 390×844, and 320×568 and uploads its JSON receipt |
 | Production native WebMCP | PENDING; current competition verdict remains NO-GO until the 3/3 headed Stable run below passes |
-| BeanSched read-only monitor cutover | PENDING; provision the exact tagged release worktree, pin the job to its SHA/tag, and require one successful manual dry cycle before enabling |
+| BeanSched read-only monitor cutover | v0.10.3 remains active; v0.10.4 cutover is PENDING its exact tag, isolated worktree, and successful manual dry cycle |
 
 ## Immutable release identity
 
@@ -98,6 +100,15 @@ platform is available.
 
 ## Required headed Chrome native receipt
 
+The v0.10.3 production diagnostic found the native surface, isolation, and all
+three exact partner tools, then exposed a producer-boundary defect: matched
+catalog records retained the internal `availability` field and the Engine
+correctly classified the non-contract envelope as invalid. v0.10.4 projects an
+explicit public offer allowlist at every producer and adds an actual-catalog
+regression for all three sites. The local four-origin journey now passes; the
+table below remains pending until the exact v0.10.4 production deployment is
+captured.
+
 Run this immediately after the workflow succeeds, using a clean Stable profile
 against the exact production URLs. Record:
 
@@ -120,11 +131,12 @@ the separately tested ordinary-browser storefront handoff.
 ## Ongoing readiness
 
 The existing BeanSched `jumping-beans-merchant-refresh` job remains the single
-clock but is currently disabled. After deployment, provision a detached
-worktree at the exact tagged release, build its ignored deterministic index
-once, and pin the job to that worktree, SHA, and annotated tag. A successful
-disabled manual run must prove the checkout and index stay unchanged while the
-product gate, exact four-origin smoke, and token/scenario runway checks pass.
-Only then may the job be enabled and the six-hour monitoring claim begin.
+clock and stays active on v0.10.3 while this candidate is reviewed. After
+deployment, provision a detached worktree at the exact v0.10.4 tag, build its
+ignored deterministic index once, and pin a disabled candidate run to that
+worktree, SHA, and annotated tag. The manual run must prove the checkout and
+index stay unchanged while the product gate, exact four-origin smoke, and
+token/scenario runway checks pass. Only then may the live job move atomically
+from v0.10.3 to v0.10.4 and retain the six-hour monitoring claim.
 Catalog refresh remains a separate manual candidate-preparation step whose
 tracked changes require a reviewed immutable release.
