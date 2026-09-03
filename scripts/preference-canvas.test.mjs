@@ -32,12 +32,13 @@ const html = readFileSync(new URL('../engine/index.html', import.meta.url), 'utf
 assert.doesNotMatch(html, /data-setup-path|preview-words-chat|See your results|Continue to review/);
 assert.equal((html.match(/id="canvas-show-offers"/g) || []).length, 1);
 assert.equal((html.match(/<h1\b/g) || []).length, 1);
-assert.match(html, /<h1[^>]*>Tell me what you’re looking for<\/h1>/);
+assert.match(html, /<h1[^>]*>See the offers you want—how you want, when you want\.<\/h1>/);
 assert.match(html, /id="canvas-enter-manual"[^>]*>Enter in the manual form<\/button>/);
 assert.match(html, /id="canvas-manual"[^>]*hidden/);
 assert.match(html, /id="canvas-back-chat"[^>]*>Back to chat<\/button>/);
 assert.match(html, /id="canvas-chat-form"/);
 assert.match(html, /id="canvas-review-selection"[^>]*>Review selection<\/button>/);
+assert.ok(html.indexOf('id="canvas-review-selection"') < html.indexOf('id="canvas-enter-manual"'), 'visual and keyboard order keep the primary review action first');
 assert.match(html, /id="canvas-visit"[^>]+checked/);
 assert.match(html, /<details[^>]+id="product-builder"/);
 assert.ok(html.indexOf('id="product-account-save"') > html.indexOf('id="canvas-results"'));

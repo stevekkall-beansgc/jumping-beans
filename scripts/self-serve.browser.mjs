@@ -99,6 +99,7 @@ try {
       await page.getByRole("button", { name: /^Show matching offers/ }).click();
       const preview = page.getByRole("link", { name: "Open storefront preview", exact: true });
       await preview.waitFor({ timeout: 1500 });
+      await page.locator(".engine-details summary").click();
       const readiness = page.locator("#browser-readiness");
       await readiness.waitFor({ state: "visible" });
       assert.equal(await readiness.getAttribute("role"), "status");

@@ -48,6 +48,7 @@ for (let run = 1; run <= runCount; run += 1) {
     // registry and hide the startup race this acceptance is intended to catch.
     await page.locator(`[data-self-serve-prompt="${starter}"]`).click();
     await page.locator("#canvas-show-offers").click();
+    await page.locator(".engine-details summary").click();
     await page.locator("#browser-readiness .bl-callout__title", { hasText: exactGreen }).waitFor({ timeout: 15000 });
 
     const evidence = await page.evaluate(async ({ origins, expectedTitle }) => {

@@ -1,9 +1,20 @@
-# Jumping Beans — a user-owned deal engine
+# Jumping Beans — offers on your terms
 
-**Jumping Beans** is the first live surface of a broader WebMCP capability
-network: an in-browser concierge that starts with an offer from open inventory,
-checks multiple opted-in partners, lets the shopper control what is
-remembered, and carries only the chosen presentation context forward.
+**Jumping Beans** helps shoppers see the offers they want—how they want, when
+they want. A shopper describes what they are looking for, previews how the same
+offer could appear in email, on a partner site, by text, or in ChatGPT, then
+searches open and partner catalogs with user-controlled presentation rules.
+
+For partners, the concept shows a way to provide the experience customers want
+and how consented preference signals could build a deeper understanding of how
+they prefer to interact. The dashboard is illustrative; live delivery,
+monitoring, and analytics are not implemented. Partners keep authority over
+their product facts, destination, checkout, and any consequential action.
+
+The current live product is the first surface of a broader WebMCP capability
+network: an in-browser concierge that checks multiple opted-in partners, lets
+the shopper control what is remembered, and carries only the chosen
+presentation context forward.
 
 It is the entry for *The WebMCP Challenge* (Devpost). Everything runs on free
 tiers and plain static files plus a couple of small serverless functions.

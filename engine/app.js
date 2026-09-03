@@ -140,10 +140,6 @@ const els = {
   canvasRetry: document.getElementById("canvas-retry"),
   canvasSync: document.getElementById("canvas-sync"),
   canvasWords: document.getElementById("product-prompt-input"),
-  actionTriggerQuote: document.getElementById("action-trigger-quote"),
-  actionPreviewName: document.getElementById("action-preview-name"),
-  actionPreviewCopy: document.getElementById("action-preview-copy"),
-  actionPreviewLink: document.getElementById("action-preview-link"),
   connectionStatus: document.querySelector(".connection-status"),
 };
 
@@ -153,20 +149,6 @@ const STORAGE = {
   networkSharing: "jumping-beans-network-sharing",
 };
 const DEFAULT_PREFERENCES = normalizePreferencePlane({ formats: ["price-proof"], tone: "calm" });
-const ACTION_TRIGGER_COPY = {
-  message: {
-    quote: "“Get the coffee I liked last week, ground, and keep it under $15.”",
-    description: "A request in a conversation can start the chain without sending the user to a storefront first.",
-  },
-  article: {
-    quote: "“That setup looks right. Find the matching item and show me proof before I decide.”",
-    description: "An article can become an action surface: the assistant can resolve the referenced item and ask what to do next.",
-  },
-  product: {
-    quote: "“I’m looking at this now. Compare it, adapt the presentation, and let me choose the next action.”",
-    description: "A product page can hand off a focused action chain instead of adding another ad or duplicate search box.",
-  },
-};
 const loadedAt = new Date().toISOString();
 const OPEN_INVENTORY = {
   sku: "open-wildone-walk-kit",
@@ -897,7 +879,17 @@ function renderMemoryStep() {
   );
 }
 
+const PRODUCT_SECTION_HASHES = new Set(["offer-preview", "find-offers", "partners"]);
+
+function scrollToProductSection(id) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+  window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - margin), behavior: "instant" });
+}
+
 function switchView(view, { focusHeading = false } = {}) {
+  const productSection = PRODUCT_SECTION_HASHES.has(view) ? view : null;
   const nextView = ["demo", "account"].includes(view) ? view : "product";
   if (view === "network" && state.applied) state.productStage = "results";
   state.currentView = nextView;
@@ -912,8 +904,9 @@ function switchView(view, { focusHeading = false } = {}) {
   if (nextView === "account") renderAccount();
   if (nextView === "network") renderProductNetwork();
   if (nextView === "product") renderProductShell();
-  const hash = nextView === "product" ? "" : `#${nextView}`;
+  const hash = productSection ? `#${productSection}` : nextView === "product" ? "" : `#${nextView}`;
   if (location.hash !== hash) history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
+  if (productSection) scrollToProductSection(productSection);
   if (focusHeading) {
     const heading = nextView === "product"
         ? els.productTitle
@@ -976,19 +969,15 @@ function renderProductFocus() {
   els.productHero.hidden = false;
 }
 
-function updateActionChain(trigger = "message") {
-  const copy = ACTION_TRIGGER_COPY[trigger] || ACTION_TRIGGER_COPY.message;
-  if (els.actionTriggerQuote) els.actionTriggerQuote.textContent = copy.quote;
-  if (els.actionPreviewCopy) els.actionPreviewCopy.textContent = `Coffee Co will receive the selected product from this context. ${copy.description}`;
-  document.querySelectorAll("[data-action-trigger]").forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.actionTrigger === trigger));
+function updateOfferChannel(channel = "email") {
+  const supportedChannels = new Set(["email", "site", "text", "chatgpt"]);
+  const nextChannel = supportedChannels.has(channel) ? channel : "email";
+  document.querySelectorAll("[data-offer-channel]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.offerChannel === nextChannel));
   });
-  if (els.actionPreviewLink) {
-    const current = new URL(els.actionPreviewLink.href, location.href);
-    const url = new URL(`${current.pathname}${current.search}${current.hash}`, ORIGINS.coffee);
-    url.searchParams.set("jb_trigger", trigger);
-    els.actionPreviewLink.href = url.href;
-  }
+  document.querySelectorAll("[data-channel-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.channelPanel !== nextChannel;
+  });
 }
 
 function renderProductShell() {
@@ -2469,10 +2458,10 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
   button.addEventListener("click", () => handlePrompt(button.dataset.prompt));
 });
 
-document.querySelectorAll("[data-action-trigger]").forEach((button) => {
-  button.addEventListener("click", () => updateActionChain(button.dataset.actionTrigger));
+document.querySelectorAll("[data-offer-channel]").forEach((button) => {
+  button.addEventListener("click", () => updateOfferChannel(button.dataset.offerChannel));
 });
-updateActionChain("message");
+updateOfferChannel("email");
 
 document.getElementById("edit-preferences").addEventListener("click", () => {
   state.productStage = "preview";

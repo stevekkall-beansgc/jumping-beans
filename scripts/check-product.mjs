@@ -88,6 +88,7 @@ runNode("production smoke contracts", ["scripts/production-smoke.test.mjs"]);
 runNode("production monitor contracts", ["scripts/monitor-production.test.mjs"]);
 runNode("self-serve product array contracts", ["scripts/self-serve-demo.test.mjs"]);
 runNode("preference canvas contracts", ["scripts/preference-canvas.test.mjs"]);
+runNode("offer channel preview contracts", ["scripts/offer-channel-preview.test.mjs"]);
 runNode("catalog matching contracts", ["partners/catalog-matching.test.mjs"]);
 runNode("Watch Co tool contracts", ["partners/watch/tool.test.mjs"]);
 runNode("Rakuten inventory contracts", ["engine/rakuten.test.mjs"]);
@@ -168,8 +169,12 @@ includesAll(engineHtml, [
   "Import selected browser memory",
 ], "engine consent journey");
 const browserReadinessIndex = engineHtml.indexOf('id="browser-readiness"');
-const canvasDraftIndex = engineHtml.indexOf('id="canvas-draft"');
-check(browserReadinessIndex !== -1 && browserReadinessIndex < canvasDraftIndex, "Native browser readiness is nested inside the setup panel that becomes hidden after results");
+const technicalDetailsStart = engineHtml.indexOf('class="bl-disclosure engine-details"');
+const technicalDetailsEnd = engineHtml.indexOf("</details>", technicalDetailsStart);
+check(
+  browserReadinessIndex > technicalDetailsStart && browserReadinessIndex < technicalDetailsEnd,
+  "Native browser readiness remains available inside the technical disclosure",
+);
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
@@ -236,7 +241,11 @@ includesAll(engineHtml, [
   'id="canvas-results-title" tabindex="-1"', 'id="canvas-results-status" role="status"',
   'id="product-forget-saved"', 'id="canvas-discard"', 'id="product-account-save"',
   'What’s shared?', 'This visit only', 'Save in this browser', 'Show matching offers',
-  'Tell me what you’re looking for', 'Enter in the manual form',
+  'See the offers you want—how you want, when you want.', 'Tell us what you’re looking for',
+  'data-offer-channel="email"', 'data-offer-channel="site"', 'data-offer-channel="text"', 'data-offer-channel="chatgpt"',
+  'These are previews only. Nothing is sent, scheduled, saved, or purchased.',
+  'Provide the experience your customers want.', 'Fictional sample data for product preview.',
+  'Enter in the manual form',
   'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"', 'Out-of-network affiliate',
   'id="browser-readiness"', 'Shopping for coffee under $15. Show customer stories first.',
   'data-self-serve-prompt="Shopping for dog gear under $50."',

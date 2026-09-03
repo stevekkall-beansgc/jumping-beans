@@ -4,27 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Search sample offers and preview how they could look your way—by email, on partner sites, by text, or in ChatGPT.">
   <meta name="impact-site-verification" value="3b49d02f-2b33-455f-8034-4655bc892f46">
-  <title>Jumping Beans — your offer memory</title>
+  <title>Jumping Beans — offers on your terms</title>
   <link rel="stylesheet" href="./design-system/tokens.css">
   <link rel="stylesheet" href="./design-system/primitives.css">
   <link rel="stylesheet" href="./app.css">
 </head>
 <body class="bl-page" data-product-theme="evergreen">
-  <a class="bl-skip-link" href="#main">Skip to the offer journey</a>
+  <a class="bl-skip-link" href="#main">Skip to the offer experience</a>
 
   <header class="bl-header" id="engine-header">
     <div class="bl-shell bl-header__inner engine-header">
       <div>
         <a class="bl-brand" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
-        <p class="bl-muted product-note">User-controlled offer memory</p>
+        <p class="bl-muted product-note">Offers on your terms</p>
       </div>
+      <nav class="audience-nav" aria-label="Jumping Beans audiences">
+        <a href="#find-offers">For shoppers</a>
+        <a href="#partners">For partners</a>
+      </nav>
       <a class="bl-button header-account" data-variant="secondary" id="header-account" href="#account">Sign in</a>
       <details class="bl-disclosure engine-details">
         <summary class="bl-disclosure__summary">How this works</summary>
         <div class="bl-disclosure__body bl-stack" data-space="compact">
-          <p>Jumping Beans keeps setup in one workspace. Technical protocol details and the original demonstration remain available separately.</p>
-          <a class="bl-button" data-variant="quiet" href="#demo" data-engine-link="demo">Open demo and WebMCP details</a>
+          <p>You choose what you’re shopping for, how offers should look, and whether to keep those choices. Technical details and the original demonstration remain available separately.</p>
+          <a class="bl-button" data-variant="quiet" href="#demo" data-engine-link="demo">See how the network works</a>
+          <div class="bl-callout" id="browser-readiness" data-tone="info" role="status"></div>
         </div>
       </details>
       <p class="bl-muted connection-status" role="status" aria-live="polite">
@@ -37,55 +43,90 @@
   <main class="bl-shell bl-main bl-stack engine-main" id="main" tabindex="-1">
     <section class="product-view bl-stack" id="product-view" aria-labelledby="product-title">
       <div class="product-hero bl-measure" id="product-hero">
-        <p class="eyebrow">A personal action layer</p>
-        <h1 id="product-title" tabindex="-1">Tell me what you’re looking for</h1>
-        <p class="lede">Start with a request from anywhere, then let one permissioned action unlock the next across independent sites. Jumping Beans carries the intent; each partner keeps its own actions and authority.</p>
+        <p class="eyebrow">Offers on your terms</p>
+        <h1 id="product-title" tabindex="-1">See the offers you want—how you want, when you want.</h1>
+        <p class="lede">Tell Jumping Beans what you’re shopping for. We’ll search a sample catalog, then preview how a matching offer could look in email, on a partner site, by text, or in ChatGPT.</p>
+        <div class="hero-actions bl-actions">
+          <a class="bl-button" href="#find-offers">Find my offers</a>
+          <a class="bl-button" data-variant="secondary" href="#offer-preview">Preview every format</a>
+        </div>
       </div>
 
-      <section class="anywhere-actions bl-card bl-stack" id="anywhere-actions" aria-labelledby="anywhere-actions-title">
-        <div class="anywhere-actions__heading">
+      <section class="offer-preview bl-card bl-stack" id="offer-preview" aria-labelledby="offer-preview-title">
+        <div class="offer-preview__heading">
           <div>
-            <p class="section-label">WebMCP action chain</p>
-            <h2 id="anywhere-actions-title">Actions can begin outside the store</h2>
+            <p class="section-label">One offer, four ways</p>
+            <h2 id="offer-preview-title">Preview it where you want it</h2>
           </div>
-          <span class="bl-badge" data-status="success">User-triggered</span>
+          <span class="bl-badge" data-status="info">Illustrative preview</span>
         </div>
-        <p class="anywhere-actions__lede">The same request can travel from a conversation, an article, or a partner product page into a sequence of allowed actions. There is no search ad to click, and every consequential step still waits for the user.</p>
-        <div class="anywhere-actions__body">
-          <div class="anywhere-trigger">
-            <p class="section-label">Choose the starting point</p>
-            <div class="anywhere-trigger__options" role="group" aria-label="Action chain starting point">
-              <button class="bl-button" data-variant="secondary" data-action-trigger="message" type="button" aria-pressed="true">A message</button>
-              <button class="bl-button" data-variant="secondary" data-action-trigger="article" type="button" aria-pressed="false">An article</button>
-              <button class="bl-button" data-variant="secondary" data-action-trigger="product" type="button" aria-pressed="false">A product page</button>
+        <p class="offer-preview__lede">See how the same match could be shaped for the place and moment you choose.</p>
+        <div class="channel-picker" role="group" aria-label="Choose an offer preview">
+          <button class="channel-picker__button" data-offer-channel="email" type="button" aria-pressed="true" aria-controls="channel-preview">
+            <span class="channel-picker__icon" aria-hidden="true">@</span><span><strong>Email</strong><small>A tidy roundup</small></span>
+          </button>
+          <button class="channel-picker__button" data-offer-channel="site" type="button" aria-pressed="false" aria-controls="channel-preview">
+            <span class="channel-picker__icon" aria-hidden="true">□</span><span><strong>Partner site</strong><small>In the storefront</small></span>
+          </button>
+          <button class="channel-picker__button" data-offer-channel="text" type="button" aria-pressed="false" aria-controls="channel-preview">
+            <span class="channel-picker__icon" aria-hidden="true">…</span><span><strong>Text</strong><small>Short and timely</small></span>
+          </button>
+          <button class="channel-picker__button" data-offer-channel="chatgpt" type="button" aria-pressed="false" aria-controls="channel-preview">
+            <span class="channel-picker__icon" aria-hidden="true">✦</span><span><strong>ChatGPT</strong><small>Ready to discuss</small></span>
+          </button>
+        </div>
+
+        <div class="channel-stage" id="channel-preview" aria-live="polite">
+          <article class="channel-surface channel-surface--email" data-channel-panel="email" aria-label="Email offer preview">
+            <div class="surface-chrome"><span>● ● ●</span><strong>Inbox</strong><span>Today, 8:00 AM</span></div>
+            <div class="surface-body">
+              <p class="surface-meta">Jumping Beans &lt;offers@preview.example&gt;</p>
+              <h3>Your calm morning coffee match</h3>
+              <div class="preview-offer-row">
+                <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347&amp;width=240" width="240" height="240" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" decoding="async" crossorigin="anonymous">
+                <div><p class="surface-meta">COFFEE CO · PRICE-FIRST</p><strong>Light Roast Coffee</strong><p class="preview-price">$11.99</p><p>Ground, under $15, with customer stories first.</p><span class="preview-cta">View offer</span></div>
+              </div>
             </div>
-            <p class="anywhere-trigger__quote" id="action-trigger-quote">“Get the coffee I liked last week, ground, and keep it under $15.”</p>
-          </div>
-          <ol class="anywhere-steps" aria-label="Allowed action chain">
-            <li><span>1</span><div><strong>Discover</strong><small>find a partner offer through WebMCP</small><code>get_matching_deals</code></div></li>
-            <li><span>2</span><div><strong>Adapt</strong><small>carry the approved preference plane</small><code>set_display_preferences</code></div></li>
-            <li><span>3</span><div><strong>Continue</strong><small>stage a partner-owned next action</small><code>set_deal_watch</code></div></li>
-          </ol>
-        </div>
-        <div class="anywhere-actions__preview">
-          <div class="anywhere-actions__product">
-            <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347&amp;width=144" width="144" height="144" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" decoding="async" crossorigin="anonymous">
-            <div>
-              <p class="section-label">Illustrative partner action</p>
-              <h3 id="action-preview-name">Light Roast Coffee (10oz Ground)</h3>
-              <p id="action-preview-copy">Coffee Co will receive the selected product and open its action-chain preview.</p>
+          </article>
+
+          <article class="channel-surface channel-surface--site" data-channel-panel="site" aria-label="Partner site offer preview" hidden>
+            <div class="surface-chrome"><strong>Coffee Co</strong><span>Shop &nbsp; Learn &nbsp; Account</span></div>
+            <div class="surface-body preview-site-layout">
+              <img src="https://cdn.shopify.com/s/files/1/0271/7209/files/Light_Roast_10oz_Ground_Angle_Cathedral_DTC_FTO.jpg?v=1784050347&amp;width=480" width="480" height="480" alt="Light Roast Coffee (10oz Ground) product image" loading="lazy" decoding="async" crossorigin="anonymous">
+              <div><p class="surface-kicker">Matched to your preferences</p><h3>Light Roast Coffee</h3><p class="preview-price">$11.99</p><p>Ground · 10 oz · No countdowns</p><div class="customer-note"><strong>Why people like it</strong><p>“Bright, balanced, and easy every morning.”</p></div><span class="preview-cta">Choose this offer</span></div>
             </div>
-          </div>
-          <div class="anywhere-actions__action">
-            <strong>$11.99</strong>
-            <a class="bl-button" id="action-preview-link" href="https://coffee-amk.pages.dev/?jb_action=chain&amp;jb_sku=LGLIGT10&amp;jb_trigger=message&amp;jb_source=jumping-beans" target="_blank" rel="noopener noreferrer">Open action-chain preview</a>
-          </div>
+          </article>
+
+          <article class="channel-surface channel-surface--text" data-channel-panel="text" aria-label="Text message offer preview" hidden>
+            <div class="phone-preview">
+              <div class="phone-preview__top"><strong>Jumping Beans</strong><span>Today 8:00 AM</span></div>
+              <div class="message-bubble"><p>Your coffee match is ready: Light Roast Coffee, ground, for $11.99.</p><p>It fits your under-$15 budget and has the customer story you asked for.</p><span class="message-link">View offer →</span></div>
+              <p class="phone-preview__reply">Preview of a message sent on your chosen timing.</p>
+            </div>
+          </article>
+
+          <article class="channel-surface channel-surface--chat" data-channel-panel="chatgpt" aria-label="ChatGPT offer preview" hidden>
+            <div class="chat-preview">
+              <div class="chat-turn chat-turn--user"><strong>You</strong><p>Find ground coffee under $15. Show customer stories first, without urgency.</p></div>
+              <div class="chat-turn chat-turn--assistant"><strong>ChatGPT</strong><p>I found a matching offer from Coffee Co.</p><div class="chat-offer"><div><span class="surface-meta">MATCHED OFFER</span><h3>Light Roast Coffee</h3><p>Ground · 10 oz</p></div><p class="preview-price">$11.99</p></div><p>“Bright, balanced, and easy every morning.”</p><span class="preview-cta">Open offer details</span></div>
+            </div>
+          </article>
         </div>
-        <p class="field-hint anywhere-actions__note">Demo only: the partner owns the next action. No order, payment, account, or message is created by this preview.</p>
+
+        <div class="timing-note">
+          <span class="timing-note__icon" aria-hidden="true">◷</span>
+          <p><strong>Preview timing choices</strong><br>Right away, in a roundup, or when the price changes—the experience is yours to shape.</p>
+        </div>
+        <p class="field-hint offer-preview__note">These are previews only. Nothing is sent, scheduled, saved, or purchased. This concept does not monitor prices.</p>
       </section>
 
-      <div class="product-workspace bl-stack">
-        <section class="product-card preference-canvas" id="product-preview" aria-labelledby="product-title">
+      <div class="product-workspace bl-stack" id="find-offers">
+        <div class="search-intro bl-measure">
+          <p class="section-label">Find your offer</p>
+          <h2 id="find-offers-title">Tell us what you’re looking for</h2>
+          <p>Describe it in your own words or use the form. We’ll search the product catalog and show you samples to review.</p>
+        </div>
+        <section class="product-card preference-canvas" id="product-preview" aria-labelledby="find-offers-title">
           <details class="bl-disclosure" id="saved-preference-actions" hidden>
             <summary class="bl-disclosure__summary" id="saved-selection-summary">Saved selection in this browser</summary>
             <div class="bl-disclosure__body bl-stack" data-space="compact">
@@ -97,22 +138,21 @@
               </div>
             </div>
           </details>
-          <div class="bl-callout" id="browser-readiness" data-tone="info" role="status"></div>
           <div id="canvas-draft" class="bl-stack" data-space="compact">
             <div class="canvas-entry">
             <div id="canvas-chat" class="canvas-entry-panel">
               <form id="canvas-chat-form" class="canvas-chat-form">
-                <label for="product-prompt-input">What matters to you?</label>
-                <textarea id="product-prompt-input" rows="4" maxlength="240" placeholder="Shopping for coffee under $15. Show customer stories first." aria-describedby="canvas-words-hint canvas-clarification"></textarea>
-                <p class="field-hint" id="canvas-words-hint">Your words become an editable selection. Nothing is shared yet.</p>
                 <div class="starter-row" aria-label="Tested self-serve recipes">
                   <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for dog gear under $50." data-feed-style="balanced" data-formats="no-urgency" type="button">Dog gear · under $50</button>
                   <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for coffee under $15. Show customer stories first." data-feed-style="visual" data-formats="testimonial,no-urgency" type="button">Coffee stories · under $15</button>
                   <button class="bl-button" data-variant="quiet" data-self-serve-prompt="Shopping for watches under $500." data-feed-style="compare" data-formats="" type="button">Watches · under $500</button>
                 </div>
+                <label for="product-prompt-input">What matters to you?</label>
+                <textarea id="product-prompt-input" rows="4" maxlength="240" placeholder="Shopping for coffee under $15. Show customer stories first." aria-describedby="canvas-words-hint canvas-clarification"></textarea>
+                <p class="field-hint" id="canvas-words-hint">Your words become an editable selection. Nothing is shared yet.</p>
                 <div class="canvas-chat-actions">
-                  <button class="bl-button" data-variant="secondary" id="canvas-enter-manual" type="button" aria-controls="canvas-manual" aria-expanded="false">Enter in the manual form</button>
                   <button class="bl-button" id="canvas-review-selection" type="submit" aria-controls="canvas-review">Review selection</button>
+                  <button class="bl-button" data-variant="secondary" id="canvas-enter-manual" type="button" aria-controls="canvas-manual" aria-expanded="false">Enter in the manual form</button>
                 </div>
               </form>
             </div>
@@ -215,6 +255,27 @@
           </div>
         </section>
       </div>
+
+      <section class="partner-story bl-card" id="partners" aria-labelledby="partner-title">
+        <div class="partner-story__copy">
+          <p class="section-label">For partners</p>
+          <h2 id="partner-title">Provide the experience your customers want.</h2>
+          <p class="partner-story__lede">This concept shows how customers could choose the way offers appear while you keep control of your catalog and checkout.</p>
+          <ul class="partner-benefits">
+            <li><span aria-hidden="true">✓</span><div><strong>Meet each customer their way</strong><p>Preview offer presentation across the channel, format, and timing they choose.</p></div></li>
+            <li><span aria-hidden="true">✓</span><div><strong>Understand what earns attention</strong><p>Explore how consented preference signals could reveal interaction patterns without exposing private conversations.</p></div></li>
+            <li><span aria-hidden="true">✓</span><div><strong>Keep your relationship</strong><p>Your product facts, destination, and final customer action stay partner-owned.</p></div></li>
+          </ul>
+          <a class="bl-button" data-variant="quiet" href="#demo" data-engine-link="demo">Open the technical network demo</a>
+        </div>
+        <aside class="partner-insights" aria-labelledby="partner-insights-title">
+          <div class="partner-insights__heading"><div><p class="surface-meta">SAMPLE DASHBOARD</p><h3 id="partner-insights-title">How customers want to interact</h3></div><span class="bl-badge" data-status="info">Illustrative</span></div>
+          <div class="insight-block"><div><strong>Preferred experience</strong><span>Calm + price-first</span></div><div class="insight-bar"><span style="width: 72%"></span></div></div>
+          <div class="insight-block"><div><strong>Where they engage</strong><span>Partner site + email</span></div><div class="insight-bar"><span style="width: 61%"></span></div></div>
+          <div class="insight-block"><div><strong>When they want it</strong><span>On a price change</span></div><div class="insight-bar"><span style="width: 54%"></span></div></div>
+          <p class="field-hint">Fictional sample data for product preview. No live customer activity is shown.</p>
+        </aside>
+      </section>
     </section>
 
     <section class="demo-view" id="demo-view" aria-labelledby="page-title" hidden>

@@ -21,6 +21,19 @@ The core loop is:
       -> confirmed action
       -> measurable outcome
 
+The product is presented through two simple audience promises:
+
+- **Shoppers:** see the offers you want—how you want, when you want. Preview a
+  consistent offer in email, on a partner site, by text, or in ChatGPT, then
+  set search parameters and review catalog matches.
+- **Partners:** provide the experience your customers want and build a deeper
+  understanding of how they prefer to interact, using consented preference
+  signals while keeping partner actions and authority partner-owned. The
+  current dashboard is a concept preview, not live analytics.
+
+WebMCP, capability resolution, and provenance remain essential implementation
+and trust details, but they do not lead the shopper-facing value story.
+
 The competition is a validation gate, not the product boundary. The product
 should not be reduced to one scripted transaction merely to satisfy a demo
 cutline.

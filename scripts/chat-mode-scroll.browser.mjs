@@ -79,7 +79,7 @@ try {
         page.on('pageerror', (error) => errors.push(error.message));
         await page.goto(baseURL);
         await page.locator('#canvas-enter-manual').waitFor();
-        assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'Tell me what you’re looking for');
+        assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'See the offers you want—how you want, when you want.');
         await page.getByLabel('What matters to you?').fill(words);
         const switches = [];
         // A 568px-high screen requires ordinary scrolling to reach the action.
