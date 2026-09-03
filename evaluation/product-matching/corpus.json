@@ -1,0 +1,2009 @@
+{
+  "schemaVersion": 1,
+  "description": "Entirely authored synthetic prompts, product records and relevance judgments. No sampled user data.",
+  "k": [
+    1,
+    3,
+    5
+  ],
+  "products": [
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P01",
+        "name": "Nylon dog walking lead",
+        "category": "dog gear",
+        "dealPrice": 10,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P01.png",
+        "landing": "https://petsupply.example/products/P01",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "lead",
+        "material": "nylon",
+        "uses": [
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P02",
+        "name": "Reflective nylon dog running harness",
+        "category": "dog gear",
+        "dealPrice": 30,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P02.png",
+        "landing": "https://petsupply.example/products/P02",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "harness",
+        "material": "nylon",
+        "reflective": true,
+        "uses": [
+          "running",
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P03",
+        "name": "Leather dog collar",
+        "category": "dog gear",
+        "dealPrice": 20,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P03.png",
+        "landing": "https://petsupply.example/products/P03",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "collar",
+        "material": "leather",
+        "uses": [
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P04",
+        "name": "Dog lead and harness walking bundle",
+        "category": "dog gear",
+        "dealPrice": 40,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P04.png",
+        "landing": "https://petsupply.example/products/P04",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": true,
+        "species": "dog",
+        "kind": "kit",
+        "material": "nylon",
+        "components": [
+          "lead",
+          "harness"
+        ],
+        "uses": [
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P05",
+        "name": "Cat walking harness",
+        "category": "cat gear",
+        "dealPrice": 15,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P05.png",
+        "landing": "https://petsupply.example/products/P05",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "cat",
+        "kind": "harness",
+        "material": "nylon",
+        "uses": [
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P06",
+        "name": "Rubber dog fetch toy",
+        "category": "dog gear",
+        "dealPrice": 8,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P06.png",
+        "landing": "https://petsupply.example/products/P06",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "toy",
+        "material": "rubber",
+        "uses": [
+          "fetch"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P07",
+        "name": "Travel dog bowl",
+        "category": "dog gear",
+        "dealPrice": 12,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P07.png",
+        "landing": "https://petsupply.example/products/P07",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "bowl",
+        "material": "silicone",
+        "uses": [
+          "travel"
+        ]
+      }
+    },
+    {
+      "partner": "petsupply",
+      "offer": {
+        "sku": "P08",
+        "name": "Cotton dog walking lead",
+        "category": "dog gear",
+        "dealPrice": 20,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://petsupply.example/images/P08.png",
+        "landing": "https://petsupply.example/products/P08",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "species": "dog",
+        "kind": "lead",
+        "material": "cotton",
+        "uses": [
+          "walking"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C01",
+        "name": "Dark roast whole bean espresso coffee",
+        "category": "coffee",
+        "dealPrice": 18,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C01.png",
+        "landing": "https://coffee.example/products/C01",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "beans",
+        "roast": "dark",
+        "form": "whole bean",
+        "caffeine": "regular",
+        "uses": [
+          "espresso"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C02",
+        "name": "Light roast whole bean filter coffee",
+        "category": "coffee",
+        "dealPrice": 22,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C02.png",
+        "landing": "https://coffee.example/products/C02",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "beans",
+        "roast": "light",
+        "form": "whole bean",
+        "caffeine": "regular",
+        "uses": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C03",
+        "name": "Decaf medium roast ground coffee",
+        "category": "coffee",
+        "dealPrice": 20,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C03.png",
+        "landing": "https://coffee.example/products/C03",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "beans",
+        "roast": "medium",
+        "form": "ground",
+        "caffeine": "decaf",
+        "uses": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C04",
+        "name": "Medium roast coffee pods",
+        "category": "coffee",
+        "dealPrice": 12,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C04.png",
+        "landing": "https://coffee.example/products/C04",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "pods",
+        "roast": "medium",
+        "form": "pods",
+        "caffeine": "regular",
+        "uses": [
+          "pod machine"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C05",
+        "name": "Filter coffee starter bundle with dripper",
+        "category": "coffee",
+        "dealPrice": 45,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C05.png",
+        "landing": "https://coffee.example/products/C05",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": true,
+        "kind": "kit",
+        "roast": "light",
+        "form": "whole bean",
+        "caffeine": "regular",
+        "components": [
+          "beans",
+          "dripper"
+        ],
+        "uses": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C06",
+        "name": "Reusable coffee filter",
+        "category": "coffee accessories",
+        "dealPrice": 10,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C06.png",
+        "landing": "https://coffee.example/products/C06",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "filter",
+        "uses": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C07",
+        "name": "Medium roast ground filter coffee",
+        "category": "coffee",
+        "dealPrice": 15,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C07.png",
+        "landing": "https://coffee.example/products/C07",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "beans",
+        "roast": "medium",
+        "form": "ground",
+        "caffeine": "regular",
+        "uses": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "partner": "coffee",
+      "offer": {
+        "sku": "C08",
+        "name": "Dark roast whole bean espresso coffee",
+        "category": "coffee",
+        "dealPrice": 25,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://coffee.example/images/C08.png",
+        "landing": "https://coffee.example/products/C08",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "beans",
+        "roast": "dark",
+        "form": "whole bean",
+        "caffeine": "regular",
+        "uses": [
+          "espresso"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W01",
+        "name": "Steel quartz everyday watch",
+        "category": "watches",
+        "dealPrice": 100,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W01.png",
+        "landing": "https://watch.example/products/W01",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "quartz",
+        "material": "steel",
+        "uses": [
+          "everyday"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W02",
+        "name": "Steel automatic dive watch",
+        "category": "watches",
+        "dealPrice": 200,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W02.png",
+        "landing": "https://watch.example/products/W02",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "automatic",
+        "material": "steel",
+        "uses": [
+          "diving",
+          "everyday"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W03",
+        "name": "Leather strap quartz dress watch",
+        "category": "watches",
+        "dealPrice": 150,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W03.png",
+        "landing": "https://watch.example/products/W03",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "quartz",
+        "material": "leather",
+        "uses": [
+          "formal"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W04",
+        "name": "Resin digital running watch",
+        "category": "watches",
+        "dealPrice": 50,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W04.png",
+        "landing": "https://watch.example/products/W04",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "digital",
+        "material": "resin",
+        "uses": [
+          "running"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W05",
+        "name": "Steel automatic watch and strap bundle",
+        "category": "watches",
+        "dealPrice": 250,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W05.png",
+        "landing": "https://watch.example/products/W05",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": true,
+        "kind": "kit",
+        "movement": "automatic",
+        "material": "steel",
+        "components": [
+          "watch",
+          "strap"
+        ],
+        "uses": [
+          "everyday"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W06",
+        "name": "Steel replacement watch strap",
+        "category": "watch accessories",
+        "dealPrice": 25,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W06.png",
+        "landing": "https://watch.example/products/W06",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "strap",
+        "material": "steel",
+        "uses": [
+          "replacement"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W07",
+        "name": "Steel quartz dive watch",
+        "category": "watches",
+        "dealPrice": 200,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W07.png",
+        "landing": "https://watch.example/products/W07",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "quartz",
+        "material": "steel",
+        "uses": [
+          "diving"
+        ]
+      }
+    },
+    {
+      "partner": "watch",
+      "offer": {
+        "sku": "W08",
+        "name": "Steel automatic formal watch",
+        "category": "watches",
+        "dealPrice": 300,
+        "listPrice": null,
+        "listPriceSource": null,
+        "imageUrl": "https://watch.example/images/W08.png",
+        "landing": "https://watch.example/products/W08",
+        "source": "synthetic evaluation catalog"
+      },
+      "facts": {
+        "bundle": false,
+        "kind": "watch",
+        "movement": "automatic",
+        "material": "steel",
+        "uses": [
+          "formal"
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "petsupply-canonical",
+      "partner": "petsupply",
+      "tags": [
+        "canonical"
+      ],
+      "prompt": "Shopping for dog gear.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ]
+        },
+        "grades": {
+          "P01": 1,
+          "P02": 1,
+          "P03": 1,
+          "P04": 1,
+          "P06": 1,
+          "P07": 1,
+          "P08": 1
+        }
+      }
+    },
+    {
+      "id": "petsupply-budget",
+      "partner": "petsupply",
+      "tags": [
+        "budget"
+      ],
+      "prompt": "Shopping for dog gear up to $20.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "maxPrice": 20
+        },
+        "grades": {
+          "P01": 1,
+          "P03": 1,
+          "P06": 1,
+          "P07": 1,
+          "P08": 1
+        }
+      }
+    },
+    {
+      "id": "petsupply-under",
+      "partner": "petsupply",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "prompt": "Shopping for dog gear under $20.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "belowPrice": 20
+        },
+        "grades": {
+          "P01": 1,
+          "P06": 1,
+          "P07": 1
+        }
+      }
+    },
+    {
+      "id": "petsupply-zero",
+      "partner": "petsupply",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "prompt": "Show dog gear up to $0.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "maxPrice": 0
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "dog gear"
+        ],
+        "maxPrice": 0
+      }
+    },
+    {
+      "id": "petsupply-unknown",
+      "partner": "petsupply",
+      "tags": [
+        "unknown-category"
+      ],
+      "prompt": "Shopping for orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "orbital widgets"
+          ]
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "petsupply-mixed",
+      "partner": "petsupply",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "prompt": "Find dog gear or orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ]
+        },
+        "grades": {
+          "P01": 1,
+          "P02": 1,
+          "P03": 1,
+          "P04": 1,
+          "P06": 1,
+          "P07": 1,
+          "P08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "dog gear",
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "petsupply-bad-categories",
+      "partner": "petsupply",
+      "tags": [
+        "malformed"
+      ],
+      "prompt": "Category field has the wrong type.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": "dog gear"
+      }
+    },
+    {
+      "id": "petsupply-bad-price",
+      "partner": "petsupply",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is the word inexpensive.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "dog gear"
+        ],
+        "maxPrice": "inexpensive"
+      }
+    },
+    {
+      "id": "petsupply-negative-price",
+      "partner": "petsupply",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is negative one.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "dog gear"
+        ],
+        "maxPrice": -1
+      }
+    },
+    {
+      "id": "petsupply-conflict",
+      "partner": "petsupply",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Shopping for dog gear under $20 and under $30.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "petsupply-ceiling-conflict",
+      "partner": "petsupply",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Use the stricter of both explicit price ceilings.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "maxPrice": 8
+        },
+        "grades": {
+          "P06": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "dog gear"
+        ],
+        "maxPrice": 500,
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "dog gear",
+          "maxPrice": 8,
+          "formats": [],
+          "rules": []
+        }
+      }
+    },
+    {
+      "id": "petsupply-out-of-scope",
+      "partner": "petsupply",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "prompt": "A ceiling for another category does not apply here.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ]
+        },
+        "grades": {
+          "P01": 1,
+          "P02": 1,
+          "P03": 1,
+          "P04": 1,
+          "P06": 1,
+          "P07": 1,
+          "P08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "dog gear"
+        ],
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "dog gear",
+          "maxPrice": null,
+          "formats": [],
+          "rules": [
+            {
+              "text": "Only show offers under $1",
+              "scope": "category",
+              "category": "orbital widgets"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "coffee-canonical",
+      "partner": "coffee",
+      "tags": [
+        "canonical"
+      ],
+      "prompt": "Shopping for coffee.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ]
+        },
+        "grades": {
+          "C01": 1,
+          "C02": 1,
+          "C03": 1,
+          "C04": 1,
+          "C05": 1,
+          "C07": 1,
+          "C08": 1
+        }
+      }
+    },
+    {
+      "id": "coffee-budget",
+      "partner": "coffee",
+      "tags": [
+        "budget"
+      ],
+      "prompt": "Shopping for coffee up to $20.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "maxPrice": 20
+        },
+        "grades": {
+          "C01": 1,
+          "C03": 1,
+          "C04": 1,
+          "C07": 1
+        }
+      }
+    },
+    {
+      "id": "coffee-under",
+      "partner": "coffee",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "prompt": "Shopping for coffee under $20.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "belowPrice": 20
+        },
+        "grades": {
+          "C01": 1,
+          "C04": 1,
+          "C07": 1
+        }
+      }
+    },
+    {
+      "id": "coffee-zero",
+      "partner": "coffee",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "prompt": "Show coffee up to $0.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "maxPrice": 0
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "coffee"
+        ],
+        "maxPrice": 0
+      }
+    },
+    {
+      "id": "coffee-unknown",
+      "partner": "coffee",
+      "tags": [
+        "unknown-category"
+      ],
+      "prompt": "Shopping for orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "orbital widgets"
+          ]
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "coffee-mixed",
+      "partner": "coffee",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "prompt": "Find coffee or orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ]
+        },
+        "grades": {
+          "C01": 1,
+          "C02": 1,
+          "C03": 1,
+          "C04": 1,
+          "C05": 1,
+          "C07": 1,
+          "C08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "coffee",
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "coffee-bad-categories",
+      "partner": "coffee",
+      "tags": [
+        "malformed"
+      ],
+      "prompt": "Category field has the wrong type.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": "coffee"
+      }
+    },
+    {
+      "id": "coffee-bad-price",
+      "partner": "coffee",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is the word inexpensive.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "coffee"
+        ],
+        "maxPrice": "inexpensive"
+      }
+    },
+    {
+      "id": "coffee-negative-price",
+      "partner": "coffee",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is negative one.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "coffee"
+        ],
+        "maxPrice": -1
+      }
+    },
+    {
+      "id": "coffee-conflict",
+      "partner": "coffee",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Shopping for coffee under $20 and under $30.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "coffee-ceiling-conflict",
+      "partner": "coffee",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Use the stricter of both explicit price ceilings.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "maxPrice": 12
+        },
+        "grades": {
+          "C04": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "coffee"
+        ],
+        "maxPrice": 500,
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "coffee",
+          "maxPrice": 12,
+          "formats": [],
+          "rules": []
+        }
+      }
+    },
+    {
+      "id": "coffee-out-of-scope",
+      "partner": "coffee",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "prompt": "A ceiling for another category does not apply here.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ]
+        },
+        "grades": {
+          "C01": 1,
+          "C02": 1,
+          "C03": 1,
+          "C04": 1,
+          "C05": 1,
+          "C07": 1,
+          "C08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "coffee"
+        ],
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "coffee",
+          "maxPrice": null,
+          "formats": [],
+          "rules": [
+            {
+              "text": "Only show offers under $1",
+              "scope": "category",
+              "category": "orbital widgets"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "watch-canonical",
+      "partner": "watch",
+      "tags": [
+        "canonical"
+      ],
+      "prompt": "Shopping for watches.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ]
+        },
+        "grades": {
+          "W01": 1,
+          "W02": 1,
+          "W03": 1,
+          "W04": 1,
+          "W05": 1,
+          "W07": 1,
+          "W08": 1
+        }
+      }
+    },
+    {
+      "id": "watch-budget",
+      "partner": "watch",
+      "tags": [
+        "budget"
+      ],
+      "prompt": "Shopping for watches up to $200.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "maxPrice": 200
+        },
+        "grades": {
+          "W01": 1,
+          "W02": 1,
+          "W03": 1,
+          "W04": 1,
+          "W07": 1
+        }
+      }
+    },
+    {
+      "id": "watch-under",
+      "partner": "watch",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "prompt": "Shopping for watches under $200.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "belowPrice": 200
+        },
+        "grades": {
+          "W01": 1,
+          "W03": 1,
+          "W04": 1
+        }
+      }
+    },
+    {
+      "id": "watch-zero",
+      "partner": "watch",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "prompt": "Show watches up to $0.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "maxPrice": 0
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "watches"
+        ],
+        "maxPrice": 0
+      }
+    },
+    {
+      "id": "watch-unknown",
+      "partner": "watch",
+      "tags": [
+        "unknown-category"
+      ],
+      "prompt": "Shopping for orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "orbital widgets"
+          ]
+        },
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "watch-mixed",
+      "partner": "watch",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "prompt": "Find watches or orbital widgets.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ]
+        },
+        "grades": {
+          "W01": 1,
+          "W02": 1,
+          "W03": 1,
+          "W04": 1,
+          "W05": 1,
+          "W07": 1,
+          "W08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "watches",
+          "orbital widgets"
+        ]
+      }
+    },
+    {
+      "id": "watch-bad-categories",
+      "partner": "watch",
+      "tags": [
+        "malformed"
+      ],
+      "prompt": "Category field has the wrong type.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": "watches"
+      }
+    },
+    {
+      "id": "watch-bad-price",
+      "partner": "watch",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is the word inexpensive.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "watches"
+        ],
+        "maxPrice": "inexpensive"
+      }
+    },
+    {
+      "id": "watch-negative-price",
+      "partner": "watch",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Price ceiling is negative one.",
+      "mode": "native",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      },
+      "input": {
+        "categories": [
+          "watches"
+        ],
+        "maxPrice": -1
+      }
+    },
+    {
+      "id": "watch-conflict",
+      "partner": "watch",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Shopping for watches under $20 and under $30.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "watch-ceiling-conflict",
+      "partner": "watch",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "prompt": "Use the stricter of both explicit price ceilings.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "maxPrice": 50
+        },
+        "grades": {
+          "W04": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "watches"
+        ],
+        "maxPrice": 500,
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "watches",
+          "maxPrice": 50,
+          "formats": [],
+          "rules": []
+        }
+      }
+    },
+    {
+      "id": "watch-out-of-scope",
+      "partner": "watch",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "prompt": "A ceiling for another category does not apply here.",
+      "mode": "native",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ]
+        },
+        "grades": {
+          "W01": 1,
+          "W02": 1,
+          "W03": 1,
+          "W04": 1,
+          "W05": 1,
+          "W07": 1,
+          "W08": 1
+        }
+      },
+      "input": {
+        "categories": [
+          "watches"
+        ],
+        "preferencePlane": {
+          "feedStyle": "balanced",
+          "category": "watches",
+          "maxPrice": null,
+          "formats": [],
+          "rules": [
+            {
+              "text": "Only show offers under $1",
+              "scope": "category",
+              "category": "orbital widgets"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "petsupply-alias",
+      "partner": "petsupply",
+      "tags": [
+        "alias"
+      ],
+      "prompt": "Shopping for canine leads.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "equals": {
+            "kind": "lead"
+          }
+        },
+        "grades": {
+          "P01": 3,
+          "P08": 3
+        }
+      }
+    },
+    {
+      "id": "coffee-alias",
+      "partner": "coffee",
+      "tags": [
+        "alias"
+      ],
+      "prompt": "Shopping for java beans.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "equals": {
+            "kind": "beans"
+          }
+        },
+        "grades": {
+          "C01": 2,
+          "C02": 2,
+          "C03": 2,
+          "C07": 2,
+          "C08": 2
+        }
+      }
+    },
+    {
+      "id": "watch-alias",
+      "partner": "watch",
+      "tags": [
+        "alias"
+      ],
+      "prompt": "Shopping for timepieces.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "equals": {
+            "kind": "watch"
+          }
+        },
+        "grades": {
+          "W01": 1,
+          "W02": 1,
+          "W03": 1,
+          "W04": 1,
+          "W07": 1,
+          "W08": 1
+        }
+      }
+    },
+    {
+      "id": "petsupply-attributes",
+      "partner": "petsupply",
+      "tags": [
+        "attribute"
+      ],
+      "prompt": "Shopping for dog gear; only reflective nylon harnesses.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "equals": {
+            "kind": "harness",
+            "material": "nylon",
+            "reflective": true
+          }
+        },
+        "grades": {
+          "P02": 3
+        }
+      }
+    },
+    {
+      "id": "coffee-attributes",
+      "partner": "coffee",
+      "tags": [
+        "attribute"
+      ],
+      "prompt": "Shopping for coffee; only dark roast whole bean.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "equals": {
+            "roast": "dark",
+            "form": "whole bean"
+          }
+        },
+        "grades": {
+          "C01": 3,
+          "C08": 3
+        }
+      }
+    },
+    {
+      "id": "watch-attributes",
+      "partner": "watch",
+      "tags": [
+        "attribute",
+        "exclusion"
+      ],
+      "prompt": "Shopping for watches; only automatic steel watches, no kits.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "equals": {
+            "movement": "automatic",
+            "material": "steel",
+            "bundle": false
+          }
+        },
+        "grades": {
+          "W02": 3,
+          "W08": 3
+        }
+      }
+    },
+    {
+      "id": "petsupply-use",
+      "partner": "petsupply",
+      "tags": [
+        "use-case"
+      ],
+      "prompt": "Shopping for dog gear; prefer running equipment.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ]
+        },
+        "grades": {
+          "P02": 3,
+          "P01": 1,
+          "P08": 1
+        }
+      }
+    },
+    {
+      "id": "coffee-use",
+      "partner": "coffee",
+      "tags": [
+        "use-case"
+      ],
+      "prompt": "Shopping for coffee; prefer espresso brewing.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ]
+        },
+        "grades": {
+          "C01": 3,
+          "C08": 3
+        }
+      }
+    },
+    {
+      "id": "watch-use",
+      "partner": "watch",
+      "tags": [
+        "use-case"
+      ],
+      "prompt": "Shopping for watches; prefer diving watches.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ]
+        },
+        "grades": {
+          "W02": 3,
+          "W07": 3
+        }
+      }
+    },
+    {
+      "id": "petsupply-exclusion",
+      "partner": "petsupply",
+      "tags": [
+        "exclusion"
+      ],
+      "prompt": "Shopping for dog gear; exclude leather and bundles.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "notEquals": {
+            "material": "leather",
+            "bundle": true
+          }
+        },
+        "grades": {
+          "P01": 2,
+          "P02": 2,
+          "P06": 1,
+          "P07": 1,
+          "P08": 2
+        }
+      }
+    },
+    {
+      "id": "coffee-exclusion",
+      "partner": "coffee",
+      "tags": [
+        "exclusion"
+      ],
+      "prompt": "Shopping for coffee; exclude pods and decaf.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "notEquals": {
+            "form": "pods",
+            "caffeine": "decaf"
+          }
+        },
+        "grades": {
+          "C01": 2,
+          "C02": 2,
+          "C05": 1,
+          "C07": 2,
+          "C08": 2
+        }
+      }
+    },
+    {
+      "id": "watch-exclusion",
+      "partner": "watch",
+      "tags": [
+        "exclusion"
+      ],
+      "prompt": "Shopping for watches; exclude leather straps and bundles.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "notEquals": {
+            "material": "leather",
+            "bundle": true
+          }
+        },
+        "grades": {
+          "W01": 2,
+          "W02": 2,
+          "W04": 1,
+          "W07": 2,
+          "W08": 2
+        }
+      }
+    },
+    {
+      "id": "petsupply-bundle",
+      "partner": "petsupply",
+      "tags": [
+        "bundle"
+      ],
+      "prompt": "Shopping for dog gear; only a lead and harness bundle.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "dog gear"
+          ],
+          "equals": {
+            "bundle": true
+          },
+          "contains": {
+            "components": [
+              "lead",
+              "harness"
+            ]
+          }
+        },
+        "grades": {
+          "P04": 3
+        }
+      }
+    },
+    {
+      "id": "coffee-bundle",
+      "partner": "coffee",
+      "tags": [
+        "bundle"
+      ],
+      "prompt": "Shopping for coffee; only a beans and dripper bundle.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "coffee"
+          ],
+          "equals": {
+            "bundle": true
+          },
+          "contains": {
+            "components": [
+              "beans",
+              "dripper"
+            ]
+          }
+        },
+        "grades": {
+          "C05": 3
+        }
+      }
+    },
+    {
+      "id": "watch-bundle",
+      "partner": "watch",
+      "tags": [
+        "bundle"
+      ],
+      "prompt": "Shopping for watches; only a watch and spare strap bundle.",
+      "mode": "words",
+      "expected": {
+        "outcome": "results",
+        "hard": {
+          "categories": [
+            "watches"
+          ],
+          "equals": {
+            "bundle": true
+          },
+          "contains": {
+            "components": [
+              "watch",
+              "strap"
+            ]
+          }
+        },
+        "grades": {
+          "W05": 3
+        }
+      }
+    },
+    {
+      "id": "unknown-words",
+      "partner": "all",
+      "tags": [
+        "unknown-category"
+      ],
+      "prompt": "Shopping for orbital widgets.",
+      "mode": "words",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "unknown-manual",
+      "partner": "all",
+      "tags": [
+        "unknown-category",
+        "manual"
+      ],
+      "prompt": "Find orbital widgets.",
+      "mode": "words",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {
+          "categories": [
+            "orbital widgets"
+          ]
+        },
+        "grades": {}
+      },
+      "manual": {
+        "category": "orbital widgets"
+      }
+    },
+    {
+      "id": "conflicting-categories",
+      "partner": "all",
+      "tags": [
+        "conflicting"
+      ],
+      "prompt": "Shopping for coffee and watches.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "conflicting-attributes",
+      "partner": "coffee",
+      "tags": [
+        "conflicting",
+        "attribute"
+      ],
+      "prompt": "Shopping for coffee; only decaf and only regular caffeine.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {
+          "equals": {
+            "caffeine": "decaf"
+          },
+          "notEquals": {
+            "caffeine": "decaf"
+          }
+        },
+        "grades": {}
+      }
+    },
+    {
+      "id": "malformed-amount",
+      "partner": "coffee",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "prompt": "Shopping for coffee under $20.001.",
+      "mode": "words",
+      "expected": {
+        "outcome": "clarification",
+        "hard": {},
+        "grades": {}
+      }
+    },
+    {
+      "id": "empty-words",
+      "partner": "all",
+      "tags": [
+        "malformed",
+        "empty"
+      ],
+      "prompt": "",
+      "mode": "words",
+      "expected": {
+        "outcome": "no-match",
+        "hard": {},
+        "grades": {}
+      }
+    }
+  ]
+}

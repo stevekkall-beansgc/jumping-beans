@@ -1,0 +1,3161 @@
+{
+  "schemaVersion": 1,
+  "harnessSha256": "64b8028c8f97f2d2bc7616d051ab05e6da347fae1607e79510e6f98bc4e9f822",
+  "corpusSha256": "f4b82e61b6e9ac0123339301098b36ab657abaf45d764375ba6e99d4ab273c61",
+  "sourceSha256": {
+    "engine/preference-canvas.mjs": "d8779563f179f764b6b8da695678072fdbb429f9553a417f00d1791b06ec1fce",
+    "engine/preference-plane.mjs": "1afe460431e77397054b9ec3776dd5aba210750870e84a8cf2a30c7ed0a10b6f",
+    "engine/p0.js": "670ee6d53444dc5d857f13260af8f61100f6921c3adc64ff702c72ac41abcf64",
+    "engine/app.js": "58853955199bd2fc6937298f4228e580bd3c4034865fdd1cc0909b149400ea27",
+    "partners/petsupply/tool.js": "15b089572bba80e5c3040db55985db60883baa215267ac9796f91577b602b756",
+    "partners/coffee/tool.js": "023037224d2aedacf53409966cc8f7d9858eeb9a2490b5dff93efd4c1d829e1c",
+    "partners/watch/tool.js": "a024d5c09db5a7c3ca6a7e6bd1fdb347959b55afe976a95edadc2dafab4bac16"
+  },
+  "k": [
+    1,
+    3,
+    5
+  ],
+  "summary": {
+    "cases": 57,
+    "qualityPassed": 31,
+    "outcomeCorrect": 48,
+    "returned": 232,
+    "hardInvalid": 99,
+    "hardFilterPrecision": 0.5732758620689655,
+    "hardFilterCleanCases": 37,
+    "provenanceCases": 36,
+    "provenanceCorrectCases": 36,
+    "unknownCases": 8,
+    "unknownOutcomeCorrect": 8,
+    "rankingCases": 33,
+    "ranking": {
+      "1": {
+        "recall": 0.19199134199134205,
+        "ndcg": 0.5656565656565656
+      },
+      "3": {
+        "recall": 0.44062049062049063,
+        "ndcg": 0.6122634592563915
+      },
+      "5": {
+        "recall": 0.6301587301587301,
+        "ndcg": 0.6473185900947158
+      }
+    }
+  },
+  "byPartner": {
+    "petsupply": {
+      "cases": 17,
+      "qualityPassed": 8,
+      "outcomeCorrect": 14,
+      "returned": 80,
+      "hardInvalid": 36,
+      "hardFilterPrecision": 0.55,
+      "hardFilterCleanCases": 10,
+      "provenanceCases": 12,
+      "provenanceCorrectCases": 12,
+      "unknownCases": 2,
+      "unknownOutcomeCorrect": 2,
+      "rankingCases": 11,
+      "ranking": {
+        "1": {
+          "recall": 0.19653679653679654,
+          "ndcg": 0.5757575757575757
+        },
+        "3": {
+          "recall": 0.438095238095238,
+          "ndcg": 0.6007561396131604
+        },
+        "5": {
+          "recall": 0.6008658008658009,
+          "ndcg": 0.614243505129947
+        }
+      }
+    },
+    "coffee": {
+      "cases": 19,
+      "qualityPassed": 8,
+      "outcomeCorrect": 14,
+      "returned": 92,
+      "hardInvalid": 48,
+      "hardFilterPrecision": 0.4782608695652174,
+      "hardFilterCleanCases": 10,
+      "provenanceCases": 14,
+      "provenanceCorrectCases": 14,
+      "unknownCases": 2,
+      "unknownOutcomeCorrect": 2,
+      "rankingCases": 11,
+      "ranking": {
+        "1": {
+          "recall": 0.1829004329004329,
+          "ndcg": 0.5454545454545454
+        },
+        "3": {
+          "recall": 0.4941558441558442,
+          "ndcg": 0.6494425878857002
+        },
+        "5": {
+          "recall": 0.612987012987013,
+          "ndcg": 0.6524783426147387
+        }
+      }
+    },
+    "watch": {
+      "cases": 17,
+      "qualityPassed": 11,
+      "outcomeCorrect": 16,
+      "returned": 60,
+      "hardInvalid": 15,
+      "hardFilterPrecision": 0.75,
+      "hardFilterCleanCases": 13,
+      "provenanceCases": 10,
+      "provenanceCorrectCases": 10,
+      "unknownCases": 2,
+      "unknownOutcomeCorrect": 2,
+      "rankingCases": 11,
+      "ranking": {
+        "1": {
+          "recall": 0.19653679653679654,
+          "ndcg": 0.5757575757575757
+        },
+        "3": {
+          "recall": 0.3896103896103896,
+          "ndcg": 0.5865916502703137
+        },
+        "5": {
+          "recall": 0.6766233766233767,
+          "ndcg": 0.675233922539462
+        }
+      }
+    },
+    "all": {
+      "cases": 4,
+      "qualityPassed": 4,
+      "outcomeCorrect": 4,
+      "returned": 0,
+      "hardInvalid": 0,
+      "hardFilterPrecision": null,
+      "hardFilterCleanCases": 4,
+      "provenanceCases": 0,
+      "provenanceCorrectCases": 0,
+      "unknownCases": 2,
+      "unknownOutcomeCorrect": 2,
+      "rankingCases": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      }
+    }
+  },
+  "byMode": {
+    "words": {
+      "cases": 33,
+      "qualityPassed": 13,
+      "outcomeCorrect": 28,
+      "returned": 147,
+      "hardInvalid": 59,
+      "hardFilterPrecision": 0.5986394557823129,
+      "hardFilterCleanCases": 19,
+      "provenanceCases": 23,
+      "provenanceCorrectCases": 23,
+      "unknownCases": 2,
+      "unknownOutcomeCorrect": 2,
+      "rankingCases": 24,
+      "ranking": {
+        "1": {
+          "recall": 0.10327380952380953,
+          "ndcg": 0.40277777777777785
+        },
+        "3": {
+          "recall": 0.3737103174603175,
+          "ndcg": 0.4668622564775384
+        },
+        "5": {
+          "recall": 0.5628968253968254,
+          "ndcg": 0.5150630613802343
+        }
+      }
+    },
+    "native": {
+      "cases": 24,
+      "qualityPassed": 18,
+      "outcomeCorrect": 20,
+      "returned": 85,
+      "hardInvalid": 40,
+      "hardFilterPrecision": 0.5294117647058824,
+      "hardFilterCleanCases": 18,
+      "provenanceCases": 13,
+      "provenanceCorrectCases": 13,
+      "unknownCases": 6,
+      "unknownOutcomeCorrect": 6,
+      "rankingCases": 9,
+      "ranking": {
+        "1": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.6190476190476191,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.8095238095238096,
+          "ndcg": 1
+        }
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "petsupply-canonical",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "canonical"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-budget",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": 20,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08"
+      ],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0.2,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.6,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-under",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": 20,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08"
+      ],
+      "relevantCount": 3,
+      "ranking": {
+        "1": {
+          "recall": 0.3333333333333333,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P03",
+          "reasons": [
+            "exclusive-price"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "exclusive-price"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.6,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-zero",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-unknown",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "unknown-category"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-mixed",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-bad-categories",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "malformed"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-bad-price",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P06",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P01",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P07",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P03",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P02",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P04",
+          "reasons": [
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-negative-price",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P06",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P01",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P07",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P03",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P02",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "P04",
+          "reasons": [
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-conflict",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "clarification",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": true
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-ceiling-conflict",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P01",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "P07",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "P03",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "P02",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "P04",
+          "reasons": [
+            "max-price"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-out-of-scope",
+      "partner": "petsupply",
+      "mode": "native",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-canonical",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "canonical"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-budget",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": 20,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03"
+      ],
+      "relevantCount": 4,
+      "ranking": {
+        "1": {
+          "recall": 0.25,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.75,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-under",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": 20,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03"
+      ],
+      "relevantCount": 3,
+      "ranking": {
+        "1": {
+          "recall": 0.3333333333333333,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C03",
+          "reasons": [
+            "exclusive-price"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.75,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-zero",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-unknown",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "unknown-category"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-mixed",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-bad-categories",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "malformed"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-bad-price",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-negative-price",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-conflict",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "clarification",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": true
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "coffee-ceiling-conflict",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C07",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "max-price"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "max-price"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-out-of-scope",
+      "partner": "coffee",
+      "mode": "native",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-canonical",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "canonical"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07",
+        "W05",
+        "W08"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-budget",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": 200,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07"
+      ],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0.2,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.6,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-under",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "budget",
+        "exclusive-boundary"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": 200,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07"
+      ],
+      "relevantCount": 3,
+      "ranking": {
+        "1": {
+          "recall": 0.3333333333333333,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "W02",
+          "reasons": [
+            "exclusive-price"
+          ]
+        },
+        {
+          "sku": "W07",
+          "reasons": [
+            "exclusive-price"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.6,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-zero",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "budget",
+        "empty"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-unknown",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "unknown-category"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-mixed",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "unknown-category",
+        "mixed-category"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W07",
+        "W08"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-bad-categories",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "malformed"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-bad-price",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-negative-price",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-conflict",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "clarification",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": true
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-ceiling-conflict",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "conflicting",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "W04"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 1,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "watch-out-of-scope",
+      "partner": "watch",
+      "mode": "native",
+      "tags": [
+        "scope",
+        "budget"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "returned": [
+        "W01",
+        "W02",
+        "W03",
+        "W04",
+        "W05",
+        "W07",
+        "W08"
+      ],
+      "relevantCount": 7,
+      "ranking": {
+        "1": {
+          "recall": 0.14285714285714285,
+          "ndcg": 1
+        },
+        "3": {
+          "recall": 0.42857142857142855,
+          "ndcg": 1
+        },
+        "5": {
+          "recall": 0.7142857142857143,
+          "ndcg": 1
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": true
+    },
+    {
+      "id": "petsupply-alias",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "alias"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": false,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 2,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-alias",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "alias"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": false,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-alias",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "alias"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": false,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 6,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-attributes",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "attribute"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P06",
+          "reasons": [
+            "required:kind",
+            "required:material",
+            "required:reflective"
+          ]
+        },
+        {
+          "sku": "P01",
+          "reasons": [
+            "required:kind",
+            "required:reflective"
+          ]
+        },
+        {
+          "sku": "P07",
+          "reasons": [
+            "required:kind",
+            "required:material",
+            "required:reflective"
+          ]
+        },
+        {
+          "sku": "P03",
+          "reasons": [
+            "required:kind",
+            "required:material",
+            "required:reflective"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "required:kind",
+            "required:material",
+            "required:reflective"
+          ]
+        },
+        {
+          "sku": "P04",
+          "reasons": [
+            "required:kind",
+            "required:reflective"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-attributes",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "attribute"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 2,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0.5,
+          "ndcg": 0.3065735963827292
+        },
+        "5": {
+          "recall": 0.5,
+          "ndcg": 0.3065735963827292
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "required:roast",
+            "required:form"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "required:roast",
+            "required:form"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "required:roast",
+            "required:form"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "required:roast"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "required:roast"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.2857142857142857,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-attributes",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "attribute",
+        "exclusion"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07",
+        "W05",
+        "W08"
+      ],
+      "relevantCount": 2,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0.5,
+          "ndcg": 0.2640681225725909
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "W04",
+          "reasons": [
+            "required:movement",
+            "required:material"
+          ]
+        },
+        {
+          "sku": "W01",
+          "reasons": [
+            "required:movement"
+          ]
+        },
+        {
+          "sku": "W03",
+          "reasons": [
+            "required:movement",
+            "required:material"
+          ]
+        },
+        {
+          "sku": "W07",
+          "reasons": [
+            "required:movement"
+          ]
+        },
+        {
+          "sku": "W05",
+          "reasons": [
+            "required:bundle"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.2857142857142857,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-use",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "use-case"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 3,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0.3333333333333333,
+          "ndcg": 0.07759626176752121
+        },
+        "5": {
+          "recall": 0.6666666666666666,
+          "ndcg": 0.1251741918393705
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-use",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "use-case"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 2,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0.5,
+          "ndcg": 0.3065735963827292
+        },
+        "5": {
+          "recall": 0.5,
+          "ndcg": 0.3065735963827292
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-use",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "use-case"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07",
+        "W05",
+        "W08"
+      ],
+      "relevantCount": 2,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 1,
+          "ndcg": 0.5012658353418871
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": 1,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-exclusion",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "exclusion"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0.2,
+          "ndcg": 0.3333333333333333
+        },
+        "3": {
+          "recall": 0.6,
+          "ndcg": 0.5307212739772436
+        },
+        "5": {
+          "recall": 0.8,
+          "ndcg": 0.631504364590047
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P03",
+          "reasons": [
+            "excluded:material"
+          ]
+        },
+        {
+          "sku": "P04",
+          "reasons": [
+            "excluded:bundle"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.7142857142857143,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-exclusion",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "exclusion"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0.4,
+          "ndcg": 0.5307212739772436
+        },
+        "5": {
+          "recall": 0.6,
+          "ndcg": 0.564114575996667
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "excluded:form"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "excluded:caffeine"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.7142857142857143,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-exclusion",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "exclusion"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07",
+        "W05",
+        "W08"
+      ],
+      "relevantCount": 5,
+      "ranking": {
+        "1": {
+          "recall": 0.2,
+          "ndcg": 0.3333333333333333
+        },
+        "3": {
+          "recall": 0.4,
+          "ndcg": 0.45250815297345076
+        },
+        "5": {
+          "recall": 0.8,
+          "ndcg": 0.6622391900196027
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "W03",
+          "reasons": [
+            "excluded:material"
+          ]
+        },
+        {
+          "sku": "W05",
+          "reasons": [
+            "excluded:bundle"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.7142857142857143,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "petsupply-bundle",
+      "partner": "petsupply",
+      "mode": "words",
+      "tags": [
+        "bundle"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "dog gear",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "P06",
+        "P01",
+        "P07",
+        "P03",
+        "P08",
+        "P02",
+        "P04"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "P06",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "P01",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "P07",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "P03",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "P08",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "P02",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "coffee-bundle",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "bundle"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "watch-bundle",
+      "partner": "watch",
+      "mode": "words",
+      "tags": [
+        "bundle"
+      ],
+      "expectedOutcome": "results",
+      "actualOutcome": "results",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": "watches",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "W04",
+        "W01",
+        "W03",
+        "W02",
+        "W07",
+        "W05",
+        "W08"
+      ],
+      "relevantCount": 1,
+      "ranking": {
+        "1": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "3": {
+          "recall": 0,
+          "ndcg": 0
+        },
+        "5": {
+          "recall": 0,
+          "ndcg": 0
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "W04",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "W01",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "W03",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "W02",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "W07",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        },
+        {
+          "sku": "W08",
+          "reasons": [
+            "required:bundle",
+            "missing:components"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0.14285714285714285,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "unknown-words",
+      "partner": "all",
+      "mode": "words",
+      "tags": [
+        "unknown-category"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "unknown-manual",
+      "partner": "all",
+      "mode": "words",
+      "tags": [
+        "unknown-category",
+        "manual"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "conflicting-categories",
+      "partner": "all",
+      "mode": "words",
+      "tags": [
+        "conflicting"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "clarification",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": true
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    },
+    {
+      "id": "conflicting-attributes",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "conflicting",
+        "attribute"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "excluded:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "required:caffeine",
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "malformed-amount",
+      "partner": "coffee",
+      "mode": "words",
+      "tags": [
+        "malformed",
+        "budget"
+      ],
+      "expectedOutcome": "clarification",
+      "actualOutcome": "results",
+      "outcomeCorrect": false,
+      "interpretation": {
+        "category": "coffee",
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [
+        "C04",
+        "C07",
+        "C01",
+        "C03",
+        "C02",
+        "C08",
+        "C05"
+      ],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [
+        {
+          "sku": "C04",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C07",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C01",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C03",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C02",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C08",
+          "reasons": [
+            "unexpected-result"
+          ]
+        },
+        {
+          "sku": "C05",
+          "reasons": [
+            "unexpected-result"
+          ]
+        }
+      ],
+      "hardFilterPrecision": 0,
+      "provenanceViolations": [],
+      "provenanceApplicable": true,
+      "qualityPass": false
+    },
+    {
+      "id": "empty-words",
+      "partner": "all",
+      "mode": "words",
+      "tags": [
+        "malformed",
+        "empty"
+      ],
+      "expectedOutcome": "no-match",
+      "actualOutcome": "no-match",
+      "outcomeCorrect": true,
+      "interpretation": {
+        "category": null,
+        "maxPrice": null,
+        "clarification": false
+      },
+      "returned": [],
+      "relevantCount": 0,
+      "ranking": {
+        "1": {
+          "recall": null,
+          "ndcg": null
+        },
+        "3": {
+          "recall": null,
+          "ndcg": null
+        },
+        "5": {
+          "recall": null,
+          "ndcg": null
+        }
+      },
+      "hardFilterViolations": [],
+      "hardFilterPrecision": null,
+      "provenanceViolations": [],
+      "provenanceApplicable": false,
+      "qualityPass": true
+    }
+  ]
+}
