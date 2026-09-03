@@ -133,8 +133,14 @@ const CONCIERGE_ORIGIN = ENGINE_ORIGINS[RUNTIME_MODE];
 const PARTNER_NAME = ${JSON.stringify(name)};
 const PARTNER_ID = ${JSON.stringify(id)};
 const TOOL_NAME = "get_matching_deals";
+const MAX_RESPONSE_DEALS = 24;
+const OUTPUT_DEAL_KEYS = new Set(["sku", "name", "category", "listPrice", "listPriceSource", "dealPrice", "imageUrl", "expiresAt", "landing", "vendor", "source", "partnerId", "partnerName", "interestEligible", "merchantPageDiscountPercent", "merchantPageDiscountEvidence", "collateral", "provenance"]);
 
 const catalog = await fetch("/catalog.json").then((r) => r.json());
+
+function outputDeal(value) {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => OUTPUT_DEAL_KEYS.has(key)));
+}
 
 await document.modelContext.registerTool(
   {
@@ -160,8 +166,9 @@ await document.modelContext.registerTool(
               (maxPrice == null || d.dealPrice <= maxPrice) &&
               (!signal || !signal.aborted)
           )
+          .slice(0, MAX_RESPONSE_DEALS)
           .map((d) => ({
-            ...d,
+            ...outputDeal(d),
             partnerId: PARTNER_ID,
             partnerName: PARTNER_NAME,
             provenance: {

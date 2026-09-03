@@ -50,7 +50,7 @@ catalog, preference-handoff, tool, and action-link paths.
 | Exact production bytes and headers | PENDING until the approved SHA is deployed |
 | Production ordinary-browser matrix | PENDING; the workflow runs all three recipes at 1280×900, 390×844, and 320×568 and uploads its JSON receipt |
 | Production native WebMCP | PENDING; current competition verdict remains NO-GO until the 3/3 headed Stable run below passes |
-| BeanSched read-only monitor cutover | PENDING; provision the exact tagged release worktree, pin the job to its SHA/tag, and require one successful manual dry cycle before enabling |
+| BeanSched read-only monitor cutover | v0.10.3 remains active; v0.10.4 cutover is PENDING its exact tag, isolated worktree, and successful manual dry cycle |
 
 ## Immutable release identity
 
@@ -131,11 +131,12 @@ the separately tested ordinary-browser storefront handoff.
 ## Ongoing readiness
 
 The existing BeanSched `jumping-beans-merchant-refresh` job remains the single
-clock but is currently disabled. After deployment, provision a detached
-worktree at the exact tagged release, build its ignored deterministic index
-once, and pin the job to that worktree, SHA, and annotated tag. A successful
-disabled manual run must prove the checkout and index stay unchanged while the
-product gate, exact four-origin smoke, and token/scenario runway checks pass.
-Only then may the job be enabled and the six-hour monitoring claim begin.
+clock and stays active on v0.10.3 while this candidate is reviewed. After
+deployment, provision a detached worktree at the exact v0.10.4 tag, build its
+ignored deterministic index once, and pin a disabled candidate run to that
+worktree, SHA, and annotated tag. The manual run must prove the checkout and
+index stay unchanged while the product gate, exact four-origin smoke, and
+token/scenario runway checks pass. Only then may the live job move atomically
+from v0.10.3 to v0.10.4 and retain the six-hour monitoring claim.
 Catalog refresh remains a separate manual candidate-preparation step whose
 tracked changes require a reviewed immutable release.
