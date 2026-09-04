@@ -134,7 +134,7 @@ for (const file of surfaceFiles) {
   const html = await readFile(path.join(root, file), "utf8");
   surfaces.set(file, html);
   checkHtml(html, file);
-  for (const match of html.matchAll(/<(?:link|script)[^>]+(?:href|src)="((?:\.\.\/|\.\/)[^"?#]+)"/g)) {
+  for (const match of html.matchAll(/<(?:link|script|img)[^>]+(?:href|src)="((?:\.\.\/|\.\/)[^"?#]+)"/g)) {
     const asset = path.resolve(root, path.dirname(file), match[1]);
     check(asset.startsWith(root + path.sep), `${file} references an asset outside the product repo`);
     try {
@@ -147,17 +147,19 @@ for (const file of surfaceFiles) {
 
 const engineHtml = surfaces.get("engine/index.html");
 includesAll(engineHtml, [
-  "A → your preference → B",
+  "A simple offer demo",
+  "Start with an offer",
+  "Choose what matters",
+  "See the partner match",
+  'src="./jumping-beans-logo.svg"',
   'id="memory-step"',
   'id="preference-controls"',
   'id="apply-preferences"',
-  "Save and apply to Site B",
-  'id="apply-once"',
-  "Apply once without saving",
+  "Review this choice",
   'id="next-step"',
   "Open inventory",
   "Opted-in partner",
-  "Before saving",
+  "Before anything is saved",
   "Scope",
   "Retention",
   "Outcome",
@@ -168,6 +170,21 @@ includesAll(engineHtml, [
   'id="account-import-confirm"',
   "Import selected browser memory",
 ], "engine consent journey");
+check(!engineHtml.includes('id="apply-once"'), "Demo still exposes a duplicate review action");
+check(!engineHtml.includes("product-note"), "Header still includes the removed product tagline");
+const demoTechnicalIndex = engineHtml.indexOf('class="bl-disclosure demo-technical"');
+check(
+  demoTechnicalIndex !== -1
+    && engineHtml.indexOf('class="source-key"', demoTechnicalIndex) > demoTechnicalIndex
+    && engineHtml.indexOf('class="bl-card memory-panel"', demoTechnicalIndex) > demoTechnicalIndex,
+  "Demo source taxonomy and saved data are not grouped behind technical details",
+);
+check(
+  engineHtml.indexOf("Optional: try a sample shopper profile") < engineHtml.indexOf('id="demo-profile"')
+    && engineHtml.indexOf("Or describe your preference in your own words") < engineHtml.indexOf('id="preference-prompt-form"')
+    && engineHtml.indexOf("Optional: preview a target-price handoff") < engineHtml.indexOf('id="watch-button"'),
+  "Optional demo controls are not progressively disclosed",
+);
 const browserReadinessIndex = engineHtml.indexOf('id="browser-readiness"');
 const technicalDetailsStart = engineHtml.indexOf('class="bl-disclosure engine-details"');
 const technicalDetailsEnd = engineHtml.indexOf("</details>", technicalDetailsStart);
@@ -185,18 +202,18 @@ includesAll(engineApp, [
   "executeTool(tool, JSON.stringify(input))",
   'sourceKind === "open"',
   'status: "not-requested"',
-  "will not create a substitute partner result",
+  "will not invent one",
   "Source and verification",
   "requiresUserConfirmation: true",
   "persisted: false",
   'state.appliedMode = persist ? "saved" : "once"',
-  "Apply once creates no persisted preference or offer note",
+  "using the choice for this visit creates no persisted preference or offer note",
   "createPartnerFrames();",
   "projectPartnerContext(state.contextSnapshot, origin)",
   "resolvePartnerTools",
   "originOutcomes",
   "comparisonMarkup",
-  "No opted-in offer matches this context",
+  "No partner offer matches these choices",
   "get_journey_receipt",
   "/api/inventory/rakuten",
   "fetchRakutenDeals",
@@ -210,8 +227,9 @@ includesAll(engineApp, [
   "hasBrowserPersistence",
   "hasExplicitMerchantPageDiscount",
   "merchant-page-displayed-percent",
-  'WebMCP · not requested',
-  'WebMCP · sharing paused',
+  "No partner request yet",
+  "Partner sharing paused",
+  "demoTechnicalMatchDetails",
   'status: "partner_acknowledged"',
   "fetchCatalogDeals",
   "/api/inventory/catalog",
@@ -318,7 +336,7 @@ includesAll(engineHtml, [
   'id="demo-profile"',
   'value="alex-budget-parent"',
   'value="jamie-gift-shopper"',
-  "Use the selected labeled demo profile for this request",
+  "Use this sample for the current demo",
 ], "engine explicit demo-profile selection contract");
 const profileSelectionBlock = engineApp.slice(
   engineApp.indexOf('els.demoProfile?.addEventListener("change"'),
@@ -328,10 +346,33 @@ includesAll(profileSelectionBlock, [
   "PERSONAS.find",
   "state.profile =",
   "if (!state.applied)",
-  "No profile data will be sent until you enable demo context and apply preferences.",
+  "No profile data will be sent until you enable demo context, review the choice, and show matching offers.",
   "await rerunAppliedJourney()",
 ], "engine profile selection and applied-journey refresh contract");
 check(!profileSelectionBlock.includes("discoverPartnerDeals("), "Draft profile selection directly invokes native partner discovery");
+const demoReviewTransitionBlock = engineApp.slice(
+  engineApp.indexOf('document.getElementById("apply-preferences")'),
+  engineApp.indexOf('document.getElementById("reset-preferences")'),
+);
+includesAll(demoReviewTransitionBlock, [
+  'state.productReviewState = "review"',
+  'state.productStage = "preview"',
+  "state.canvasReviewVisible = true",
+  'switchView("product")',
+  "els.productReviewTitle.focus()",
+], "demo review transition reveals the promised product review");
+includesAll(engineApp, [
+  "Price proof isn’t available for this sample.",
+  "provenanceMarkup(deal, sourceKind, collateral)",
+  "presentationEvidence.source",
+], "primary offer cards keep unavailable collateral simple and its source inside provenance");
+includesAll(engineApp, [
+  'state.currentView === "demo"',
+  'state.currentView === "account"',
+  '? "Back to preferences"',
+  ': "Review selection"',
+  "availableActions: [reviewAction]",
+], "native preference tool returns only the immediate review-path action visible in the current view");
 const nativePreferenceToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_display_preferences"'),
   engineApp.indexOf('name: "build_offer_journey"'),

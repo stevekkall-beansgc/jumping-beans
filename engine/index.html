@@ -17,8 +17,10 @@
   <header class="bl-header" id="engine-header">
     <div class="bl-shell bl-header__inner engine-header">
       <div>
-        <a class="bl-brand" href="./" aria-label="Jumping Beans home">Jumping Beans</a>
-        <p class="bl-muted product-note">Offers on your terms</p>
+        <a class="bl-brand brand-lockup" href="./" aria-label="Jumping Beans home">
+          <img src="./jumping-beans-logo.svg" width="44" height="44" alt="" aria-hidden="true">
+          <span>Jumping Beans</span>
+        </a>
       </div>
       <nav class="audience-nav" aria-label="Jumping Beans audiences">
         <a href="#find-offers">For shoppers</a>
@@ -31,12 +33,12 @@
           <p>You choose what you’re shopping for, how offers should look, and whether to keep those choices. Technical details and the original demonstration remain available separately.</p>
           <a class="bl-button" data-variant="quiet" href="#demo" data-engine-link="demo">See how the network works</a>
           <div class="bl-callout" id="browser-readiness" data-tone="info" role="status"></div>
+          <p class="bl-muted connection-status" role="status" aria-live="polite">
+            <span class="status-dot" id="status-dot" data-on="0" aria-hidden="true"></span>
+            <span id="status">Sample catalog ready. Checking partner sites.</span>
+          </p>
         </div>
       </details>
-      <p class="bl-muted connection-status" role="status" aria-live="polite">
-        <span class="status-dot" id="status-dot" data-on="0" aria-hidden="true"></span>
-        <span id="status">Open inventory ready. Checking opted-in partner sites.</span>
-      </p>
     </div>
   </header>
 
@@ -279,49 +281,39 @@
     </section>
 
     <section class="demo-view" id="demo-view" aria-labelledby="page-title" hidden>
-    <button class="bl-button view-back" data-variant="quiet" type="button" data-engine-view="product">Back to preferences</button>
+    <button class="bl-button view-back" data-variant="quiet" type="button" data-engine-view="product">Back to offers</button>
     <section class="bl-stack bl-measure intro" data-space="compact" aria-labelledby="page-title">
-      <p class="eyebrow">Agent-led offer journey</p>
-      <h2 id="page-title" tabindex="-1">Let the next offer remember what you chose.</h2>
-      <p class="lede">Concierge starts with an open catalog offer. Partner calls begin without persona data; you may explicitly approve a labeled demo profile for one request. Approved context can affect eligibility and ranking.</p>
-      <dl class="source-key" aria-label="Inventory source types">
-        <div>
-          <dt><span class="source-marker source-open" aria-hidden="true"></span>Open inventory</dt>
-          <dd>Public catalog data; no merchant tool connection required.</dd>
-        </div>
-        <div>
-          <dt><span class="source-marker source-optin" aria-hidden="true"></span>Opted-in partner</dt>
-          <dd>A site that exposes structured offers through WebMCP.</dd>
-        </div>
-        <div>
-          <dt><span class="source-marker source-affiliate" aria-hidden="true"></span>Out-of-network affiliate</dt>
-          <dd>Live catalog inventory that links to its merchant storefront.</dd>
-        </div>
-      </dl>
+      <p class="eyebrow">A simple offer demo</p>
+      <h2 id="page-title" tabindex="-1">See what changes when the shopper sets the rules.</h2>
+      <p class="lede">Start with an offer, choose what matters, and see how a partner can present the next match. Nothing is shared or saved until you review it.</p>
+      <ol class="demo-overview" aria-label="Demo overview">
+        <li><span>1</span><div><strong>Start with an offer</strong><small>Jumping Beans finds a catalog match.</small></div></li>
+        <li><span>2</span><div><strong>Choose what matters</strong><small>You control what the next offer emphasizes.</small></div></li>
+        <li><span>3</span><div><strong>See the partner match</strong><small>The product facts stay the same; the experience adapts.</small></div></li>
+      </ol>
     </section>
 
     <div class="layout">
       <section class="bl-card journey" id="journey" aria-labelledby="journey-title">
         <header class="journey-head">
           <div>
-            <p class="section-label">A → your preference → B</p>
-            <h2 id="journey-title">A network of offers, resolved with your permission</h2>
+            <p class="section-label">Three steps</p>
+            <h2 id="journey-title">One choice, one clearer offer</h2>
           </div>
-          <span class="bl-badge protocol-badge" data-status="info" id="protocol-badge">WebMCP · checking partner sites</span>
         </header>
 
         <section class="bl-callout bl-stack agent" data-space="compact" data-tone="info" aria-labelledby="agent-title">
           <div class="agent-avatar" aria-hidden="true">JB</div>
           <div>
-            <h3 id="agent-title">Concierge</h3>
-            <p id="agent-message" aria-live="polite">I found the first offer in open inventory. Choose what the next offer should show before anything is saved.</p>
+            <h3 id="agent-title">What’s happening</h3>
+            <p id="agent-message" aria-live="polite">I found a starting offer. Choose what you want the next match to emphasize.</p>
           </div>
         </section>
 
         <ol class="journey-line">
           <li class="step">
             <span class="step-number" aria-hidden="true">1</span>
-            <article class="bl-card step-card" id="memory-step" aria-label="Site A offer from open inventory"></article>
+            <article class="bl-card step-card" id="memory-step" aria-label="Starting catalog offer"></article>
           </li>
 
           <li class="step">
@@ -330,14 +322,14 @@
               <header class="step-card-head">
                 <div>
                   <p class="step-kicker">Your choice</p>
-                  <h3 id="preference-title">Choose how Site B should present the offer</h3>
+                  <h3 id="preference-title">Choose what you want to see</h3>
                 </div>
                 <span class="bl-badge source-pill source-user" data-status="success">User-controlled</span>
               </header>
 
               <fieldset class="preference-fieldset" id="preference-controls">
                 <legend>Display rules</legend>
-                <p class="field-hint" id="preference-hint">Presentation formats can break ranking ties; they never change product facts, authorization, or eligibility.</p>
+                <p class="field-hint" id="preference-hint">These choices change how an offer is presented—not its price, product facts, or availability.</p>
                 <div class="preference-options" aria-describedby="preference-hint">
                   <label><input type="checkbox" data-pref="testimonial"><span>Testimonials</span></label>
                   <label><input type="checkbox" data-pref="price-proof" checked><span>Price proof</span></label>
@@ -346,30 +338,53 @@
                 </div>
               </fieldset>
 
-              <div class="demo-profile-field">
-                <label for="demo-profile">Labeled demo profile</label>
-                <select id="demo-profile" name="demoProfile">
-                  <option value="alex-budget-parent" selected>Alex — budget parent</option>
-                  <option value="jamie-gift-shopper">Jamie — gift shopper</option>
-                </select>
-              </div>
-              <label class="demo-context-choice"><input id="demo-context" type="checkbox"><span>Use the selected labeled demo profile for this request</span></label>
-              <p class="field-hint">Off by default. Selecting a profile changes only this draft. Its categories and budget are sent only to each opted-in partner after you enable this checkbox and apply preferences; they are not saved as your profile.</p>
+              <details class="bl-disclosure demo-option">
+                <summary class="bl-disclosure__summary">Optional: try a sample shopper profile</summary>
+                <div class="bl-disclosure__body bl-stack" data-space="compact">
+                  <div class="demo-profile-field">
+                    <label for="demo-profile">Sample shopper</label>
+                    <select id="demo-profile" name="demoProfile">
+                      <option value="alex-budget-parent" selected>Alex — budget parent</option>
+                      <option value="jamie-gift-shopper">Jamie — gift shopper</option>
+                    </select>
+                  </div>
+                  <label class="demo-context-choice"><input id="demo-context" type="checkbox"><span>Use this sample for the current demo</span></label>
+                  <p class="field-hint">Off by default. The sample’s categories and budget are shared only after you enable it and apply the choices. It is not saved as your profile.</p>
+                </div>
+              </details>
+
+              <details class="bl-disclosure demo-option">
+                <summary class="bl-disclosure__summary">Or describe your preference in your own words</summary>
+                <div class="bl-disclosure__body bl-stack" data-space="compact">
+                  <form class="compose" id="preference-prompt-form">
+                    <label for="prompt">What should the next offer emphasize?</label>
+                    <p id="prompt-hint">We’ll update the choices above for you to review.</p>
+                    <div class="compose-row">
+                      <input id="prompt" name="preferencePrompt" type="text" aria-describedby="prompt-hint" autocomplete="off">
+                      <button class="bl-button" data-variant="secondary" id="send-prompt" type="submit">Update choices</button>
+                    </div>
+                  </form>
+                  <div class="starter-row" aria-label="Example preference prompts">
+                    <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Show me proof, not pressure">Show me proof, not pressure</button>
+                    <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Only show me offers under $30">Only show me offers under $30</button>
+                    <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Remember this offer">Remember this offer</button>
+                  </div>
+                </div>
+              </details>
 
               <section class="bl-callout bl-stack memory-preview" data-space="compact" data-tone="info" aria-labelledby="memory-preview-title">
-                <h4 class="bl-callout__title" id="memory-preview-title">Before saving</h4>
+                <h4 class="bl-callout__title" id="memory-preview-title">Before anything is saved</h4>
                 <p id="memory-preview-text">Useful fact: show price proof first.</p>
                 <dl>
-                  <div><dt>Scope</dt><dd>Jumping Beans product, in this browser</dd></div>
-                  <div><dt>Retention</dt><dd>Until you use Forget</dd></div>
-                  <div><dt>Outcome</dt><dd id="memory-outcome">Save a local display rule and apply it to Site B; no order, payment, or message is created</dd></div>
+                  <div><dt>Scope</dt><dd>This offer search</dd></div>
+                  <div><dt>Retention</dt><dd>You choose on the next screen</dd></div>
+                  <div><dt>Outcome</dt><dd id="memory-outcome">Review this display choice before it can be used; no order, payment, or message is created</dd></div>
                 </dl>
               </section>
 
-              <p class="field-hint">Review the exact fact on the primary page; from there, you can Save and apply to Site B or Apply once without saving.</p>
+              <p class="field-hint">The next screen shows exactly what will be used before anything happens.</p>
               <div class="bl-actions step-actions">
-                <button class="bl-button" id="apply-preferences" type="button">Review what we’ll use</button>
-                <button class="bl-button" data-variant="secondary" id="apply-once" type="button">Review temporary use</button>
+                <button class="bl-button" id="apply-preferences" type="button">Review this choice</button>
                 <button class="bl-button" data-variant="quiet" id="reset-preferences" type="button">Reset choices</button>
               </div>
             </article>
@@ -377,48 +392,56 @@
 
           <li class="step">
             <span class="step-number" aria-hidden="true">3</span>
-            <article class="bl-card step-card" id="next-step" aria-label="Site B offer from an opted-in partner"></article>
+            <article class="bl-card step-card" id="next-step" aria-label="Matching partner offer"></article>
           </li>
         </ol>
 
-        <section class="bl-callout deal-watch" aria-labelledby="watch-title">
-          <div class="watch-copy">
-            <h3 id="watch-title">Want to share a Watch Co target price?</h3>
-            <p id="watch-detail">Stage one Watch Co product and target price for review. Jumping Beans does not save or monitor it.</p>
+        <details class="bl-disclosure demo-more">
+          <summary class="bl-disclosure__summary">Optional: preview a target-price handoff</summary>
+          <div class="bl-disclosure__body">
+            <section class="bl-callout deal-watch" aria-labelledby="watch-title">
+              <div class="watch-copy">
+                <h3 id="watch-title">Want to share a Watch Co target price?</h3>
+                <p id="watch-detail">Stage one Watch Co product and target price for review. Jumping Beans does not save or monitor it.</p>
+              </div>
+              <button class="bl-button" data-variant="secondary" id="watch-button" type="button">Prepare Watch Co handoff</button>
+              <section class="bl-callout bl-stack watch-confirmation" data-space="compact" data-tone="info" id="watch-confirmation" aria-labelledby="watch-confirmation-title" hidden>
+                <h4 class="bl-callout__title" id="watch-confirmation-title">Before opening Watch Co</h4>
+                <p id="watch-fact"></p>
+                <dl>
+                  <div><dt>Scope</dt><dd>Exact product and target price in a one-time navigation to Watch Co</dd></div>
+                  <div><dt>Retention</dt><dd>Not retained by Jumping Beans. Watch Co will state its retention before confirmation.</dd></div>
+                  <div><dt>Outcome</dt><dd>Watch Co will prefill the exact product and target price. It alone stages, confirms, and persists a demand signal; no notification, order, payment, or message is created here.</dd></div>
+                </dl>
+                <div class="bl-actions watch-actions">
+                  <button class="bl-button" id="confirm-watch" type="button">Open Watch Co to stage target price</button>
+                  <button class="bl-button" data-variant="quiet" id="cancel-watch" type="button">Not now</button>
+                </div>
+              </section>
+            </section>
           </div>
-          <button class="bl-button" data-variant="secondary" id="watch-button" type="button">Prepare Watch Co handoff</button>
-          <section class="bl-callout bl-stack watch-confirmation" data-space="compact" data-tone="info" id="watch-confirmation" aria-labelledby="watch-confirmation-title" hidden>
-            <h4 class="bl-callout__title" id="watch-confirmation-title">Before opening Watch Co</h4>
-            <p id="watch-fact"></p>
-            <dl>
-              <div><dt>Scope</dt><dd>Exact product and target price in a one-time navigation to Watch Co</dd></div>
-              <div><dt>Retention</dt><dd>Not retained by Jumping Beans. Watch Co will state its retention before confirmation.</dd></div>
-              <div><dt>Outcome</dt><dd>Watch Co will prefill the exact product and target price. It alone stages, confirms, and persists a demand signal; no notification, order, payment, or message is created here.</dd></div>
-            </dl>
-            <div class="bl-actions watch-actions">
-              <button class="bl-button" id="confirm-watch" type="button">Open Watch Co to stage target price</button>
-              <button class="bl-button" data-variant="quiet" id="cancel-watch" type="button">Not now</button>
-            </div>
-          </section>
-        </section>
-
-        <form class="compose" id="preference-prompt-form">
-          <label for="prompt">Tell Concierge what matters</label>
-          <p id="prompt-hint">Concierge will update the choices above. Review them before saving or applying once.</p>
-          <div class="compose-row">
-            <input id="prompt" name="preferencePrompt" type="text" aria-describedby="prompt-hint" autocomplete="off">
-            <button class="bl-button" data-variant="secondary" id="send-prompt" type="submit">Update choices</button>
-          </div>
-        </form>
-
-        <div class="starter-row" aria-label="Example preference prompts">
-          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Show me proof, not pressure">Show me proof, not pressure</button>
-          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Only show me offers under $30">Only show me offers under $30</button>
-          <button class="bl-button starter" data-variant="quiet" type="button" data-prompt="Remember this offer">Remember this offer</button>
-        </div>
+        </details>
       </section>
 
-      <aside class="bl-card memory-panel" aria-labelledby="memory-title">
+      <details class="bl-disclosure demo-technical">
+        <summary class="bl-disclosure__summary">Technical details and saved demo data</summary>
+        <div class="bl-disclosure__body bl-stack">
+          <span class="bl-badge protocol-badge" data-status="info" id="protocol-badge">Checking partner sites</span>
+          <dl class="source-key" aria-label="Inventory source types">
+            <div>
+              <dt><span class="source-marker source-open" aria-hidden="true"></span>Open inventory</dt>
+              <dd>Public catalog data; no merchant tool connection required.</dd>
+            </div>
+            <div>
+              <dt><span class="source-marker source-optin" aria-hidden="true"></span>Opted-in partner</dt>
+              <dd>A site that exposes structured offers through WebMCP.</dd>
+            </div>
+            <div>
+              <dt><span class="source-marker source-affiliate" aria-hidden="true"></span>Out-of-network affiliate</dt>
+              <dd>Live catalog inventory that links to its merchant storefront.</dd>
+            </div>
+          </dl>
+          <aside class="bl-card memory-panel" aria-labelledby="memory-title">
         <header>
           <p class="section-label">Browser storage</p>
           <h2 id="memory-title">Your offer memory</h2>
@@ -444,9 +467,9 @@
           <ul class="memory-list" id="memory-list"></ul>
           <button class="bl-button text-button" data-variant="danger" id="forget-all" type="button" hidden>Forget all saved notes</button>
         </section>
-
-
-      </aside>
+          </aside>
+        </div>
+      </details>
     </div>
     </section>
 
@@ -460,7 +483,7 @@
         <p id="account-status" role="status" aria-live="polite">Continue anonymously, or sign in to save a separate account copy.</p>
         <aside class="bl-callout bl-stack" data-tone="info" aria-labelledby="account-gate-title">
           <h2 class="bl-callout__title" id="account-gate-title" tabindex="-1">Sign in to sync</h2>
-          <p id="account-gate-copy">Sign in to save preferences across devices. Browsing, setup, local drafts, Save and apply in this browser, and Apply once without saving remain available without an account.</p>
+          <p id="account-gate-copy">Sign in to save preferences across devices. Browsing, setup, local drafts, and showing matching offers for this visit or with a browser-saved selection remain available without an account.</p>
           <p id="account-draft-notice" class="field-hint">When you sign in, your draft is kept temporarily in this tab for up to 30 minutes and restored when you return. Signing in does not save or import it to your account.</p>
           <div class="bl-actions">
             <a class="bl-button" id="account-login" href="/auth/login?returnTo=%2F%23account">Sign in with Google</a>

@@ -36,6 +36,14 @@ try {
     assert.ok(await page.locator('#partners').evaluate((node) => node.getBoundingClientRect().top < innerHeight), 'Partner deep link scrolls into view');
     await page.getByRole('link', { name: 'Open the technical network demo' }).click();
     assert.equal(await page.locator('#demo-view').isVisible(), true);
+    await button(page, 'Review this choice').click();
+    assert.equal(await page.locator('#product-view').isVisible(), true);
+    assert.equal(await page.locator('#canvas-review').isVisible(), true);
+    assert.equal(await focusId(page), 'product-preview-title', 'Demo review action moves focus to the revealed review');
+    assert.ok(await page.locator('#product-preview-title').evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= innerHeight;
+    }), 'Demo review heading scrolls into view');
     await page.getByRole('link', { name: 'For shoppers' }).click();
     assert.equal(await page.evaluate(() => location.hash), '#find-offers');
     assert.equal(await page.locator('#product-view').isVisible(), true);
