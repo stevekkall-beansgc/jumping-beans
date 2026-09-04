@@ -170,6 +170,28 @@ includesAll(engineHtml, [
   'id="account-import-confirm"',
   "Import selected browser memory",
 ], "engine consent journey");
+const partnerExperienceBlock = engineHtml.slice(
+  engineHtml.indexOf('<section class="partner-story'),
+  engineHtml.indexOf('<section class="demo-view"'),
+);
+includesAll(partnerExperienceBlock, [
+  "WHAT YOU GET",
+  "WHAT WE NEED FROM YOU",
+  "Your launch choices",
+  "You set the direction and approve. We handle the build.",
+  "You keep control of product facts, pricing, checkout, and final customer actions.",
+  "without seeing private messages",
+  "YOUR LAUNCH PLAN",
+  "Share the essentials",
+  "Review the experience",
+  "We build and launch",
+  "See what customers prefer",
+  "Preview the customer experience",
+], "partner experience explains the managed deliverable and partner responsibilities");
+check(
+  !/(?:WebMCP|opted-in|preference signals|technical network|This concept)/i.test(partnerExperienceBlock),
+  "Partner experience exposes Jumping Beans implementation concepts",
+);
 check(!engineHtml.includes('id="apply-once"'), "Demo still exposes a duplicate review action");
 check(!engineHtml.includes("product-note"), "Header still includes the removed product tagline");
 const demoTechnicalIndex = engineHtml.indexOf('class="bl-disclosure demo-technical"');
@@ -262,7 +284,7 @@ includesAll(engineHtml, [
   'See the offers you want—how you want, when you want.', 'Tell us what you’re looking for',
   'data-offer-channel="email"', 'data-offer-channel="site"', 'data-offer-channel="text"', 'data-offer-channel="chatgpt"',
   'These are previews only. Nothing is sent, scheduled, saved, or purchased.',
-  'Provide the experience your customers want.', 'Fictional sample data for product preview.',
+  'Give customers the offer experience they prefer.', 'Illustrative service plan.',
   'Enter in the manual form',
   'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"', 'Out-of-network affiliate',
   'id="browser-readiness"', 'Shopping for coffee under $15. Show customer stories first.',

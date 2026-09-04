@@ -34,8 +34,18 @@ try {
     assert.equal(await page.evaluate(() => location.hash), '#partners');
     assert.equal(await page.locator('#product-view').isVisible(), true);
     assert.ok(await page.locator('#partners').evaluate((node) => node.getBoundingClientRect().top < innerHeight), 'Partner deep link scrolls into view');
-    await page.getByRole('link', { name: 'Open the technical network demo' }).click();
+    await page.setViewportSize({ width: 680, height: 900 });
+    assert.equal(await page.locator('#partners').evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1, 'Partner story collapses before portrait-tablet content becomes cramped');
+    await reflow(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await reflow(page);
+    await page.getByRole('link', { name: 'Preview the customer experience' }).click();
     assert.equal(await page.locator('#demo-view').isVisible(), true);
+    assert.equal(await focusId(page), 'page-title', 'Partner preview moves focus to the demo introduction');
+    assert.ok(await page.locator('#page-title').evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= innerHeight;
+    }), 'Partner preview scrolls the demo introduction into view');
     await button(page, 'Review this choice').click();
     assert.equal(await page.locator('#product-view').isVisible(), true);
     assert.equal(await page.locator('#canvas-review').isVisible(), true);

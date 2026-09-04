@@ -915,7 +915,7 @@ function switchView(view, { focusHeading = false } = {}) {
     const heading = nextView === "product"
         ? els.productTitle
         : nextView === "account" ? els.accountTitle : document.getElementById("page-title");
-    heading?.focus({ preventScroll: true });
+    heading?.focus();
   }
 }
 
