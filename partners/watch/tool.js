@@ -16,8 +16,10 @@ const TOOL_NAME = "get_matching_deals";
 const MAX_RESPONSE_DEALS = 24;
 const ALLOWED_FORMATS = new Set(["testimonial", "price-proof", "video", "no-urgency"]);
 const ALLOWED_FEED_STYLES = new Set(["visual", "balanced", "compare", "custom"]);
+const OUTPUT_DEAL_KEYS = new Set(["sku", "name", "category", "listPrice", "listPriceSource", "dealPrice", "imageUrl", "expiresAt", "landing", "vendor", "source", "partnerId", "partnerName", "interestEligible", "merchantPageDiscountPercent", "merchantPageDiscountEvidence", "collateral", "provenance"]);
 
-const catalog = await fetch("/catalog.json").then((r) => r.json());
+const canRegisterNativeTool = typeof document.modelContext?.registerTool === "function";
+const catalog = canRegisterNativeTool ? await fetch("/catalog.json").then((r) => r.json()) : [];
 
 // Local catalog adapter, deliberately separate from the source taxonomy.  Its
 // aliases and facts are derived from displayable catalog fields only; it never
@@ -152,6 +154,10 @@ function setPreferencePlane(value) {
   globalThis.window?.dispatchEvent?.(new CustomEvent("jb:preference-plane", { detail: partnerState.preferencePlane }));
 }
 
+function outputDeal(value) {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => OUTPUT_DEAL_KEYS.has(key)));
+}
+
 function enrich(deal) {
   const hasExplicitMerchantPageDiscount = deal.merchantPageDiscountEvidence === "merchant-page-displayed-percent"
     && Number.isFinite(deal.merchantPageDiscountPercent)
@@ -181,7 +187,7 @@ function savings(deal) {
     : 0;
 }
 
-await document.modelContext.registerTool(
+if (canRegisterNativeTool) await document.modelContext.registerTool(
   {
     name: TOOL_NAME,
     title: "Get matching deals",
@@ -312,7 +318,7 @@ await document.modelContext.registerTool(
           })
           .slice(0, MAX_RESPONSE_DEALS)
           .map((d) => ({
-            ...Object.fromEntries(Object.entries(d).filter(([key]) => key !== "__match")),
+            ...outputDeal(d),
             partnerId: PARTNER_ID,
             partnerName: PARTNER_NAME,
             provenance: {
@@ -329,4 +335,4 @@ await document.modelContext.registerTool(
   { exposedTo: [CONCIERGE_ORIGIN] }
 );
 
-console.log(`[${PARTNER_ID}] registered:`, TOOL_NAME);
+if (canRegisterNativeTool) console.log(`[${PARTNER_ID}] registered:`, TOOL_NAME);

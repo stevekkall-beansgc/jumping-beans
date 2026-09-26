@@ -12,7 +12,7 @@ export async function onRequestGet({ request, env }) {
     });
   }
   try {
-    return new Response(JSON.stringify(await summary(env, product)), {
+    return new Response(JSON.stringify({ product, ...await summary(env, product) }), {
       headers: { "content-type": "application/json; charset=utf-8" },
     });
   } catch (error) {

@@ -3,6 +3,8 @@
 // cross-origin-isolation + origin-trial headers WebMCP requires.
 import assets from "./static.js"; // generated: { "index.html": "...", ... }
 import { handleIdentity } from "./identity.mjs";
+import { handleRakutenInventory } from "./rakuten.mjs";
+import { handleCatalogInventory } from "./catalog.mjs";
 
 const TRIAL =
   "Agi8UYnlGG38Bx/n9WLYXzqTEW2xnHv6SMR0ANCNg8i/SS15D+xcmLNqkoVtqrfQM2JHkr7DC0mTY2ZJpj+MkQgAAACAeyJvcmlnaW4iOiJodHRwczovL2p1bXBpbmctYmVhbnMtZW5naW5lLnN0ZXZlLWsta2FsbC53b3JrZXJzLmRldjo0NDMiLCJmZWF0dXJlIjoiV2ViTUNQIiwiZXhwaXJ5IjoxNzk0ODczNjAwLCJpc1N1YmRvbWFpbiI6dHJ1ZX0=";
@@ -45,11 +47,15 @@ function withEngineHeaders(response) {
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const rakutenResponse = await handleRakutenInventory(request, env);
+    if (rakutenResponse) return withEngineHeaders(rakutenResponse);
+    const catalogResponse = await handleCatalogInventory(request, env);
+    if (catalogResponse) return withEngineHeaders(catalogResponse);
     // Account routes are same-origin engine endpoints. They never bridge to a
     // partner tool, alter WebMCP discovery, or expose session material there.
     const identityResponse = await handleIdentity(request, env);
     if (identityResponse) return withEngineHeaders(identityResponse);
-    const url = new URL(request.url);
     let path = decodeURIComponent(url.pathname);
     if (path === "/") path = "/index.html";
 
@@ -62,6 +68,7 @@ export default {
     return withEngineHeaders(new Response(body, {
       headers: {
         "Content-Type": MIME[ext] || "application/octet-stream",
+        "Cache-Control": "public, max-age=0, must-revalidate",
       },
     }));
   },

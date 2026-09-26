@@ -1,6 +1,7 @@
 # Cloudflare Wrangler local artifacts
 .wrangler/
 node_modules/
+/engine/inventory-assets/
 
 # Local dev
 .env

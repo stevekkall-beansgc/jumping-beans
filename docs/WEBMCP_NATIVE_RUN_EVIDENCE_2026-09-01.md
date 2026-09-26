@@ -1,5 +1,10 @@
 # Jumping Beans — Native WebMCP Run Evidence
 
+> Historical evidence for the 2026-09-01 build. It does not accept the current
+> candidate or production deployment. Use
+> [`SELF_SERVE_RELEASE_ACCEPTANCE.md`](SELF_SERVE_RELEASE_ACCEPTANCE.md) for the
+> current release verdict.
+
 Date: 2026-09-01  
 Scope: local native WebMCP acceptance after the 8082 policy recovery  
 Decision: **LOCAL CONNECTED-PROFILE LANE STOP; PUBLIC CLEAN-PROFILE ACCEPTANCE PASS**

@@ -32,12 +32,13 @@ const html = readFileSync(new URL('../engine/index.html', import.meta.url), 'utf
 assert.doesNotMatch(html, /data-setup-path|preview-words-chat|See your results|Continue to review/);
 assert.equal((html.match(/id="canvas-show-offers"/g) || []).length, 1);
 assert.equal((html.match(/<h1\b/g) || []).length, 1);
-assert.match(html, /<h1[^>]*>Tell me what you’re looking for<\/h1>/);
+assert.match(html, /<h1[^>]*>See the offers you want—how you want, when you want\.<\/h1>/);
 assert.match(html, /id="canvas-enter-manual"[^>]*>Enter in the manual form<\/button>/);
 assert.match(html, /id="canvas-manual"[^>]*hidden/);
 assert.match(html, /id="canvas-back-chat"[^>]*>Back to chat<\/button>/);
 assert.match(html, /id="canvas-chat-form"/);
 assert.match(html, /id="canvas-review-selection"[^>]*>Review selection<\/button>/);
+assert.ok(html.indexOf('id="canvas-review-selection"') < html.indexOf('id="canvas-enter-manual"'), 'visual and keyboard order keep the primary review action first');
 assert.match(html, /id="canvas-visit"[^>]+checked/);
 assert.match(html, /<details[^>]+id="product-builder"/);
 assert.ok(html.indexOf('id="product-account-save"') > html.indexOf('id="canvas-results"'));
@@ -62,9 +63,10 @@ const state = {
   canvasRetention: 'once', canvasClarification: '', canvasRuleId: null,
   draftRevision: 0, appliedJourneyRevision: 0, memory: [], currentView: 'product',
   savedPreferences: null, hasSavedPreferences: false, originOutcomes: {}, sourceA: {},
+  connectedTools: [], discoveryComplete: false, networkSharingPaused: false,
 };
 const writes = []; const records = []; const saved = new Map();
-let rule = 0; let resolveRead; let calls = 0;
+let rule = 0; let resolveRead; let rejectRead; let calls = 0;
 context = vm.createContext({
   state, els, valid: true, DEFAULT_PREFERENCES: defaults, STARTER_STYLES,
   normalizePreferencePlane: (value) => normalizePreferencePlane(JSON.parse(JSON.stringify(value))),
@@ -83,12 +85,13 @@ context = vm.createContext({
   addMemory: () => !context.storageDenied, money: (value) => `$${Number(value).toFixed(2)}`,
   opaqueId: () => `rule-${++rule}`, escapeHtml: (value) => String(value),
   offerMarkup: (_deal, kind) => kind === 'open' ? 'Open inventory' : 'Opted-in partner', networkMarkup: () => 'Partner status',
+  selfServePreviewMarkup: () => 'Open storefront preview',
   renderJourney: () => { context.renderProductShell(); context.renderProductNetwork(); },
-  rerunAppliedJourney: async () => { state.appliedJourneyRevision++; calls++; await new Promise((resolve) => { resolveRead = resolve; }); },
+  rerunAppliedJourney: async () => { state.appliedJourneyRevision++; state.discoveryComplete = false; state.originOutcomes = {}; calls++; await new Promise((resolve, reject) => { resolveRead = resolve; rejectRead = reject; }); },
   invalidateAppliedJourney: () => { state.capabilityResolution = null; state.originOutcomes = {}; },
 });
 function load(start, end) { const a=source.indexOf(start), b=source.indexOf(end,a); assert.ok(a>=0 && b>a); vm.runInContext(source.slice(a,b),context); }
-load('function hasSuccessfulPartnerApplication()', 'function createPartnerFrames(');
+load('function renderBrowserReadiness()', 'function createPartnerFrames(');
 load('function renderProductReview(', 'function ruleScopeLabel(');
 load('function ruleScopeLabel(', 'function currentProductCategory(');
 load('function currentProductCategory(', 'function productPreferenceDraft(');
@@ -96,6 +99,7 @@ load('function productPreferenceDraft()', 'function renderOfferCard(');
 load('function markDraftEdited(', 'function hydrateAccountJourney(');
 load('async function applyPreferences(', 'function invalidateAppliedJourney(');
 context.renderProductShell();
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP check is available');
 assert.equal(els.canvasDraft.hidden,false);
 assert.equal(els.canvasChat.hidden,false);
 assert.equal(els.canvasManual.hidden,true);
@@ -296,12 +300,39 @@ state.applied=true; state.productStage='results'; state.productReviewState='appl
 state.originOutcomes=base.outcomes;state.capabilityResolution={exposed:[]}; context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'no-match');
 assert.match(els.canvasResultsFeed.innerHTML,/Open inventory/);
+assert.match(els.canvasResultsFeed.innerHTML,/Open storefront preview/);
 assert.doesNotMatch(els.canvasResultsFeed.innerHTML,/Opted-in partner/);
 state.originOutcomes.two.status='timeout';state.capabilityResolution.exposed=[{}];context.renderProductNetwork();
 assert.equal(els.canvasResults.dataset.state,'partial');
 assert.match(els.canvasResultsFeed.innerHTML,/Opted-in partner/);
+// The persistent readiness callout must reflect the current result, retry, and
+// pause states instead of retaining an earlier green verdict.
+state.originOutcomes={one:{status:'ready'},two:{status:'no-match'}};
+state.connectedTools=[{origin:'one'},{origin:'two'}];
+state.discoveryComplete=true;
+state.productReviewState='applied';
+context.renderProductShell();
+assert.equal(els.browserReadiness.dataset.tone,'success');
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP verified with all 2 member sites');
+state.productReviewState='applying';
+context.renderProductShell();
+assert.equal(els.browserReadiness.children[0].textContent,'Checking native WebMCP');
+state.productReviewState='applied';state.networkSharingPaused=true;state.originOutcomes={};
+context.renderProductShell();
+assert.equal(els.browserReadiness.dataset.tone,'info');
+assert.equal(els.browserReadiness.children[0].textContent,'Native WebMCP sharing is paused');
+state.networkSharingPaused=false;
+state.applied=true;state.productReviewState='applied';state.discoveryComplete=true;
+state.originOutcomes={one:{status:'ready'},two:{status:'no-match'}};
+const failedRetry=context.retryCanvasResults();
+assert.equal(els.browserReadiness.children[0].textContent,'Checking native WebMCP');
+rejectRead(new Error('partner discovery failed'));
+await failedRetry;
+assert.equal(state.discoveryComplete,true);
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['failed','failed']);
+assert.equal(els.browserReadiness.children[0].textContent,'Native member check is incomplete');
 // The actual native discovery path must stop if Forget revokes while getTools waits.
-load('async function discoverPartnerDeals(', 'function applyPartnerDiscovery(');
+load('function createPartnerFrames(', 'async function fetchRakutenDeals(');
 let finishDiscovery; let invocations=0;
 context.document.modelContext={ getTools: async () => new Promise(resolve => {finishDiscovery=resolve;}) };
 context.TOOL_NAMES={matchingDeals:'get_matching_deals'};
@@ -309,22 +340,172 @@ context.discoverGrant=()=>{invocations++; return {};};
 context.executeTool=()=>{invocations++; return {};};
 state.applied=true; state.appliedJourneyRevision++;
 const pendingNative=context.discoverPartnerDeals();
+await Promise.resolve();
 state.applied=false;state.appliedJourneyRevision++;
 finishDiscovery([{name:'get_matching_deals',origin:'one'}]);
 await pendingNative;
 assert.equal(invocations,0,'revoked discovery cannot invoke a native partner tool');
 
-// The native serialized-argument compatibility retry has the same revocation boundary.
+// A partial native registry must be retried until every allowlisted origin is
+// present. Discovery returns the tools without mutating live readiness state.
+context.window.setTimeout=(resolve)=>resolve();
+context.location={origin:'engine'};
+context.discoverGrant=()=>({});
+context.projectPartnerContext=()=>({fields:{}});
+context.resolvePartnerTools=async({tools,allowedOrigins})=>({
+  deals:[],
+  originOutcomes:Object.fromEntries(allowedOrigins.map(origin=>[origin,{status:tools.some(tool=>tool.origin===origin)?'ready':'failed',count:0}])),
+});
+context.invokeCapability=async({handler})=>({ok:true,value:await handler()});
+let toolReads=0;
+context.document.modelContext.getTools=async()=>++toolReads===1
+  ? [{name:'get_matching_deals',origin:'one'}]
+  : [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+state.applied=true;state.networkSharingPaused=false;state.appliedJourneyRevision++;
+state.connectedTools=[{origin:'previous'}];
+const completeNative=await context.discoverPartnerDeals();
+assert.equal(toolReads,2,'a partial registry is never accepted as terminal while an allowlisted origin is still booting');
+assert.deepEqual(completeNative.connectedTools.map(({origin})=>origin),['one','two']);
+assert.deepEqual(state.connectedTools.map(({origin})=>origin),['previous'],'discovery cannot mutate authoritative readiness before ownership is checked');
+
+// An immediate approval must wait for partner frame bootstrap before reading
+// the native registry.
+let releasePartnerFrames;
+context.bootstrapPromise=new Promise(resolve=>{releasePartnerFrames=resolve;});
+vm.runInContext('partnerFramesReady = bootstrapPromise',context);
+toolReads=0;
+context.document.modelContext.getTools=async()=>{toolReads++;return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];};
+const bootstrapNative=context.discoverPartnerDeals();
+await Promise.resolve();
+assert.equal(toolReads,0,'native registry is not read before partner frames finish booting');
+releasePartnerFrames([]);
+await bootstrapNative;
+assert.equal(toolReads,1);
+
+// A newer discovery at the same applied-journey revision owns readiness. A
+// late partial result from an older request cannot overwrite the full result.
+load('function applyPartnerDiscovery(', 'let nativeToolchangeReconciliationQueued');
+state.connectedOrigins=[];
+state.selectedWatchOfferId=null;
+let originsSeenByDecision;
+context.choosePartnerOffer=()=>{originsSeenByDecision=[...state.connectedOrigins];return null;};
+context.watchHandoffOffers=()=>[];
+context.updateConnections=()=>{};
+context.renderJourney=()=>{};
+let releaseStaleTools;
+toolReads=0;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseStaleTools=resolve;});
+  if(toolReads===2)return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+  return [{name:'get_matching_deals',origin:'one'}];
+};
+const staleRequest=context.beginPartnerDiscovery();
+await Promise.resolve();
+const currentRequest=context.beginPartnerDiscovery();
+const currentResult=await currentRequest.promise;
+assert.equal(context.applyPartnerDiscovery(currentResult,currentRequest),true);
+releaseStaleTools([{name:'get_matching_deals',origin:'one'}]);
+const staleResult=await staleRequest.promise;
+assert.equal(context.applyPartnerDiscovery(staleResult,staleRequest),false,'an older same-revision discovery cannot overwrite a newer result');
+assert.equal(JSON.stringify(originsSeenByDecision),'["one","two"]','decision evidence sees every unique origin from the current native discovery');
+assert.equal(JSON.stringify(state.connectedOrigins),'["one","two"]');
+assert.equal(JSON.stringify(state.connectedTools.map(({origin})=>origin)),'["one","two"]');
+
+// A queued toolchange timer cannot supersede a foreground applied journey if
+// that journey starts before the timer runs. It is replayed after the current
+// journey has published its complete result.
+load('let nativeToolchangeReconciliationQueued', 'function choosePartnerOffer(');
+load('async function rerunAppliedJourney()', 'function handlePrompt(');
+let toolchangeListener;let scheduledReconciliation;
+context.window.setTimeout=(callback)=>{scheduledReconciliation=callback;};
+context.document.modelContext.addEventListener=(type,listener)=>{if(type==='toolchange')toolchangeListener=listener;};
+context.observeNativeToolChanges();
+context.fetchRakutenDeals=async()=>({deals:[],meta:null});
+context.fetchCatalogDeals=async()=>({deals:[],meta:null});
+context.invalidateAppliedJourney=()=>{state.discoveryComplete=false;state.originOutcomes={};};
+const acceptedDiscoveries=[];
+const applyDiscovery=context.applyPartnerDiscovery;
+context.applyPartnerDiscovery=(result,request)=>{
+  const accepted=applyDiscovery(result,request);
+  if(accepted)acceptedDiscoveries.push(result.connectedTools.map(({origin})=>origin));
+  return accepted;
+};
+toolReads=0;
+let releaseForegroundTools;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseForegroundTools=resolve;});
+  return [{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}];
+};
+toolchangeListener();
+const queuedBeforeForeground=scheduledReconciliation;
+const foregroundJourney=context.rerunAppliedJourney();
+for(let flush=0;flush<10&&!releaseForegroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseForegroundTools,'function');
+queuedBeforeForeground();
+await Promise.resolve();
+assert.equal(toolReads,1,'a queued toolchange cannot start a competing discovery after a foreground journey begins');
+releaseForegroundTools([{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}]);
+await foregroundJourney;
+assert.deepEqual(acceptedDiscoveries[0],['one','two'],'the foreground journey remains authoritative and can report partner acknowledgement');
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['ready','ready']);
+const replayAfterForeground=scheduledReconciliation;
+replayAfterForeground();
+for(let flush=0;flush<20&&acceptedDiscoveries.length<2;flush++)await Promise.resolve();
+assert.ok(toolReads>=2,'a coalesced toolchange is replayed after the foreground journey completes');
+assert.ok(acceptedDiscoveries.every(origins=>JSON.stringify(origins)==='["one","two"]'));
+
+// An already-active reconciliation with another event pending also yields to
+// a newer foreground journey instead of starting a second background request.
+let releaseBackgroundTools;let releaseSecondForegroundTools;
+toolReads=0;scheduledReconciliation=null;
+context.document.modelContext.getTools=async()=>{
+  toolReads++;
+  if(toolReads===1)return new Promise(resolve=>{releaseBackgroundTools=resolve;});
+  if(toolReads===2)return new Promise(resolve=>{releaseSecondForegroundTools=resolve;});
+  return [{name:'get_matching_deals',origin:'one'}];
+};
+toolchangeListener();
+const startBackground=scheduledReconciliation;
+startBackground();
+for(let flush=0;flush<10&&!releaseBackgroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseBackgroundTools,'function');
+toolchangeListener();
+const foregroundDuringReconciliation=context.rerunAppliedJourney();
+for(let flush=0;flush<10&&!releaseSecondForegroundTools;flush++)await Promise.resolve();
+assert.equal(typeof releaseSecondForegroundTools,'function');
+releaseBackgroundTools([{name:'get_matching_deals',origin:'one'}]);
+for(let flush=0;flush<10;flush++)await Promise.resolve();
+assert.equal(toolReads,2,'pending reconciliation yields instead of superseding a newly active foreground journey');
+releaseSecondForegroundTools([{name:'get_matching_deals',origin:'one'},{name:'get_matching_deals',origin:'two'}]);
+await foregroundDuringReconciliation;
+assert.deepEqual(state.connectedTools.map(({origin})=>origin),['one','two']);
+assert.deepEqual(Object.values(state.originOutcomes).map(({status})=>status),['ready','ready']);
+
+// Chrome's native API receives JSON text first, while the legacy-object
+// compatibility retry keeps the same revocation boundary.
 load('async function executeTool(', 'function discoverGrant(');
 context.isCompatibilityInputError=isCompatibilityInputError;
 let rejectNative; let nativeCalls=0;
-context.document.modelContext.executeTool=async()=>{nativeCalls++; return new Promise((_resolve,reject)=>{rejectNative=reject;});};
+let nativeInputs=[];
+context.document.modelContext.executeTool=async(_tool,input)=>{nativeCalls++; nativeInputs.push(input); return new Promise((_resolve,reject)=>{rejectNative=reject;});};
 state.applied=true;state.networkSharingPaused=false;
 const initialNative=context.executeTool({name:'get_matching_deals'}, {maxPrice:200});
+assert.equal(nativeInputs[0],'{"maxPrice":200}','native Chrome input is serialized first');
 state.applied=false;state.appliedJourneyRevision++;
-rejectNative(new Error('Failed to parse input arguments'));
+rejectNative(new TypeError("parameter 2 is not of type 'object'"));
 await assert.rejects(initialNative);
 assert.equal(nativeCalls,1,'revocation blocks serialized compatibility retry');
+
+// A recognized legacy input-type error may retry once with the object while
+// the consent boundary is still valid.
+nativeInputs=[];nativeCalls=0;state.applied=true;
+context.document.modelContext.executeTool=async(_tool,input)=>{nativeCalls++;nativeInputs.push(input);if(typeof input==='string')throw new TypeError("parameter 2 is not of type 'object'");return JSON.stringify({deals:[]});};
+assert.equal(JSON.stringify(await context.executeTool({name:'get_matching_deals'}, {maxPrice:200})),'{"deals":[]}');
+assert.equal(nativeCalls,2);
+assert.equal(nativeInputs[0],'{"maxPrice":200}');
+assert.equal(nativeInputs[1].maxPrice,200);
 
 // A memory write failure leaves Forget retryable and does not imply deletion.
 saved.set('preferences',oldSaved); saved.set('memory',[{kind:'preference'}]);

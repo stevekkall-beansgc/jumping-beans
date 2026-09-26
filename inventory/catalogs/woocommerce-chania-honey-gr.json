@@ -1,0 +1,50 @@
+[
+  {
+    "sku": "woocommerce-158",
+    "name": "Βιολογικό Θυμαρίσιο Μέλι Οικογενειακό Πακέτο",
+    "category": "θυμαρίσιο",
+    "listPrice": null,
+    "listPriceSource": null,
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 38.9,
+    "imageUrl": "https://www.chania-honey.gr/wp-content/uploads/2021/07/product-family-prize.png",
+    "expiresAt": "2026-10-03T16:16:43.868Z",
+    "landing": "https://www.chania-honey.gr/product/%ce%bc%ce%ad%ce%bb%ce%b9-%ce%b8%cf%85%ce%bc%ce%b1%cf%81%ce%af%cf%83%ce%b9%ce%bf-%ce%bf%ce%b9%ce%ba%ce%bf%ce%b3%ce%b5%ce%bd%ce%b5%ce%b9%ce%b1%ce%ba%cf%8c-%cf%80%ce%b1%ce%ba%ce%ad%cf%84%ce%bf/",
+    "vendor": "chania-honey.gr",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  },
+  {
+    "sku": "woocommerce-159",
+    "name": "Βιολογικό Θυμαρίσιο Μέλι 800gr",
+    "category": "θυμαρίσιο",
+    "listPrice": null,
+    "listPriceSource": null,
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 25.95,
+    "imageUrl": "https://www.chania-honey.gr/wp-content/uploads/2021/04/product-800-prize.png",
+    "expiresAt": "2026-10-03T16:16:43.868Z",
+    "landing": "https://www.chania-honey.gr/product/%ce%bc%ce%ad%ce%bb%ce%b9-%ce%b8%cf%85%ce%bc%ce%b1%cf%81%ce%af%cf%83%ce%b9%ce%bf-800gr/",
+    "vendor": "chania-honey.gr",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  },
+  {
+    "sku": "woocommerce-160",
+    "name": "Βιολογικό Θυμαρίσιο Μέλι 400gr",
+    "category": "θυμαρίσιο",
+    "listPrice": null,
+    "listPriceSource": null,
+    "merchantPageDiscountPercent": null,
+    "merchantPageDiscountEvidence": null,
+    "dealPrice": 16.45,
+    "imageUrl": "https://www.chania-honey.gr/wp-content/uploads/2021/04/product-400-prize.png",
+    "expiresAt": "2026-10-03T16:16:43.868Z",
+    "landing": "https://www.chania-honey.gr/product/%ce%bc%ce%ad%ce%bb%ce%b9-%ce%b8%cf%85%ce%bc%ce%b1%cf%81%ce%af%cf%83%ce%b9%ce%bf-400gr/",
+    "vendor": "chania-honey.gr",
+    "availability": "in-stock",
+    "source": "woocommerce"
+  }
+]

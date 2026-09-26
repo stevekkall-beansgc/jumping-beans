@@ -27,6 +27,8 @@ import {
 import { accountJourneyAfterLogout, accountJourneyHydration, accountMemoryAfterForget, mergeAccountResponse } from "./personal-experience.js";
 import { normalizePreferencePlane, reviewPreferencePlane, selectStarterStyle, STARTER_STYLES } from "./preference-plane.mjs";
 
+import { partnerHandoffUrl, previewPartnerHandoff } from "./preference-handoff.mjs";
+
 import { canvasDraft, interpretPreferenceWords, selectionSummary, canvasResultState } from "./preference-canvas.mjs";
 
 import { ACCOUNT_DRAFT_KEY, accountDraftSnapshot, readAccountDraft, accountGateCopy, accountDisplayName, accountIntent, accountReturnView } from "./account-access.js";
@@ -49,6 +51,7 @@ const els = {
   statusDot: document.getElementById("status-dot"),
   protocol: document.getElementById("protocol-badge"),
   sourceCount: document.getElementById("source-count"),
+  browserReadiness: document.getElementById("browser-readiness"),
   agent: document.getElementById("agent-message"),
   memoryStep: document.getElementById("memory-step"),
   nextStep: document.getElementById("next-step"),
@@ -137,10 +140,6 @@ const els = {
   canvasRetry: document.getElementById("canvas-retry"),
   canvasSync: document.getElementById("canvas-sync"),
   canvasWords: document.getElementById("product-prompt-input"),
-  actionTriggerQuote: document.getElementById("action-trigger-quote"),
-  actionPreviewName: document.getElementById("action-preview-name"),
-  actionPreviewCopy: document.getElementById("action-preview-copy"),
-  actionPreviewLink: document.getElementById("action-preview-link"),
   connectionStatus: document.querySelector(".connection-status"),
 };
 
@@ -150,20 +149,6 @@ const STORAGE = {
   networkSharing: "jumping-beans-network-sharing",
 };
 const DEFAULT_PREFERENCES = normalizePreferencePlane({ formats: ["price-proof"], tone: "calm" });
-const ACTION_TRIGGER_COPY = {
-  message: {
-    quote: "“Get the coffee I liked last week, ground, and keep it under $15.”",
-    description: "A request in a conversation can start the chain without sending the user to a storefront first.",
-  },
-  article: {
-    quote: "“That setup looks right. Find the matching item and show me proof before I decide.”",
-    description: "An article can become an action surface: the assistant can resolve the referenced item and ask what to do next.",
-  },
-  product: {
-    quote: "“I’m looking at this now. Compare it, adapt the presentation, and let me choose the next action.”",
-    description: "A product page can hand off a focused action chain instead of adding another ad or duplicate search box.",
-  },
-};
 const loadedAt = new Date().toISOString();
 const OPEN_INVENTORY = {
   sku: "open-wildone-walk-kit",
@@ -235,6 +220,12 @@ const state = {
   appliedPreferences: { ...initialPreferences, formats: [...initialPreferences.formats] },
   memory: Array.isArray(storedMemory) ? storedMemory : [],
   partnerDeals: [],
+  rakutenDeals: [],
+  rakutenStatus: "idle",
+  rakutenMeta: null,
+  catalogDeals: [],
+  catalogStatus: "idle",
+  catalogMeta: null,
   connectedTools: [],
   sourceA: OPEN_INVENTORY,
   sourceB: null,
@@ -294,7 +285,7 @@ function recordEvent(type, payload = {}) {
 const formatLabels = {
   testimonial: "Testimonials",
   "price-proof": "Price proof",
-  video: "Short video",
+  video: "Short video (when supplied)",
   "no-urgency": "No urgency",
 };
 const preferredFormats = ["testimonial", "video", "price-proof"];
@@ -328,6 +319,21 @@ function safeUrl(value) {
   }
 }
 
+function imageUrlAtWidth(value, width) {
+  const url = safeUrl(value);
+  if (!url) return null;
+  if (url.hostname === "cdn.shopify.com") url.searchParams.set("width", String(width));
+  return url;
+}
+
+function responsiveImageSrcset(value) {
+  const url = safeUrl(value);
+  if (!url || url.hostname !== "cdn.shopify.com") return "";
+  return [320, 480, 512, 640, 960]
+    .map((width) => `${imageUrlAtWidth(url.href, width).href} ${width}w`)
+    .join(", ");
+}
+
 function safeOrigin(value) {
   return safeUrl(value)?.origin || value || "unknown origin";
 }
@@ -344,32 +350,33 @@ function absoluteTime(value) {
 function updateConnections() {
   const origins = [...new Set(state.connectedTools.map((tool) => tool.origin).filter(Boolean))];
   state.connectedOrigins = origins;
+  renderBrowserReadiness();
   const names = origins.map((origin) => PARTNER_NAMES[origin] || safeOrigin(origin));
   const discovered = origins.length;
   if (!SUPPORTED) {
-    els.status.textContent = "Open inventory ready. WebMCP is unavailable here; no opted-in partner result is available.";
-    els.protocol.textContent = "WebMCP · unavailable in this browser";
+    els.status.textContent = "Sample catalog ready. Partner checking is unavailable in this browser.";
+    els.protocol.textContent = "Partner check unavailable";
     els.sourceCount.textContent = "No tool check available";
     els.statusDot.dataset.on = "0";
     return;
   }
   if (!state.applied) {
-    els.status.textContent = "Open inventory ready. Member sites have not been asked for preferences.";
-    els.protocol.textContent = "WebMCP · not requested";
+    els.status.textContent = "Sample catalog ready. Your choices have not been shared.";
+    els.protocol.textContent = "No partner request yet";
     els.sourceCount.textContent = "No partner request sent";
     els.statusDot.dataset.on = "0";
     return;
   }
   if (state.networkSharingPaused) {
-    els.status.textContent = "Open inventory ready. Network sharing is paused; no preferences were sent to member sites.";
-    els.protocol.textContent = "WebMCP · sharing paused";
+    els.status.textContent = "Sample catalog ready. Partner sharing is paused.";
+    els.protocol.textContent = "Partner sharing paused";
     els.sourceCount.textContent = "No partner request sent while paused";
     els.statusDot.dataset.on = "0";
     return;
   }
   if (!state.discoveryComplete) {
-    els.status.textContent = "Open inventory ready. Checking opted-in partner sites.";
-    els.protocol.textContent = "WebMCP · checking partner sites";
+    els.status.textContent = "Sample catalog ready. Checking partner sites.";
+    els.protocol.textContent = "Checking partner sites";
     els.sourceCount.textContent = `Checking ${PARTNER_ORIGINS.length} sites`;
     els.statusDot.dataset.on = "0";
     return;
@@ -382,29 +389,76 @@ function updateConnections() {
     const resultLabel = ready
       ? `${ready} site${ready === 1 ? "" : "s"} returned offers${noMatch ? `; ${noMatch} returned no match` : ""}`
       : `${noMatch} site${noMatch === 1 ? "" : "s"} responded with no matching offers`;
-    els.status.textContent = `Open inventory ready. ${resultLabel}.`;
-    els.protocol.textContent = `WebMCP · ${responses} partner response${responses === 1 ? "" : "s"}`;
+    els.status.textContent = `Sample catalog ready. ${resultLabel}.`;
+    els.protocol.textContent = `${responses} partner response${responses === 1 ? "" : "s"}`;
     els.sourceCount.textContent = resultLabel;
     els.statusDot.dataset.on = ready ? "1" : "0";
     return;
   }
   els.status.textContent = discovered
-    ? `Open inventory ready. ${discovered} opted-in site${discovered === 1 ? "" : "s"} connected: ${names.join(", ")}.`
-    : "Open inventory ready. No opted-in offer tools responded.";
+    ? `Sample catalog ready. ${discovered} partner site${discovered === 1 ? "" : "s"} connected: ${names.join(", ")}.`
+    : "Sample catalog ready. No partner sites responded.";
   els.protocol.textContent = discovered
-    ? `WebMCP · ${discovered} opted-in site${discovered === 1 ? "" : "s"}`
-    : "WebMCP · no opted-in tools found";
+    ? `${discovered} partner site${discovered === 1 ? "" : "s"} connected`
+    : "No partner response";
   els.sourceCount.textContent = discovered
     ? `${discovered} connected: ${names.join(", ")}`
     : "0 connected";
   els.statusDot.dataset.on = discovered ? "1" : "0";
 }
 
+function renderBrowserReadiness() {
+  if (!els.browserReadiness) return;
+  const title = document.createElement("strong");
+  const copy = document.createElement("p");
+  title.className = "bl-callout__title";
+  const respondingOrigins = PARTNER_ORIGINS.filter((origin) => ["ready", "no-match"].includes(state.originOutcomes?.[origin]?.status));
+  const connectedOrigins = new Set(state.connectedTools.map((tool) => tool.origin));
+  const verified = state.applied && !state.networkSharingPaused
+    && state.productReviewState !== "applying" && state.discoveryComplete
+    && respondingOrigins.length === PARTNER_ORIGINS.length
+    && PARTNER_ORIGINS.every((origin) => connectedOrigins.has(origin));
+  if (verified) {
+    title.textContent = `Native WebMCP verified with all ${PARTNER_ORIGINS.length} member sites`;
+    copy.textContent = "Each allowlisted site completed the current read-only offer check. Matched cards and the separate storefront preview can now show the same approved selection.";
+    els.browserReadiness.dataset.tone = "success";
+  } else if (SUPPORTED && state.applied && state.networkSharingPaused) {
+    title.textContent = "Native WebMCP sharing is paused";
+    copy.textContent = "No selection is being sent to member sites. Resume network sharing to run a new native check with the current approved selection.";
+    els.browserReadiness.dataset.tone = "info";
+  } else if (SUPPORTED && state.applied && (!state.discoveryComplete || state.productReviewState === "applying")) {
+    title.textContent = "Checking native WebMCP";
+    copy.textContent = `Waiting for responses from ${PARTNER_ORIGINS.length} allowlisted member sites. The ordinary-browser storefront preview remains available in the results.`;
+    els.browserReadiness.dataset.tone = "info";
+  } else if (SUPPORTED && state.applied) {
+    title.textContent = "Native member check is incomplete";
+    copy.textContent = `${respondingOrigins.length} of ${PARTNER_ORIGINS.length} member sites completed the native check. The separately labeled storefront preview remains available and does not count as a WebMCP match.`;
+    els.browserReadiness.dataset.tone = "warning";
+  } else if (SUPPORTED) {
+    title.textContent = "Native WebMCP check is available";
+    copy.textContent = `This isolated browser exposes the native API. Apply a selection to verify all ${PARTNER_ORIGINS.length} allowlisted member sites before the demo claims a native result.`;
+    els.browserReadiness.dataset.tone = "info";
+  } else {
+    title.textContent = "Storefront preview is ready";
+    copy.textContent = "This browser cannot run native WebMCP. Apply a Coffee, Dog gear, or Watches selection to open the same visit-only preference handoff on its member storefront. The preview stays clearly separate from a WebMCP match.";
+    els.browserReadiness.dataset.tone = "info";
+  }
+  const renderKey = JSON.stringify([els.browserReadiness.dataset.tone, title.textContent, copy.textContent]);
+  if (state.browserReadinessRenderKey === renderKey) return;
+  state.browserReadinessRenderKey = renderKey;
+  els.browserReadiness.replaceChildren(title, copy);
+}
+
 function hasSuccessfulPartnerApplication() {
   return Object.values(state.originOutcomes || {}).some((outcome) => ["ready", "no-match"].includes(outcome?.status));
 }
 
+const NATIVE_DISCOVERY_ATTEMPTS = 6;
+let partnerFramesReady = Promise.resolve([]);
+let nativeDiscoveryRequestSequence = 0;
+
 function createPartnerFrames() {
+  if (!SUPPORTED) return Promise.resolve([]);
   const waits = PARTNER_ORIGINS.map((origin, index) => {
     const frame = document.createElement("iframe");
     // WebMCP is origin-isolated. Delegate both the tool capability and the
@@ -419,6 +473,7 @@ function createPartnerFrames() {
     frame.className = "partner-frame";
     frame.dataset.origin = origin;
     frame.title = `WebMCP discovery frame for ${PARTNER_NAMES[origin] || `partner ${index + 1}`}`;
+    frame.tabIndex = -1;
     frame.setAttribute("aria-hidden", "true");
     const wait = new Promise((resolve) => {
       let settled = false;
@@ -442,12 +497,14 @@ async function executeTool(tool, input, { compatibilityRetry = true } = {}) {
   if (!state.applied || state.networkSharingPaused) throw new Error("Preference application was revoked");
   let raw;
   try {
-    raw = await document.modelContext.executeTool(tool, input);
+    // Chrome's imperative WebMCP API accepts the tool input as JSON text.
+    // Serialize first so the production path follows the browser contract.
+    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
   } catch (error) {
     if (!compatibilityRetry || !isCompatibilityInputError(error) || !state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) throw error;
-    // Some WebMCP implementations still expect serialized arguments. This
-    // retry is limited to partner reads and keeps the product protocol-aware.
-    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+    // Older development implementations accepted an object. Keep that
+    // compatibility path limited to recognized input-type failures.
+    raw = await document.modelContext.executeTool(tool, input);
   }
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
@@ -461,13 +518,27 @@ function discoverGrant() {
   });
 }
 
+function beginPartnerDiscovery(preferences = state.appliedPreferences) {
+  const request = {
+    id: ++nativeDiscoveryRequestSequence,
+    appliedJourneyRevision: state.appliedJourneyRevision,
+  };
+  request.promise = discoverPartnerDeals(preferences);
+  return request;
+}
+
 async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   const requestRevision = state.appliedJourneyRevision;
   // Native discovery is deferred until the page applies an explicit choice.
   // This keeps draft preferences and a merely toggled demo control in-page.
-  if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])) };
-  if (state.networkSharingPaused) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "paused", count: 0, reason: "network sharing is paused by the user" }])) };
-  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {} };
+  if (!state.applied) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "not-requested", count: 0, reason: "awaiting explicit preference application" }])), connectedTools: [] };
+  if (state.networkSharingPaused) return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "paused", count: 0, reason: "network sharing is paused by the user" }])), connectedTools: [] };
+  if (!SUPPORTED || typeof document.modelContext.getTools !== "function") return { deals: [], originOutcomes: {}, connectedTools: [] };
+  // An immediate user action can arrive while the partner frames are still
+  // booting. Wait for their load/registration boundary before reading the
+  // browser registry so the first approved journey is authoritative.
+  await partnerFramesReady;
+  if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {}, connectedTools: [] };
   recordEvent("capability.invocation.started", {
     capabilityId: "offers.discover",
     capabilityVersion: "1.0.0",
@@ -475,20 +546,19 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   });
   let matching = [];
   let lastError = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < NATIVE_DISCOVERY_ATTEMPTS; attempt += 1) {
     try {
       const tools = await document.modelContext.getTools({ fromOrigins: PARTNER_ORIGINS });
-      if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {} };
+      if (!state.applied || state.networkSharingPaused || requestRevision !== state.appliedJourneyRevision) return { deals: [], originOutcomes: {}, connectedTools: [] };
       matching = tools
         .filter((tool) => tool.name === TOOL_NAMES.matchingDeals && PARTNER_ORIGINS.includes(tool.origin))
         .filter((tool, index, all) => all.findIndex((candidate) => candidate.origin === tool.origin) === index);
-      if (matching.length || attempt === 2) break;
+      if (matching.length === PARTNER_ORIGINS.length || attempt === NATIVE_DISCOVERY_ATTEMPTS - 1) break;
     } catch (error) {
       lastError = error;
     }
     await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
   }
-  state.connectedTools = matching;
   matching.forEach((tool) => recordEvent("capability.exposed", {
     capabilityId: "offers.discover",
     capabilityVersion: "1.0.0",
@@ -501,7 +571,7 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
       capabilityVersion: "1.0.0",
       reason: "partner discovery failed after compatibility retries",
     });
-    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: "partner discovery failed" }])) };
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: "partner discovery failed" }])), connectedTools: [] };
   }
   const grant = discoverGrant();
   const invocation = await invokeCapability({
@@ -519,15 +589,62 @@ async function discoverPartnerDeals(preferences = state.appliedPreferences) {
   });
   if (!invocation.ok) {
     recordEvent("capability.invocation.denied", { capabilityId: "offers.discover", reason: invocation.authorization?.code || invocation.code });
-    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: invocation.authorization?.code || invocation.code }])) };
+    return { deals: [], originOutcomes: Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed", count: 0, reason: invocation.authorization?.code || invocation.code }])), connectedTools: matching };
   }
   Object.entries(invocation.value.originOutcomes).forEach(([origin, outcome]) => recordEvent(`capability.invocation.${outcome.status}`, { capabilityId: "offers.discover", capabilityVersion: "1.0.0", origin, ...outcome }));
-  return invocation.value;
+  return { ...invocation.value, connectedTools: matching };
 }
 
-function applyPartnerDiscovery(result) {
+async function fetchRakutenDeals(preferences = state.appliedPreferences) {
+  const category = String(preferences.category || "").trim();
+  const params = new URLSearchParams({ max: "24" });
+  if (category) params.set("q", category);
+  const response = await fetch(`/api/inventory/rakuten?${params}`, {
+    credentials: "same-origin",
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload?.items)) throw new Error(payload?.error || "rakuten-unavailable");
+  const ceiling = Number.isFinite(preferences.maxPrice) ? preferences.maxPrice : null;
+  const deals = payload.items.filter((deal) => {
+    const price = Number(deal?.dealPrice);
+    return Number.isFinite(price) && price >= 0 && (
+      ceiling == null || price < ceiling || (price === ceiling && preferences.maxPriceInclusive !== false)
+    );
+  });
+  return { deals, meta: payload.meta || null };
+}
+
+async function fetchCatalogDeals(preferences = state.appliedPreferences) {
+  const category = String(preferences.category || "").trim();
+  const params = new URLSearchParams({ max: "24" });
+  if (category) {
+    params.set("q", category);
+    params.set("category", category);
+  }
+  if (Number.isFinite(preferences.maxPrice)) {
+    params.set("maxPrice", String(preferences.maxPrice));
+    params.set("maxPriceInclusive", String(preferences.maxPriceInclusive !== false));
+  }
+  const response = await fetch(`/api/inventory/catalog?${params}`, {
+    credentials: "same-origin",
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload?.items)) throw new Error(payload?.error || "catalog-unavailable");
+  return { deals: payload.items, meta: payload.meta || null };
+}
+
+function applyPartnerDiscovery(result, request) {
+  if (request?.id !== nativeDiscoveryRequestSequence || request.appliedJourneyRevision !== state.appliedJourneyRevision) return false;
+  state.connectedTools = Array.isArray(result.connectedTools) ? result.connectedTools : [];
   state.partnerDeals = result.deals;
   state.originOutcomes = result.originOutcomes;
+  // The decision receipt and its event must describe the tools discovered for
+  // this invocation. Refresh the derived origin list before either is built.
+  state.connectedOrigins = [...new Set(state.connectedTools.map((tool) => tool.origin).filter(Boolean))];
   state.sourceB = choosePartnerOffer(result.deals);
   const watchOffers = watchHandoffOffers();
   if (!watchOffers.some((deal) => deal.resolution.offerId === state.selectedWatchOfferId)) {
@@ -536,27 +653,60 @@ function applyPartnerDiscovery(result) {
   state.discoveryComplete = true;
   updateConnections();
   renderJourney();
+  return true;
 }
 
 let nativeToolchangeReconciliationQueued = false;
+let nativeToolchangeReconciliationActive = false;
+let nativeToolchangeReconciliationPending = false;
+let nativeForegroundDiscoveryCount = 0;
+
+function queueNativeToolchangeReconciliation() {
+  if (nativeForegroundDiscoveryCount > 0 || nativeToolchangeReconciliationActive) {
+    nativeToolchangeReconciliationPending = true;
+    return;
+  }
+  if (nativeToolchangeReconciliationQueued) return;
+  nativeToolchangeReconciliationQueued = true;
+  window.setTimeout(() => { void reconcileNativeToolChanges(); }, 0);
+}
+
+async function reconcileNativeToolChanges() {
+  nativeToolchangeReconciliationQueued = false;
+  if (nativeForegroundDiscoveryCount > 0 || nativeToolchangeReconciliationActive) {
+    nativeToolchangeReconciliationPending = true;
+    return;
+  }
+  nativeToolchangeReconciliationActive = true;
+  try {
+    do {
+      if (nativeForegroundDiscoveryCount > 0) {
+        nativeToolchangeReconciliationPending = true;
+        break;
+      }
+      nativeToolchangeReconciliationPending = false;
+      const revision = state.appliedJourneyRevision;
+      if (!state.applied) break;
+      state.discoveryComplete = false;
+      state.originOutcomes = {};
+      renderBrowserReadiness();
+      const request = beginPartnerDiscovery();
+      const result = await request.promise;
+      if (!state.applied || revision !== state.appliedJourneyRevision) continue;
+      applyPartnerDiscovery(result, request);
+    } while (nativeToolchangeReconciliationPending && state.applied);
+  } finally {
+    nativeToolchangeReconciliationActive = false;
+    if (nativeToolchangeReconciliationPending) queueNativeToolchangeReconciliation();
+  }
+}
 
 function observeNativeToolChanges() {
   if (!SUPPORTED || typeof document.modelContext?.addEventListener !== "function") return;
   // `toolchange` only tells us that the browser registry changed. Reconcile it
   // through a fresh, allowlisted native discovery rather than treating the
   // event as a tool registry or reusing a cached RegisteredTool.
-  document.modelContext.addEventListener("toolchange", () => {
-    if (nativeToolchangeReconciliationQueued) return;
-    nativeToolchangeReconciliationQueued = true;
-    const revision = state.appliedJourneyRevision;
-    window.setTimeout(async () => {
-      nativeToolchangeReconciliationQueued = false;
-      if (!state.applied || revision !== state.appliedJourneyRevision) return;
-      const result = await discoverPartnerDeals();
-      if (!state.applied || revision !== state.appliedJourneyRevision) return;
-      applyPartnerDiscovery(result);
-    }, 0);
-  });
+  document.modelContext.addEventListener("toolchange", queueNativeToolchangeReconciliation);
 }
 
 function choosePartnerOffer(deals, preferences = state.appliedPreferences) {
@@ -594,51 +744,66 @@ function selectedCollateral(deal, preferences) {
   for (const type of wanted) {
     const item = collateral.find((entry) => entry.type === type);
     if (item) return item;
-    if (type === "testimonial" && formats.includes("testimonial")) {
-      return {
-        type,
-        text: "A partner can provide a sourced customer story in this slot.",
-        source: "Presentation slot; no story supplied",
-      };
-    }
-    if (type === "video" && formats.includes("video")) {
-      return {
-        type,
-        title: "A partner can provide a short product video in this slot",
-        duration: 18,
-        source: "Presentation slot; no video supplied",
-      };
-    }
   }
+  const unavailable = [
+    formats.includes("testimonial") && !collateral.some((entry) => entry.type === "testimonial") ? { label: "customer story", message: "A customer story isn’t available for this sample." } : null,
+    formats.includes("video") && !collateral.some((entry) => entry.type === "video") ? { label: "short video", message: "A short video isn’t available for this sample." } : null,
+    formats.includes("price-proof") && !hasExplicitMerchantPageDiscount(deal) ? { label: "price proof", message: "Price proof isn’t available for this sample." } : null,
+  ].filter(Boolean);
   return {
     type: "offer-fact",
-    text: `Current catalog price ${money(deal.dealPrice)}. No merchant-page percentage was supplied.`,
-    source: "Offer record",
+    text: unavailable.length === 1
+      ? unavailable[0].message
+      : unavailable.length > 1
+        ? `Some requested details aren’t available for this sample: ${unavailable.map((item) => item.label).join(", ")}.`
+        : "The current catalog price is shown above.",
+    source: "Offer record; requested collateral remains unavailable unless the partner supplies it",
   };
 }
 
 function offerImage(deal) {
   const source = safeUrl(deal.imageUrl);
-  return source
-    ? `<img src="${escapeHtml(source.href)}" alt="${escapeHtml(deal.name || "Offer")} product image" loading="lazy" crossorigin="anonymous">`
-    : '<div class="art-placeholder" aria-hidden="true">Offer image unavailable</div>';
+  if (!source) return '<div class="art-placeholder" aria-hidden="true">Offer image unavailable</div>';
+  const srcset = responsiveImageSrcset(source.href);
+  const responsiveAttributes = srcset
+    ? ` sizes="(max-width: 42rem) calc(100vw - 4rem), 12rem" srcset="${escapeHtml(srcset)}"`
+    : "";
+  return `<img${responsiveAttributes} src="${escapeHtml(imageUrlAtWidth(source.href, 640).href)}" width="640" height="480" alt="${escapeHtml(deal.name || "Offer")} product image" loading="lazy" decoding="async" crossorigin="anonymous">`;
 }
 
-function provenanceMarkup(deal, sourceKind) {
+function provenanceMarkup(deal, sourceKind, presentationEvidence = null) {
   const destination = safeUrl(deal.landing);
   const sourceOrigin = safeUrl(deal.partnerOrigin || deal.origin);
   const isOpen = sourceKind === "open";
+  const isAffiliate = sourceKind === "affiliate";
+  const isCatalog = sourceKind === "catalog";
   const who = isOpen
     ? `Jumping Beans loaded a public record attributed to ${deal.merchant || deal.vendor || "the catalog merchant"}`
+    : isAffiliate
+      ? `${deal.partnerName || deal.merchant || "The merchant"} supplied the record through Rakuten Advertising`
+      : isCatalog
+        ? `${deal.partnerName || deal.merchant || "The merchant"} supplied the record through its public catalog feed`
     : `${deal.partnerName || deal.merchant || "The partner"} returned the record through WebMCP`;
   const source = isOpen
     ? "Public product-feed snapshot bundled with this demo"
+    : isAffiliate
+      ? "Live Rakuten Advertising Product Search API record"
+      : isCatalog
+        ? (deal.sourceDescription || "Public merchant catalog snapshot; direct merchant link-out")
     : `WebMCP offer tool${sourceOrigin ? ` at ${sourceOrigin.origin}` : ""}`;
   const when = isOpen
     ? `Loaded into this page ${absoluteTime(deal.observedAt)}; the source capture time is unavailable`
+    : isAffiliate
+      ? `Rakuten API response received ${absoluteTime(deal.observedAt)}`
+      : isCatalog
+        ? `Catalog snapshot captured ${absoluteTime(deal.observedAt)}; it expires ${absoluteTime(deal.expiresAt)}`
     : `Tool response received ${absoluteTime(deal.observedAt)}`;
   const evidence = isOpen
     ? `Catalog record ${deal.sku}; no live price check ran`
+    : isAffiliate
+      ? `Live Rakuten catalog record ${deal.sku}; no merchant-page price check ran`
+      : isCatalog
+        ? `Public catalog record ${deal.sku}; freshness ends ${absoluteTime(deal.expiresAt)}`
     : `Tool response from ${sourceOrigin?.origin || "the opted-in origin"}; catalog record ${deal.sku || "without a supplied SKU"}`;
   const sourceLink = destination
     ? `<a href="${escapeHtml(destination.href)}" target="_blank" rel="noopener noreferrer">Merchant product page</a>`
@@ -654,6 +819,7 @@ function provenanceMarkup(deal, sourceKind) {
         <div><dt>When</dt><dd>${escapeHtml(when)}</dd></div>
         <div><dt>Verification</dt><dd>${escapeHtml(deal.verificationLabel || "Unverified")}</dd></div>
         <div><dt>Evidence</dt><dd>${escapeHtml(evidence)}</dd></div>
+        ${presentationEvidence ? `<div><dt>Presentation</dt><dd>${escapeHtml(presentationEvidence.source || "No presentation source supplied")}</dd></div>` : ""}
       </dl>
       </div>
     </details>`;
@@ -671,15 +837,20 @@ function offerMarkup(deal, sourceKind, label, preferences) {
       : collateral.type === "video"
         ? `${escapeHtml(collateral.title || "Product video")} · ${escapeHtml(collateral.duration || 18)} seconds`
         : escapeHtml(collateral.text);
-  const sourceClass = sourceKind === "open" ? "source-open" : "source-optin";
-  const sourceLabel = sourceKind === "open" ? "Open inventory" : "Opted-in partner";
+  const isAffiliate = sourceKind === "affiliate";
+  const isCatalog = sourceKind === "catalog";
+  const sourceClass = sourceKind === "open" ? "source-open" : isAffiliate || isCatalog ? "source-affiliate" : "source-optin";
+  const sourceLabel = sourceKind === "open" ? "Open inventory" : isAffiliate || isCatalog ? "Out-of-network" : "Opted-in partner";
   const comparisonPrice = hasExplicitMerchantPageDiscount(deal)
     ? `<span>${escapeHtml(deal.merchantPageDiscountPercent)}% off shown on the merchant product page</span>`
     : "";
-  const reason =
-    sourceKind === "open"
-      ? "Found in a bundled public catalog snapshot. No partner connection was needed."
-      : "Matched through an opted-in WebMCP offer tool and rendered using your applied display rules.";
+  const reason = sourceKind === "open"
+    ? "Found in a bundled public catalog snapshot. No partner connection was needed."
+    : isAffiliate
+      ? "Found through a live Rakuten Advertising affiliate catalog. The merchant owns the destination and checkout."
+      : isCatalog
+        ? "Found in a public merchant catalog snapshot. Jumping Beans links directly to that merchant; no affiliate relationship is claimed for this feed."
+      : "Matched through a participating partner and shown using your approved display choices.";
   return `
     <header class="step-card-head">
       <div><p class="step-kicker">${escapeHtml(label)}</p><h3>${escapeHtml(deal.name)}</h3></div>
@@ -698,21 +869,31 @@ function offerMarkup(deal, sourceKind, label, preferences) {
         <div class="bl-callout collateral" data-tone="info">
           <div class="collateral-label">${escapeHtml(formatLabels[collateral.type] || "Offer evidence")}</div>
           <div>${collateralText}</div>
-          <small>Source: ${escapeHtml(collateral.source || "No source supplied")}</small>
         </div>
       </div>
     </div>
-    ${provenanceMarkup(deal, sourceKind)}`;
+    ${sourceKind === "optin" && partnerDestination(deal.partnerOrigin) ? `<div class="bl-actions"><a class="bl-button" href="${escapeHtml(partnerDestination(deal.partnerOrigin))}" target="_blank" rel="noopener noreferrer">Open adapted partner page</a></div>` : ""}
+    ${provenanceMarkup(deal, sourceKind, collateral)}`;
 }
 
 function renderMemoryStep() {
   renderOfferCard(
     els.memoryStep,
-    offerMarkup(state.sourceA, "open", "Site A · recorded from open inventory", DEFAULT_PREFERENCES),
+    offerMarkup(state.sourceA, "open", "Starting offer", DEFAULT_PREFERENCES),
   );
 }
 
+const PRODUCT_SECTION_HASHES = new Set(["offer-preview", "find-offers", "partners"]);
+
+function scrollToProductSection(id) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+  window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - margin), behavior: "instant" });
+}
+
 function switchView(view, { focusHeading = false } = {}) {
+  const productSection = PRODUCT_SECTION_HASHES.has(view) ? view : null;
   const nextView = ["demo", "account"].includes(view) ? view : "product";
   if (view === "network" && state.applied) state.productStage = "results";
   state.currentView = nextView;
@@ -727,13 +908,14 @@ function switchView(view, { focusHeading = false } = {}) {
   if (nextView === "account") renderAccount();
   if (nextView === "network") renderProductNetwork();
   if (nextView === "product") renderProductShell();
-  const hash = nextView === "product" ? "" : `#${nextView}`;
+  const hash = productSection ? `#${productSection}` : nextView === "product" ? "" : `#${nextView}`;
   if (location.hash !== hash) history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
+  if (productSection) scrollToProductSection(productSection);
   if (focusHeading) {
     const heading = nextView === "product"
         ? els.productTitle
         : nextView === "account" ? els.accountTitle : document.getElementById("page-title");
-    heading?.focus({ preventScroll: true });
+    heading?.focus();
   }
 }
 
@@ -791,19 +973,15 @@ function renderProductFocus() {
   els.productHero.hidden = false;
 }
 
-function updateActionChain(trigger = "message") {
-  const copy = ACTION_TRIGGER_COPY[trigger] || ACTION_TRIGGER_COPY.message;
-  if (els.actionTriggerQuote) els.actionTriggerQuote.textContent = copy.quote;
-  if (els.actionPreviewCopy) els.actionPreviewCopy.textContent = `Coffee Co will receive the selected product from this context. ${copy.description}`;
-  document.querySelectorAll("[data-action-trigger]").forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.actionTrigger === trigger));
+function updateOfferChannel(channel = "email") {
+  const supportedChannels = new Set(["email", "site", "text", "chatgpt"]);
+  const nextChannel = supportedChannels.has(channel) ? channel : "email";
+  document.querySelectorAll("[data-offer-channel]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.offerChannel === nextChannel));
   });
-  if (els.actionPreviewLink) {
-    const url = new URL(els.actionPreviewLink.href);
-    url.origin = ORIGINS.coffee;
-    url.searchParams.set("jb_trigger", trigger);
-    els.actionPreviewLink.href = url.href;
-  }
+  document.querySelectorAll("[data-channel-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.channelPanel !== nextChannel;
+  });
 }
 
 function renderProductShell() {
@@ -830,6 +1008,7 @@ function renderProductShell() {
     state.ruleRenderKey = ruleRenderKey;
   }
   renderProductReview(active);
+  renderBrowserReadiness();
 }
 
 function updateCanvasWords() {
@@ -1135,9 +1314,31 @@ function renderProductNetwork() {
   els.canvasResults.setAttribute("aria-busy", String(result.kind === "loading"));
   els.canvasResultsTitle.textContent = result.title;
   els.canvasResultsStatus.textContent = result.message;
-  const markup = result.kind === "loading" ? "" : [
+  const rakutenDeals = Array.isArray(state.rakutenDeals) ? state.rakutenDeals : [];
+  const rakutenStatus = state.rakutenStatus || "idle";
+  const rakutenMarkup = rakutenStatus === "loading"
+    ? `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>Searching live affiliate inventory for this selection…</p></section>`
+    : rakutenStatus === "error"
+      ? `<section class="bl-callout network-summary" data-tone="warning"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>Live Rakuten inventory is temporarily unavailable. Member-site results are still shown independently.</p></section>`
+      : rakutenDeals.length
+        ? `<section class="bl-stack rakuten-inventory"><div><h3>Out-of-network inventory · Rakuten Advertising</h3><p class="field-hint">Live affiliate catalog results. These merchants are separate from the three opted-in member sites and open in their own storefronts.</p></div>${rakutenDeals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "affiliate", "Rakuten · live merchant inventory", state.appliedPreferences)}</article>`).join("")}</section>`
+        : `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · Rakuten Advertising</h3><p>No live Rakuten products matched this category and budget. This is a separate no-result from the member-site search.</p></section>`;
+  const catalogDeals = Array.isArray(state.catalogDeals) ? state.catalogDeals : [];
+  const catalogStatus = state.catalogStatus || "idle";
+  const catalogMarkup = catalogStatus === "loading"
+    ? `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · public merchant catalogs</h3><p>Searching the attached merchant catalog snapshots for this selection…</p></section>`
+    : catalogStatus === "error"
+      ? `<section class="bl-callout network-summary" data-tone="warning"><h3>Out-of-network inventory · public merchant catalogs</h3><p>Attached merchant catalogs are temporarily unavailable. Member-site and Rakuten results are still shown independently.</p></section>`
+      : catalogDeals.length
+        ? `<section class="bl-stack catalog-inventory"><div><h3>Out-of-network inventory · public merchant catalogs</h3><p class="field-hint">Snapshot results from attached public feeds. Each card links directly to its merchant; no affiliate relationship is claimed for these feeds.</p></div>${catalogDeals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "catalog", `${deal.partnerName || "Merchant catalog"} · public feed`, state.appliedPreferences)}</article>`).join("")}</section>`
+        : `<section class="bl-callout network-summary" data-tone="info"><h3>Out-of-network inventory · public merchant catalogs</h3><p>No current public-catalog products matched this category and budget. Unavailable feeds are reported in Network details.</p></section>`;
+  const previewMarkup = selfServePreviewMarkup();
+  const markup = result.kind === "loading" ? previewMarkup : [
     ...deals.slice(0, 6).map((deal) => `<article class="product-offer-card">${offerMarkup(deal, "optin", `${deal.partnerName || "Member experience"} · matched to your preferences`, state.appliedPreferences)}</article>`),
+    previewMarkup,
     `<section class="bl-stack"><h3>Open inventory · separate baseline</h3><p class="field-hint">Public catalog snapshot, independent of your matching results.</p><article class="product-offer-card">${offerMarkup(state.sourceA, "open", "Open selection", DEFAULT_PREFERENCES)}</article></section>`,
+    rakutenMarkup,
+    catalogMarkup,
   ].join("");
   if (els.canvasResultsFeed.innerHTML !== markup) els.canvasResultsFeed.innerHTML = markup;
   els.canvasNetworkDetails.innerHTML = networkMarkup();
@@ -1170,7 +1371,10 @@ async function retryCanvasResults() {
   renderProductNetwork();
   const revision = state.appliedJourneyRevision + 1;
   try { await rerunAppliedJourney(); }
-  catch { state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }])); }
+  catch {
+    state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }]));
+    state.discoveryComplete = true;
+  }
   if (!state.applied || revision !== state.appliedJourneyRevision) return;
   state.productReviewState = "applied";
   renderJourney();
@@ -1181,9 +1385,24 @@ function renderOfferCard(container, markup) {
 }
 
 function partnerDestination(destination) {
-  const url = safeUrl(destination);
-  if (!url) return null;
-  return url.href;
+  return partnerHandoffUrl(destination, state.appliedPreferences, {
+    origins: PARTNER_ORIGINS, applied: state.applied, paused: state.networkSharingPaused,
+  });
+}
+
+function selfServePreviewMarkup() {
+  const preview = previewPartnerHandoff(state.appliedPreferences, ORIGINS, {
+    origins: PARTNER_ORIGINS,
+    applied: state.applied,
+    paused: state.networkSharingPaused,
+  });
+  if (!preview) return "";
+  const partner = PARTNER_NAMES[ORIGINS[preview.partnerId]] || "member storefront";
+  return `<section class="bl-callout self-serve-preview" data-tone="info">
+    <h4 class="bl-callout__title">Preview this selection on ${escapeHtml(partner)}</h4>
+    <p>This visit-only navigation proves the selected category, budget, and presentation reach a member storefront. It is available in ordinary browsers and does not claim that WebMCP matched an offer.</p>
+    <div class="bl-actions"><a class="bl-button" data-variant="secondary" href="${escapeHtml(preview.href)}" target="_blank" rel="noopener noreferrer">Open storefront preview</a></div>
+  </section>`;
 }
 
 function networkMarkup() {
@@ -1200,7 +1419,19 @@ function networkMarkup() {
   if (!rows.length) {
     return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>No opted-in partner capability responded in this browser. The open catalog remains available as the baseline.</p></section>`;
   }
-  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul></section>`;
+  const catalogSources = Array.isArray(state.catalogMeta?.sources) ? state.catalogMeta.sources : [];
+  const catalogFailures = catalogSources.filter((source) => source.status !== "ready");
+  const catalogHealth = catalogSources.length
+    ? `<p>Public merchant feeds: ${catalogSources.length - catalogFailures.length} ready, ${catalogFailures.length} not currently ready. A not-ready feed is not presented as a match.</p>${catalogFailures.length ? `<ul class="network-list">${catalogFailures.map((source) => `<li><strong>${escapeHtml(source.name || source.host)}</strong><span>${escapeHtml(source.host || "merchant feed")} · ${escapeHtml(source.status)}${source.lastError ? ` · ${escapeHtml(source.lastError)}` : ""}</span></li>`).join("")}</ul>` : ""}`
+    : state.catalogStatus === "error"
+      ? "<p>Public merchant catalog status is unavailable for this request; no catalog result is substituted.</p>"
+      : "";
+  return `<section class="bl-callout network-summary" data-tone="info"><h4 class="bl-callout__title">Network view</h4><p>Each opted-in origin is bounded and reported independently. Ranking uses approved context, price, and selected presentation formats.</p><ul class="network-list">${rows.join("")}</ul>${catalogHealth ? `<h4 class="bl-callout__title">Public catalog health</h4>${catalogHealth}` : ""}</section>`;
+}
+
+function demoTechnicalMatchDetails(content) {
+  if (!content) return "";
+  return `<details class="provenance demo-match-details"><summary>Technical match details</summary><div>${content}</div></details>`;
 }
 
 function isWatchHandoffOffer(deal) {
@@ -1227,17 +1458,24 @@ function comparisonMarkup(deals) {
 
 function renderNextStep() {
   const activePreferences = state.applied ? state.appliedPreferences : DEFAULT_PREFERENCES;
+  if (!state.applied) {
+    renderOfferCard(
+      els.nextStep,
+      `<header class="step-card-head"><div><p class="step-kicker">Partner offer</p><h3>Your partner match appears here</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">Waiting</span></header><p class="offer-copy">Review and use your choice to see the next matching offer.</p>`,
+    );
+    return;
+  }
   if (state.discoveryComplete && !state.sourceB && state.partnerDeals.length) {
     renderOfferCard(
       els.nextStep,
-      `<header class="step-card-head"><div><p class="step-kicker">Site B · no relevant match</p><h3>No opted-in offer matches this context</h3></div><span class="bl-badge source-pill source-optin" data-status="info">Filtered</span></header><p class="offer-copy">The connected partners returned offers, but none met the current profile, category, or price rules. Adjust the draft choices to widen the result set.</p><p class="reason"><strong>Decision receipt</strong><br>${escapeHtml(state.capabilityResolution?.reason || "Eligibility rules")}; ${state.capabilityResolution?.relevant.length || 0} relevant offer${state.capabilityResolution?.relevant.length === 1 ? "" : "s"}.</p>${networkMarkup()}`,
+      `<header class="step-card-head"><div><p class="step-kicker">Partner result</p><h3>No partner offer matches these choices</h3></div><span class="bl-badge source-pill source-optin" data-status="info">No match</span></header><p class="offer-copy">Try changing the budget or display choices to see a wider set of offers.</p>${demoTechnicalMatchDetails(`<p class="reason"><strong>Decision receipt</strong><br>${escapeHtml(state.capabilityResolution?.reason || "Eligibility rules")}; ${state.capabilityResolution?.relevant.length || 0} relevant offer${state.capabilityResolution?.relevant.length === 1 ? "" : "s"}.</p>${selfServePreviewMarkup()}${networkMarkup()}`)}`,
     );
     return;
   }
   if (!state.sourceB) {
     renderOfferCard(
       els.nextStep,
-      `<header class="step-card-head"><div><p class="step-kicker">Site B · no partner result</p><h3>No opted-in partner offer is available</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">No result</span></header><p class="offer-copy">No partner offer was returned for this request. Jumping Beans will not create a substitute partner result.</p>${networkMarkup()}`,
+      `<header class="step-card-head"><div><p class="step-kicker">Partner result</p><h3>No partner offer is available</h3></div><span class="bl-badge source-pill source-open" data-status="neutral">No result</span></header><p class="offer-copy">No partner returned an offer for this request. Jumping Beans will not invent one.</p>${demoTechnicalMatchDetails(`${selfServePreviewMarkup()}${networkMarkup()}`)}`,
     );
     return;
   }
@@ -1246,23 +1484,23 @@ function renderNextStep() {
   const destination =
     deal.partnerOrigin || PARTNER_ORIGINS[0] || deal.landing;
   const href = partnerDestination(destination);
-  const label = "Site B · adapted by an opted-in partner";
-  const openLabel = "Open opted-in Site B";
+  const label = "Partner match";
+  const openLabel = "Open partner offer";
   const actions = `
     <div class="bl-actions step-actions">
       ${href ? `<a class="bl-button" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${openLabel}</a>` : ""}
-      <button class="bl-button" data-variant="secondary" id="show-source" type="button">Explain partner opt-in</button>
+      <button class="bl-button" data-variant="secondary" id="show-source" type="button">Why this partner?</button>
     </div>`;
   const comparison = comparisonMarkup(state.capabilityResolution?.exposed || []);
   const withheld = state.capabilityResolution?.withheld || [];
   const withholding = withheld.length ? `<p class="reason"><strong>Withheld offers</strong><br>${withheld.length} offer${withheld.length === 1 ? " was" : "s were"} withheld: ${escapeHtml(withheld.map((item) => item.reason).join("; "))}</p>` : "";
   renderOfferCard(
     els.nextStep,
-    offerMarkup(deal, sourceKind, label, activePreferences) + comparison + withholding + actions + networkMarkup(),
+    offerMarkup(deal, sourceKind, label, activePreferences) + actions + demoTechnicalMatchDetails(comparison + withholding + networkMarkup()),
   );
   document.getElementById("show-source")?.addEventListener("click", () => {
     setAgent(
-      "The baseline offer did not require merchant participation. This Site B response did: the partner opted in to expose structured offer data and optional collateral through WebMCP.",
+      "This partner chose to participate and returned a match for the choices you approved. Product facts still come from the partner.",
     );
   });
   document.getElementById("watch-handoff-offer")?.addEventListener("change", (event) => {
@@ -1299,10 +1537,7 @@ function preferenceFact() {
 }
 
 function preferenceOutcome() {
-  const savedRecords = state.pendingRemember
-    ? "a local display rule and matching offer note"
-    : "a local display rule";
-  return `Save ${savedRecords} and apply the rule to Site B; no order, payment, or message is created`;
+  return "Review this display choice before it can be used; no order, payment, or message is created";
 }
 
 function renderMemoryPreview() {
@@ -1341,7 +1576,7 @@ function renderMemory() {
     empty.className = "empty-memory";
     empty.textContent = state.hasSavedPreferences
       ? "A saved display preference is loaded. Use Forget all to remove it."
-      : "Nothing is saved. Apply once to keep this journey temporary.";
+      : "Nothing is saved. Use this choice for the visit to keep the journey temporary.";
     els.memoryList.append(empty);
   } else {
     for (const item of items) {
@@ -1687,6 +1922,12 @@ function forgetAllMemory() {
   state.demoContextGranted = false;
   els.demoContext.checked = false;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
   state.originOutcomes = {};
   state.capabilityResolution = null;
@@ -1792,13 +2033,13 @@ async function applyPreferences({ persist }) {
     state.pendingRemember = false;
     setAgent(
       preferencesSaved
-        ? "Saved in this browser. Checking member sites with only the approved preference plane."
-        : "This browser could not save the preference. Checking member sites for this visit only.",
+        ? "Saved in this browser. Checking partner sites with only the choices you approved."
+        : "This browser could not save the choice. Checking partner sites for this visit only.",
     );
     showToast(preferencesSaved ? (memorySaved ? "Display rules saved; checking offers" : "Preferences saved; checking offers") : "Checking offers for this visit only");
   } else {
     state.pendingRemember = false;
-    setAgent("Checking member sites with this one-time selection. No display preference or offer note was saved.");
+    setAgent("Checking partner sites with this one-time choice. Nothing was saved.");
     showToast("Checking offers for this visit only");
   }
   state.productDraftDirty = false;
@@ -1809,6 +2050,7 @@ async function applyPreferences({ persist }) {
     await rerunAppliedJourney();
   } catch {
     state.originOutcomes = Object.fromEntries(PARTNER_ORIGINS.map((origin) => [origin, { status: "failed" }]));
+    state.discoveryComplete = true;
   }
   if (state.appliedJourneyRevision !== revision || !state.applied) return;
   if (hasSuccessfulPartnerApplication()) {
@@ -1818,7 +2060,7 @@ async function applyPreferences({ persist }) {
       mode: state.appliedMode,
     });
     const appliedTo = Object.values(state.originOutcomes).filter((outcome) => ["ready", "no-match"].includes(outcome?.status)).length;
-    setAgent(`Your approved selection was applied to ${appliedTo} member site${appliedTo === 1 ? "" : "s"}. ${state.appliedMode === "saved" ? "Your preference remains saved in this browser." : "Nothing was saved."}`);
+    setAgent(`Your choice was used with ${appliedTo} partner site${appliedTo === 1 ? "" : "s"}. ${state.appliedMode === "saved" ? "It remains saved in this browser." : "Nothing was saved."}`);
     showToast("Member-site preferences applied");
   }
   state.productReviewState = "applied";
@@ -1830,7 +2072,14 @@ function invalidateAppliedJourney() {
   state.pendingWatch = null;
   state.selectedWatchOfferId = null;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
+  state.discoveryComplete = false;
   state.originOutcomes = {};
   state.capabilityResolution = null;
   state.decisionReceipt = null;
@@ -1839,10 +2088,44 @@ function invalidateAppliedJourney() {
 async function rerunAppliedJourney() {
   const revision = ++state.appliedJourneyRevision;
   invalidateAppliedJourney();
+  state.rakutenStatus = "loading";
+  state.catalogStatus = "loading";
   renderJourney();
-  const result = await discoverPartnerDeals(state.appliedPreferences);
-  if (revision !== state.appliedJourneyRevision) return;
-  applyPartnerDiscovery(result);
+  const partnerRequest = beginPartnerDiscovery(state.appliedPreferences);
+  nativeForegroundDiscoveryCount += 1;
+  try {
+    const [partnerResult, rakutenResult, catalogResult] = await Promise.allSettled([
+      partnerRequest.promise,
+      fetchRakutenDeals(state.appliedPreferences),
+      fetchCatalogDeals(state.appliedPreferences),
+    ]);
+    if (revision !== state.appliedJourneyRevision) return;
+    applyPartnerDiscovery(partnerResult.status === "fulfilled"
+      ? partnerResult.value
+      : { deals: [], originOutcomes: {}, connectedTools: [] }, partnerRequest);
+    if (rakutenResult.status === "fulfilled") {
+      state.rakutenDeals = rakutenResult.value.deals;
+      state.rakutenMeta = rakutenResult.value.meta;
+      state.rakutenStatus = "ready";
+    } else {
+      state.rakutenDeals = [];
+      state.rakutenMeta = null;
+      state.rakutenStatus = "error";
+    }
+    if (catalogResult.status === "fulfilled") {
+      state.catalogDeals = catalogResult.value.deals;
+      state.catalogMeta = catalogResult.value.meta;
+      state.catalogStatus = "ready";
+    } else {
+      state.catalogDeals = [];
+      state.catalogMeta = null;
+      state.catalogStatus = "error";
+    }
+    renderJourney();
+  } finally {
+    nativeForegroundDiscoveryCount = Math.max(0, nativeForegroundDiscoveryCount - 1);
+    if (nativeForegroundDiscoveryCount === 0 && nativeToolchangeReconciliationPending) queueNativeToolchangeReconciliation();
+  }
 }
 
 function handlePrompt(value) {
@@ -2006,6 +2289,21 @@ for (const input of [els.productCategory, els.productMaxPrice, els.productStyle]
   });
 }
 els.canvasWords.addEventListener("input", updateCanvasWords);
+document.querySelectorAll("[data-self-serve-prompt]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (state.productReviewState === "applying") return;
+    els.canvasWords.value = button.dataset.selfServePrompt;
+    updateCanvasWords();
+    state.preferences = normalizePreferencePlane({
+      ...state.preferences,
+      feedStyle: button.dataset.feedStyle,
+      formats: button.dataset.formats ? button.dataset.formats.split(",").filter(Boolean) : [],
+    });
+    state.canvasReviewVisible = true;
+    renderProductShell();
+    els.productReviewTitle.focus({ preventScroll: true });
+  });
+});
 els.canvasEnterManual.addEventListener("click", () => setCanvasEntryMode("manual"));
 els.canvasBackChat.addEventListener("click", () => setCanvasEntryMode("chat"));
 els.canvasChatForm.addEventListener("submit", (event) => {
@@ -2094,7 +2392,7 @@ els.controls.addEventListener("change", (event) => {
 els.demoContext?.addEventListener("change", async () => {
   state.demoContextGranted = els.demoContext.checked;
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
-  setAgent(state.demoContextGranted ? (state.applied ? "You approved the clearly labeled applied demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile consent is staged. Apply the display choice before any partner discovery can use it.") : "Demo profile context is off. No persona-derived fields are sent to partners.");
+  setAgent(state.demoContextGranted ? (state.applied ? "You approved the clearly labeled applied demo profile for this request. Its categories and budget will be sent only to opted-in sites." : "Demo profile consent is staged. Review the choice and show matching offers before any partner discovery can use it.") : "Demo profile context is off. No persona-derived fields are sent to partners.");
   if (state.applied) await rerunAppliedJourney();
   else renderJourney();
 });
@@ -2103,7 +2401,7 @@ els.demoProfile?.addEventListener("change", async () => {
   state.profile = PERSONAS.find((profile) => profile.personaId === els.demoProfile.value) || PERSONAS[0];
   state.contextSnapshot = createContextSnapshot({ profile: state.profile, preferences: state.appliedPreferences, applied: state.applied, demoContextGranted: state.demoContextGranted });
   if (!state.applied) {
-    setAgent(`Selected ${state.profile.displayName} as a draft demo profile. No profile data will be sent until you enable demo context and apply preferences.`);
+    setAgent(`Selected ${state.profile.displayName} as a draft demo profile. No profile data will be sent until you enable demo context, review the choice, and show matching offers.`);
     renderJourney();
     return;
   }
@@ -2114,17 +2412,11 @@ els.demoProfile?.addEventListener("change", async () => {
 document.getElementById("apply-preferences").addEventListener("click", async () => {
   state.productReviewState = "review";
   state.productStage = "preview";
+  state.canvasReviewVisible = true;
   state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
   switchView("product");
   renderProductShell();
-});
-
-document.getElementById("apply-once").addEventListener("click", async () => {
-  state.productReviewState = "review";
-  state.productStage = "preview";
-  state.productSetupPath ||= state.hasSavedPreferences ? "saved" : "manual";
-  switchView("product");
-  renderProductShell();
+  els.productReviewTitle.focus();
 });
 
 document.getElementById("reset-preferences").addEventListener("click", () => {
@@ -2139,6 +2431,12 @@ document.getElementById("reset-preferences").addEventListener("click", () => {
   state.applied = false;
   state.appliedMode = null;
   state.partnerDeals = [];
+  state.rakutenDeals = [];
+  state.rakutenStatus = "idle";
+  state.rakutenMeta = null;
+  state.catalogDeals = [];
+  state.catalogStatus = "idle";
+  state.catalogMeta = null;
   state.sourceB = null;
   state.originOutcomes = {};
   state.capabilityResolution = null;
@@ -2167,10 +2465,10 @@ document.querySelectorAll("[data-prompt]").forEach((button) => {
   button.addEventListener("click", () => handlePrompt(button.dataset.prompt));
 });
 
-document.querySelectorAll("[data-action-trigger]").forEach((button) => {
-  button.addEventListener("click", () => updateActionChain(button.dataset.actionTrigger));
+document.querySelectorAll("[data-offer-channel]").forEach((button) => {
+  button.addEventListener("click", () => updateOfferChannel(button.dataset.offerChannel));
 });
-updateActionChain("message");
+updateOfferChannel("email");
 
 document.getElementById("edit-preferences").addEventListener("click", () => {
   state.productStage = "preview";
@@ -2368,7 +2666,7 @@ function registerEngineTools() {
   }, "offers.discover");
   register({
     name: "set_display_preferences",
-    description: "Stage presentation preferences for the next offer. The user must choose Save and apply or Apply once in the page before the preference affects Site B.",
+    description: "Stage presentation preferences for the next offer. The user must review the selection and choose Show matching offers before it affects any opted-in partner.",
     inputSchema: {
       type: "object",
       properties: {
@@ -2404,22 +2702,27 @@ function registerEngineTools() {
         persisted: false,
       });
       renderJourney();
-      setAgent("The agent staged new display rules. Review the exact fact before saving or applying once.");
+      setAgent("The agent staged new display rules. Review the exact selection before showing matching offers.");
+      const reviewAction = state.currentView === "demo"
+        ? "Review this choice"
+        : state.currentView === "account"
+          ? "Back to preferences"
+          : "Review selection";
       return {
         stagedPreferences: state.preferences,
         fact: preferenceFact(),
         scope: "Jumping Beans product in this browser",
-        retention: "Until the user chooses Forget if saved; this visit only if applied once",
-        outcome: `${preferenceOutcome()}; Apply once creates no persisted preference or offer note`,
+        retention: "Until the user chooses Forget if saved in this browser; otherwise this visit only",
+        outcome: `${preferenceOutcome()}; using the choice for this visit creates no persisted preference or offer note`,
         requiresUserConfirmation: true,
         persisted: false,
-        availableActions: ["Save and apply to Site B", "Apply once without saving"],
+        availableActions: [reviewAction],
       };
     },
   }, "preferences.stage");
   register({
     name: "build_offer_journey",
-    description: "Show the open-inventory offer, the user's preference choice, and either an opted-in Site B offer or an honest no-result outcome as one journey.",
+    description: "Show the starting offer, the user's preference choice, and either an opted-in partner offer or an honest no-result outcome as one journey.",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
     execute: async () => {
@@ -2427,7 +2730,7 @@ function registerEngineTools() {
       return {
         openInventory: state.sourceA.name,
         nextSite: state.sourceB?.partnerName || "no partner result",
-        nextSiteSource: state.sourceB ? "opted-in WebMCP partner" : "no opted-in partner result",
+        nextSiteSource: state.sourceB ? "opted-in partner" : "no opted-in partner result",
         preferences: state.applied ? state.appliedPreferences : null,
       };
     },
@@ -2482,8 +2785,24 @@ function registerEngineTools() {
   }, "offers.discover");
 }
 
+function hydrateEntryPreference() {
+  const raw = new URLSearchParams(location.search).get("jb_preference");
+  if (typeof raw !== "string" || !els.canvasWords || els.canvasWords.value.trim()) return;
+  const value = raw.trim();
+  if (!value || value.length > 240) {
+    if (value.length > 240) els.canvasClarification.textContent = "The entry preference was too long, so it was not added. Enter a shorter selection below.";
+    return;
+  }
+  els.canvasWords.value = value;
+  updateCanvasWords();
+  els.productReviewStatus.textContent = "A draft selection arrived with this link. Review or edit it before anything is shared.";
+}
+
 async function init() {
+  const initializationRevision = state.appliedJourneyRevision;
   restoreAccountDraft();
+  hydrateEntryPreference();
+  renderBrowserReadiness();
   switchView(location.hash.slice(1) || "product");
   state.contextSnapshot = createContextSnapshot({
     profile: state.profile,
@@ -2498,17 +2817,22 @@ async function init() {
   // Attach before the first partner navigation so registration cannot race the
   // native lifecycle observer. Initial discovery below remains authoritative.
   observeNativeToolChanges();
-  await createPartnerFrames();
+  partnerFramesReady = createPartnerFrames();
+  await partnerFramesReady;
   renderJourney();
   void loadAccount();
   registerEngineTools();
   updateConnections();
-  const result = await discoverPartnerDeals();
-  applyPartnerDiscovery(result);
-  if (result.deals.length) {
-    setAgent("I found Site A in open inventory and received a structured offer from an opted-in Site B. Choose what Site B should show, then apply once or save it in this browser.");
-  } else if (SUPPORTED) {
-    setAgent("I found Site A in open inventory, but no opted-in tool returned an offer. Site B shows an honest no-result outcome.");
+  if (initializationRevision === state.appliedJourneyRevision) {
+    const request = beginPartnerDiscovery();
+    const result = await request.promise;
+    if (applyPartnerDiscovery(result, request)) {
+      if (result.deals.length) {
+        setAgent("I found a starting offer and a partner match. Choose what you want to see, then use the choice once or save it in this browser.");
+      } else if (SUPPORTED) {
+        setAgent("I found a starting offer, but no partner match is available here. The demo shows an honest no-result instead.");
+      }
+    }
   }
   switchView(location.hash.slice(1) || "product");
 }

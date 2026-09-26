@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import { validatePartnerEnvelope } from "../engine/p0.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const future = "2030-01-01T00:00:00.000Z";
@@ -34,21 +35,45 @@ for (const [partner, category, name, rule, expectedSku] of [
 ]) {
   test(`${partner} keeps matching local, bounded, and explainable`, async () => {
     const tool = await partnerTool(partner, [
-      { sku: expectedSku, name, category, dealPrice: 20, listPrice: 30, listPriceSource: "merchant", imageUrl: `https://${partner}.example/a.png`, landing: `https://${partner}.example/a`, source: "fixture", expiresAt: future },
+      { sku: expectedSku, name, category, dealPrice: 20, listPrice: 30, listPriceSource: "merchant", imageUrl: `https://${partner}.example/a.png`, landing: `https://${partner}.example/a`, source: "fixture", expiresAt: future, availability: "in-stock", taxonomy: { internal: true }, internalAudit: "never expose" },
       { sku: `${partner}-old`, name: `${name} bundle`, category, dealPrice: 10, listPrice: null, listPriceSource: null, imageUrl: `https://${partner}.example/b.png`, landing: `https://${partner}.example/b`, source: "fixture", expiresAt: "2020-01-01T00:00:00.000Z" },
     ]);
     assert.equal(tool.registered.name, "get_matching_deals");
     assert.equal(tool.registered.annotations.readOnlyHint, true);
     const result = await tool.execute({ categories: [category], maxPrice: 20, preferencePlane: plane(rule), explain: true });
     assert.deepEqual(result.deals.map((deal) => deal.sku), [expectedSku]);
-    assert.equal(result.matchedSignals[0].sourceTaxonomy, null);
-    assert.equal(result.matchedSignals[0].unmapped, true);
+    assert.deepEqual(result.matchedSignals[0].sourceTaxonomy, { internal: true });
+    assert.equal(result.matchedSignals[0].unmapped, false);
     assert.ok(result.matchedSignals[0].signals.length > 0);
+    const contractResult = await tool.execute({ categories: [category], maxPrice: 20, preferencePlane: plane(rule) });
+    assert.equal(validatePartnerEnvelope(contractResult), true);
+    assert.deepEqual(Object.keys(contractResult), ["deals"]);
+    assert.ok(contractResult.deals.every((deal) => !["availability", "taxonomy", "internalAudit", "__match"].some((key) => Object.hasOwn(deal, key))));
+    assert.equal(JSON.stringify(contractResult).includes("never expose"), false);
     assert.deepEqual(await tool.execute({ categories: [category], identity: { email: "never-share@example.test" } }), { deals: [] });
     assert.deepEqual(await tool.execute({ categories: [category], preferencePlane: { ...plane(rule), session: "never-share" } }), { deals: [] });
     assert.deepEqual(await tool.execute({ categories: [category], maxPrice: -1 }), { deals: [] });
   });
 }
+
+test("all three production catalogs emit schema-valid native envelopes for their canonical recipes", async () => {
+  for (const [partner, category, maxPrice, feedStyle, formats] of [
+    ["petsupply", "dog gear", 49.99999999999999, "balanced", ["no-urgency"]],
+    ["coffee", "coffee", 14.999999999999998, "visual", ["testimonial", "no-urgency"]],
+    ["watch", "watches", 499.99999999999994, "compare", []],
+  ]) {
+    const catalog = JSON.parse(await readFile(path.join(root, partner, "catalog.json"), "utf8"));
+    const tool = await partnerTool(partner, catalog);
+    const result = await tool.execute({
+      categories: [category],
+      maxPrice,
+      preferencePlane: { feedStyle, category, maxPrice, formats, rules: [] },
+    });
+    assert.equal(validatePartnerEnvelope(result), true, `${partner} returned a non-contract envelope`);
+    assert.ok(result.deals.length > 0 && result.deals.length <= 24, `${partner} did not return a bounded canonical result`);
+    assert.ok(result.deals.every((deal) => deal.dealPrice <= maxPrice), `${partner} exceeded the canonical price ceiling`);
+  }
+});
 
 test("Petsupply maps canonical dog gear only into local dog inventory and preserves the price ceiling", async () => {
   const tool = await partnerTool("petsupply", [

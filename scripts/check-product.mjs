@@ -68,14 +68,35 @@ function checkHtml(html, file) {
   check(!html.includes("<style"), `${file} contains an inline style block`);
 }
 
+const generatedCatalogIndex = path.join(root, "engine/inventory-assets/catalog-index.json");
+try {
+  await stat(generatedCatalogIndex);
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+  runNode("generated catalog index bootstrap", ["scripts/build-inventory-index.mjs"]);
+}
+
 runNode("generated UI freshness", ["scripts/sync-static-ui.mjs", "--check"]);
 runNode("engine bundle freshness", ["engine/bundle-static.mjs", "--check"]);
 runNode("engine identity contracts", ["engine/identity.test.mjs"]);
 runNode("personal experience hydration contracts", ["engine/personal-experience.test.mjs"]);
 runNode("account access contracts", ["scripts/account-access.test.mjs"]);
+runNode("visible preference handoff contracts", ["scripts/preference-handoff.test.mjs"]);
+runNode("native WebMCP capability contracts", ["engine/native-webmcp.test.mjs"]);
+runNode("deployment readiness contracts", ["scripts/deployment-readiness.test.mjs"]);
+runNode("production smoke contracts", ["scripts/production-smoke.test.mjs"]);
+runNode("production monitor contracts", ["scripts/monitor-production.test.mjs"]);
+runNode("self-serve product array contracts", ["scripts/self-serve-demo.test.mjs"]);
 runNode("preference canvas contracts", ["scripts/preference-canvas.test.mjs"]);
+runNode("offer channel preview contracts", ["scripts/offer-channel-preview.test.mjs"]);
 runNode("catalog matching contracts", ["partners/catalog-matching.test.mjs"]);
 runNode("Watch Co tool contracts", ["partners/watch/tool.test.mjs"]);
+runNode("Rakuten inventory contracts", ["engine/rakuten.test.mjs"]);
+runNode("out-of-network catalog contracts", ["engine/catalog.test.mjs"]);
+runNode("Open feed ingestion contracts", ["scripts/ingest-feed.test.mjs"]);
+runNode("Merchant registry contracts", ["scripts/merchant-registry.test.mjs"]);
+runNode("out-of-network catalog index freshness", ["scripts/build-inventory-index.mjs", "--check"]);
+runNode("out-of-network catalog index build", ["scripts/build-inventory-index.test.mjs"]);
 
 const scriptFiles = [];
 for (const directory of ["engine", "partners", "scripts", "shared"]) {
@@ -113,7 +134,7 @@ for (const file of surfaceFiles) {
   const html = await readFile(path.join(root, file), "utf8");
   surfaces.set(file, html);
   checkHtml(html, file);
-  for (const match of html.matchAll(/<(?:link|script)[^>]+(?:href|src)="((?:\.\.\/|\.\/)[^"?#]+)"/g)) {
+  for (const match of html.matchAll(/<(?:link|script|img)[^>]+(?:href|src)="((?:\.\.\/|\.\/)[^"?#]+)"/g)) {
     const asset = path.resolve(root, path.dirname(file), match[1]);
     check(asset.startsWith(root + path.sep), `${file} references an asset outside the product repo`);
     try {
@@ -126,17 +147,19 @@ for (const file of surfaceFiles) {
 
 const engineHtml = surfaces.get("engine/index.html");
 includesAll(engineHtml, [
-  "A → your preference → B",
+  "A simple offer demo",
+  "Start with an offer",
+  "Choose what matters",
+  "See the partner match",
+  'src="./jumping-beans-logo.svg"',
   'id="memory-step"',
   'id="preference-controls"',
   'id="apply-preferences"',
-  "Save and apply to Site B",
-  'id="apply-once"',
-  "Apply once without saving",
+  "Review this choice",
   'id="next-step"',
   "Open inventory",
   "Opted-in partner",
-  "Before saving",
+  "Before anything is saved",
   "Scope",
   "Retention",
   "Outcome",
@@ -147,28 +170,76 @@ includesAll(engineHtml, [
   'id="account-import-confirm"',
   "Import selected browser memory",
 ], "engine consent journey");
+const partnerExperienceBlock = engineHtml.slice(
+  engineHtml.indexOf('<section class="partner-story'),
+  engineHtml.indexOf('<section class="demo-view"'),
+);
+includesAll(partnerExperienceBlock, [
+  "WHAT YOU GET",
+  "WHAT WE NEED FROM YOU",
+  "Your launch choices",
+  "You set the direction and approve. We handle the build.",
+  "You keep control of product facts, pricing, checkout, and final customer actions.",
+  "without seeing private messages",
+  "YOUR LAUNCH PLAN",
+  "Share the essentials",
+  "Review the experience",
+  "We build and launch",
+  "See what customers prefer",
+  "Preview the customer experience",
+], "partner experience explains the managed deliverable and partner responsibilities");
+check(
+  !/(?:WebMCP|opted-in|preference signals|technical network|This concept)/i.test(partnerExperienceBlock),
+  "Partner experience exposes Jumping Beans implementation concepts",
+);
+check(!engineHtml.includes('id="apply-once"'), "Demo still exposes a duplicate review action");
+check(!engineHtml.includes("product-note"), "Header still includes the removed product tagline");
+const demoTechnicalIndex = engineHtml.indexOf('class="bl-disclosure demo-technical"');
+check(
+  demoTechnicalIndex !== -1
+    && engineHtml.indexOf('class="source-key"', demoTechnicalIndex) > demoTechnicalIndex
+    && engineHtml.indexOf('class="bl-card memory-panel"', demoTechnicalIndex) > demoTechnicalIndex,
+  "Demo source taxonomy and saved data are not grouped behind technical details",
+);
+check(
+  engineHtml.indexOf("Optional: try a sample shopper profile") < engineHtml.indexOf('id="demo-profile"')
+    && engineHtml.indexOf("Or describe your preference in your own words") < engineHtml.indexOf('id="preference-prompt-form"')
+    && engineHtml.indexOf("Optional: preview a target-price handoff") < engineHtml.indexOf('id="watch-button"'),
+  "Optional demo controls are not progressively disclosed",
+);
+const browserReadinessIndex = engineHtml.indexOf('id="browser-readiness"');
+const technicalDetailsStart = engineHtml.indexOf('class="bl-disclosure engine-details"');
+const technicalDetailsEnd = engineHtml.indexOf("</details>", technicalDetailsStart);
+check(
+  browserReadinessIndex > technicalDetailsStart && browserReadinessIndex < technicalDetailsEnd,
+  "Native browser readiness remains available inside the technical disclosure",
+);
 
 const engineApp = await readFile(path.join(root, "engine/app.js"), "utf8");
 includesAll(engineApp, [
   "frame.allow = `tools ${origin}; cross-origin-isolated ${origin}`",
+  "frame.tabIndex = -1",
   "getTools({ fromOrigins: PARTNER_ORIGINS })",
   "PARTNER_ORIGINS.includes(tool.origin)",
   "executeTool(tool, JSON.stringify(input))",
   'sourceKind === "open"',
   'status: "not-requested"',
-  "will not create a substitute partner result",
+  "will not invent one",
   "Source and verification",
   "requiresUserConfirmation: true",
   "persisted: false",
   'state.appliedMode = persist ? "saved" : "once"',
-  "Apply once creates no persisted preference or offer note",
+  "using the choice for this visit creates no persisted preference or offer note",
   "createPartnerFrames();",
   "projectPartnerContext(state.contextSnapshot, origin)",
   "resolvePartnerTools",
   "originOutcomes",
   "comparisonMarkup",
-  "No opted-in offer matches this context",
+  "No partner offer matches these choices",
   "get_journey_receipt",
+  "/api/inventory/rakuten",
+  "fetchRakutenDeals",
+  'sourceKind === "affiliate"',
   "profile: PERSONAS[0]",
   "rerunAppliedJourney",
   "appliedJourneyRevision",
@@ -178,10 +249,30 @@ includesAll(engineApp, [
   "hasBrowserPersistence",
   "hasExplicitMerchantPageDiscount",
   "merchant-page-displayed-percent",
-  'WebMCP · not requested',
-  'WebMCP · sharing paused',
+  "No partner request yet",
+  "Partner sharing paused",
+  "demoTechnicalMatchDetails",
   'status: "partner_acknowledged"',
+  "fetchCatalogDeals",
+  "/api/inventory/catalog",
+  'catalogStatus = "loading"',
+  'offerMarkup(deal, "catalog"',
+  "Public catalog health",
+  "previewPartnerHandoff",
+  "Open storefront preview",
+  "does not claim that WebMCP matched an offer",
+  "renderBrowserReadiness",
+  "Storefront preview is ready",
+  "selfServePreviewMarkup()",
+  "Native WebMCP verified with all",
+  "if (!SUPPORTED) return Promise.resolve([])",
 ], "engine WebMCP, provenance, and consent contract");
+const nativeCapabilitySource = await readFile(path.join(root, "engine/native-webmcp.mjs"), "utf8");
+includesAll(nativeCapabilitySource, ["isolated === true", "nonNativeMembers", 'startsWith("codex")', '"getTools", "executeTool", "registerTool"'], "fail-closed native WebMCP readiness contract");
+const catalogWorker = await readFile(path.join(root, "engine/index.mjs"), "utf8");
+includesAll(catalogWorker, ["handleCatalogInventory", "catalog.mjs"], "engine catalog API route");
+const catalogWrangler = await readFile(path.join(root, "engine/wrangler.toml"), "utf8");
+includesAll(catalogWrangler, ["[assets]", "directory = \"./inventory-assets\"", "binding = \"INVENTORY_ASSETS\"", "run_worker_first = true"], "engine catalog static-asset binding");
 includesAll(engineHtml, [
   'class="product-workspace bl-stack"', 'class="bl-disclosure engine-details"',
   'id="canvas-draft"', 'id="product-category"', 'id="product-max-price"', 'id="product-prompt-input"',
@@ -190,8 +281,16 @@ includesAll(engineHtml, [
   'id="canvas-results-title" tabindex="-1"', 'id="canvas-results-status" role="status"',
   'id="product-forget-saved"', 'id="canvas-discard"', 'id="product-account-save"',
   'What’s shared?', 'This visit only', 'Save in this browser', 'Show matching offers',
-  'Tell me what you’re looking for', 'Enter in the manual form',
-  'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"',
+  'See the offers you want—how you want, when you want.', 'Tell us what you’re looking for',
+  'data-offer-channel="email"', 'data-offer-channel="site"', 'data-offer-channel="text"', 'data-offer-channel="chatgpt"',
+  'These are previews only. Nothing is sent, scheduled, saved, or purchased.',
+  'Give customers the offer experience they prefer.', 'Illustrative service plan.',
+  'Enter in the manual form',
+  'id="canvas-chat-form"', 'id="canvas-manual"', 'id="canvas-back-chat"', 'Out-of-network affiliate',
+  'id="browser-readiness"', 'Shopping for coffee under $15. Show customer stories first.',
+  'data-self-serve-prompt="Shopping for dog gear under $50."',
+  'data-self-serve-prompt="Shopping for watches under $500."',
+  'Dog gear, coffee, and watches have tested member previews.',
 ], "Product preference canvas, interpretation, retention, and immediate results");
 check(!/data-setup-path|preview-words-chat|See your results|Continue to review/.test(engineHtml), "Obsolete setup navigation remains");
 check(!engineHtml.includes('role="tablist"'), "Primary path exposes competing tabs");
@@ -204,11 +303,13 @@ includesAll(engineApp, [
   'setAttribute("aria-busy", String(isApplying))', 'setAttribute("aria-disabled", String(isApplying))',
   'els.canvasResultsTitle.focus({ preventScroll: true })',
   'writeStored(STORAGE.networkSharing, !state.networkSharingPaused)',
+  'document.querySelectorAll("[data-self-serve-prompt]")',
 ], "Canvas control and storage boundaries");
 const applyTransition = engineApp.slice(engineApp.indexOf("async function applyPreferences"), engineApp.indexOf("function invalidateAppliedJourney"));
 check(applyTransition.indexOf('state.productStage = "results"') < applyTransition.indexOf('await rerunAppliedJourney()'), "Results must appear before partner resolution completes");
 check(!applyTransition.includes('switchView("network"'), "Apply adds a separate results navigation");
 check(!engineApp.includes("scrollIntoView"), "Canvas forces scrolling");
+check(!engineApp.includes("url.origin ="), "Engine assigns the read-only URL.origin property during startup");
 includesAll(await readFile(path.join(root, "engine/app.css"), "utf8"), [
   ":where([hidden])", "display: none !important", ".canvas-fact", ".canvas-retention", ".engine-details", "@media (prefers-reduced-motion: reduce)",
 ], "Product hidden state, canvas, disclosure, and reduced motion CSS");
@@ -251,12 +352,13 @@ const sharedStorefront = await readFile(path.join(root, "shared/storefront.js"),
 includesAll(petsupplyTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "petsupply preference-plane adapter");
 includesAll(coffeeTool, ["preferencePlane", "normalizePreferencePlane", "jb:preference-plane"], "coffee preference-plane adapter");
 includesAll(sharedStorefront, ["__JB_PARTNER_CONTEXT__", "preferencePlane", "jb:preference-plane", "relevantRules", "presentationScore"], "shared partner storefront preference-plane contract");
+includesAll(sharedStorefront, ["embeddedForDiscovery", "PAGE_SIZE = 24", "renderRankedCatalog", "NIV-77007Q45"], "bounded self-serve storefront contract");
 check(!sharedStorefront.includes("jb_presentation"), "shared storefront no longer relies on query-string presentation hints");
 includesAll(engineHtml, [
   'id="demo-profile"',
   'value="alex-budget-parent"',
   'value="jamie-gift-shopper"',
-  "Use the selected labeled demo profile for this request",
+  "Use this sample for the current demo",
 ], "engine explicit demo-profile selection contract");
 const profileSelectionBlock = engineApp.slice(
   engineApp.indexOf('els.demoProfile?.addEventListener("change"'),
@@ -266,10 +368,33 @@ includesAll(profileSelectionBlock, [
   "PERSONAS.find",
   "state.profile =",
   "if (!state.applied)",
-  "No profile data will be sent until you enable demo context and apply preferences.",
+  "No profile data will be sent until you enable demo context, review the choice, and show matching offers.",
   "await rerunAppliedJourney()",
 ], "engine profile selection and applied-journey refresh contract");
 check(!profileSelectionBlock.includes("discoverPartnerDeals("), "Draft profile selection directly invokes native partner discovery");
+const demoReviewTransitionBlock = engineApp.slice(
+  engineApp.indexOf('document.getElementById("apply-preferences")'),
+  engineApp.indexOf('document.getElementById("reset-preferences")'),
+);
+includesAll(demoReviewTransitionBlock, [
+  'state.productReviewState = "review"',
+  'state.productStage = "preview"',
+  "state.canvasReviewVisible = true",
+  'switchView("product")',
+  "els.productReviewTitle.focus()",
+], "demo review transition reveals the promised product review");
+includesAll(engineApp, [
+  "Price proof isn’t available for this sample.",
+  "provenanceMarkup(deal, sourceKind, collateral)",
+  "presentationEvidence.source",
+], "primary offer cards keep unavailable collateral simple and its source inside provenance");
+includesAll(engineApp, [
+  'state.currentView === "demo"',
+  'state.currentView === "account"',
+  '? "Back to preferences"',
+  ': "Review selection"',
+  "availableActions: [reviewAction]",
+], "native preference tool returns only the immediate review-path action visible in the current view");
 const nativePreferenceToolBlock = engineApp.slice(
   engineApp.indexOf('name: "set_display_preferences"'),
   engineApp.indexOf('name: "build_offer_journey"'),
@@ -354,17 +479,28 @@ includesAll(spikeServer, [
   "elif PORT == 8182",
 ], "minimal native response-policy contract");
 includesAll(engineApp, [
+  "const NATIVE_DISCOVERY_ATTEMPTS = 6",
+  "let partnerFramesReady = Promise.resolve([])",
+  "function beginPartnerDiscovery(",
+  "request?.id !== nativeDiscoveryRequestSequence",
+  "state.connectedTools = Array.isArray(result.connectedTools)",
+  "matching.length === PARTNER_ORIGINS.length",
+  "partnerFramesReady = createPartnerFrames()",
+  "await partnerFramesReady",
   "function observeNativeToolChanges()",
   'document.modelContext.addEventListener("toolchange"',
+  "function queueNativeToolchangeReconciliation()",
+  "function reconcileNativeToolChanges()",
+  "nativeToolchangeReconciliationPending = true",
   "const revision = state.appliedJourneyRevision",
-  "if (!state.applied || revision !== state.appliedJourneyRevision) return",
+  "if (!state.applied || revision !== state.appliedJourneyRevision) continue",
   "observeNativeToolChanges();",
 ], "engine native toolchange reconciliation contract");
 const toolchangeBlock = engineApp.slice(
-  engineApp.indexOf("function observeNativeToolChanges()"),
+  engineApp.indexOf("function queueNativeToolchangeReconciliation()"),
   engineApp.indexOf("function choosePartnerOffer("),
 );
-check((toolchangeBlock.match(/revision !== state\.appliedJourneyRevision/g) || []).length === 2, "Native toolchange reconciliation does not reject stale pre- and post-discovery results");
+check((toolchangeBlock.match(/revision !== state\.appliedJourneyRevision/g) || []).length === 1, "Native toolchange reconciliation does not reject a stale discovery result");
 const p0Source = await readFile(path.join(root, "engine/p0.js"), "utf8");
 includesAll(p0Source, [
   "offers.discover",
@@ -494,6 +630,24 @@ includesAll(engineConfig, [
   "watch: localOrigin(8086)",
   "ORIGINS = ORIGIN_SETS[RUNTIME_MODE]",
 ], "engine local/production origin contract");
+
+const nativeColdStartBrowser = await readFile(path.join(root, "scripts/native-cold-start.browser.mjs"), "utf8");
+includesAll(nativeColdStartBrowser, [
+  "launchPersistentContext",
+  "runCount >= 5",
+  'headless: false',
+  'args: ["--no-first-run", "--disable-extensions"',
+  '"--enable-features=WebMCP,WebMCPTesting"',
+  "actionBeforeRegistryProbe: true",
+  "acknowledgedOutcomeCount === 1",
+  "Native WebMCP cold-start acceptance failed",
+], "native cold-start browser acceptance contract");
+const coldStartActionIndex = nativeColdStartBrowser.indexOf('await page.locator(`[data-self-serve-prompt=');
+const coldStartProbeIndex = nativeColdStartBrowser.indexOf("const evidence = await page.evaluate");
+check(
+  coldStartActionIndex >= 0 && coldStartProbeIndex > coldStartActionIndex,
+  "Native cold-start acceptance warms the registry before the first user action",
+);
 
 for (const partner of ["petsupply", "coffee", "watch"]) {
   const file = `partners/${partner}/tool.js`;
@@ -689,7 +843,9 @@ const failingD1 = d1Double({ failCommit: true }); const failingEnv = { WATCH_DB:
 check((await api.onRequestPost({ request: apiRequest("/api/register-interest", { action: failingAction, grantId: failingClient.body.grantId, confirmationGrant: failingClient.body.confirmationGrant }, { origin: failingClient.origin, cookie: failingClient.cookie, csrf: failingClient.csrf }), env: failingEnv })).status === 503 && failingD1.state.interests.length === 0 && !failingD1.state.actions.size, "D1 batch failure does not roll back receipt claim and interest insert");
 const expiryD1 = d1Double(); expiryD1.state.interests.push({ product: sku, target_price_minor: 10000, expires_at: new Date(Date.now() - 1000).toISOString() });
 const expirySummary = await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: { WATCH_DB: expiryD1 } });
-check(expirySummary.status === 200 && (await expirySummary.json()).count === 0, "D1 summary includes expired interest records");
+const expirySummaryBody = await expirySummary.json();
+check(expirySummaryBody.product === sku, "D1 summary does not preserve the requested product");
+check(expirySummary.status === 200 && expirySummaryBody.count === 0, "D1 summary includes expired interest records");
 check((await summaryApi.onRequestGet({ request: new Request(`https://watch.invalid/api/interest-summary?product=${sku}`), env: {} })).status === 503, "D1 summary does not fail closed without the binding");
 const migration = await readFile(path.join(root, "partners/watch/migrations/0001_write_actions.sql"), "utf8"); const watchWrangler = await readFile(path.join(root, "partners/watch/wrangler.toml"), "utf8");
 includesAll(migration, ["watch_pending_actions", "watch_action_receipts", "watch_interests", "watch_write_sessions", "watch_rate_limits", "UNIQUE", "target_price_minor"], "Watch D1 migration contract");
@@ -747,6 +903,13 @@ const scaffoldSource = await readFile(path.join(root, "scripts/scaffold-partner.
 check(!/(?:#[0-9a-f]{3,8}|rgba?\()/i.test(scaffoldSource), "Partner scaffold reintroduces raw authored colors");
 check(!/live and verified|verified by the shop/i.test(scaffoldSource), "Partner scaffold reintroduces unsupported verification claims");
 includesAll(scaffoldSource, ["design-system/tokens.css", "design-system/primitives.css", "class=\"bl-skip-link\"", "not independently verified by Jumping Beans"], "partner scaffold standard output");
+includesAll(scaffoldSource, [
+  "const MAX_RESPONSE_DEALS = 24",
+  "const OUTPUT_DEAL_KEYS = new Set",
+  "function outputDeal(value)",
+  ".slice(0, MAX_RESPONSE_DEALS)",
+  "...outputDeal(d)",
+], "partner scaffold native response contract");
 check((scaffoldSource.match(/listPrice: null/g) || []).length === 2 && (scaffoldSource.match(/listPriceSource: null/g) || []).length === 2, "Partner scaffold invents comparison evidence for demo products");
 
 const prohibited = [engineApp, scaffoldSource, await readFile(path.join(root, "shared/storefront.js"), "utf8")];
@@ -763,6 +926,8 @@ for (const route of [
 ]) {
   check(route in staticModule.default, `engine/static.js is missing ${route}`);
 }
+check(Object.keys(staticModule.default).every((route) => !route.includes("/inventory-assets/") && !route.includes(".test.")), "engine/static.js publishes generated inventory or test modules");
+check(!("/identity.mjs" in staticModule.default), "engine/static.js publishes the server-only identity module");
 
 if (failures.length) {
   console.error(`\nProduct check failed (${failures.length} finding${failures.length === 1 ? "" : "s"}):`);

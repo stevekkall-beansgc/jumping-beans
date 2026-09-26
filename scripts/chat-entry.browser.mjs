@@ -23,6 +23,43 @@ async function stableClick(page, locator) {
   assert.deepEqual(await page.evaluate(() => ({ y: scrollY, url: location.href })), before, 'In-place action cannot scroll or navigate');
 }
 try {
+  // Product-section deep links survive reloads and cross-view navigation.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const partnerURL = new URL(baseURL);
+    partnerURL.hash = 'partners';
+    await page.goto(partnerURL.href);
+    await page.locator('#partners').waitFor();
+    assert.equal(await page.evaluate(() => location.hash), '#partners');
+    assert.equal(await page.locator('#product-view').isVisible(), true);
+    assert.ok(await page.locator('#partners').evaluate((node) => node.getBoundingClientRect().top < innerHeight), 'Partner deep link scrolls into view');
+    await page.setViewportSize({ width: 680, height: 900 });
+    assert.equal(await page.locator('#partners').evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1, 'Partner story collapses before portrait-tablet content becomes cramped');
+    await reflow(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await reflow(page);
+    await page.getByRole('link', { name: 'Preview the customer experience' }).click();
+    assert.equal(await page.locator('#demo-view').isVisible(), true);
+    assert.equal(await focusId(page), 'page-title', 'Partner preview moves focus to the demo introduction');
+    assert.ok(await page.locator('#page-title').evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= innerHeight;
+    }), 'Partner preview scrolls the demo introduction into view');
+    await button(page, 'Review this choice').click();
+    assert.equal(await page.locator('#product-view').isVisible(), true);
+    assert.equal(await page.locator('#canvas-review').isVisible(), true);
+    assert.equal(await focusId(page), 'product-preview-title', 'Demo review action moves focus to the revealed review');
+    assert.ok(await page.locator('#product-preview-title').evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= innerHeight;
+    }), 'Demo review heading scrolls into view');
+    await page.getByRole('link', { name: 'For shoppers' }).click();
+    assert.equal(await page.evaluate(() => location.hash), '#find-offers');
+    assert.equal(await page.locator('#product-view').isVisible(), true);
+    assert.ok(await page.locator('#find-offers').evaluate((node) => node.getBoundingClientRect().top < innerHeight), 'Cross-view shopper link scrolls into view');
+    await context.close();
+  }
   for (const [width, height] of [[1280, 900], [390, 844], [320, 568]]) {
     for (const colorScheme of ['light', 'dark']) {
       const context = await browser.newContext({ viewport: { width, height }, colorScheme, reducedMotion: 'reduce' });
@@ -31,7 +68,7 @@ try {
       await page.goto(baseURL);
       await page.locator('#canvas-enter-manual').waitFor();
       const prefix = `${width}-${colorScheme}`;
-      assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'Tell me what you’re looking for');
+      assert.equal(await page.getByRole('heading', { level: 1 }).textContent(), 'See the offers you want—how you want, when you want.');
       assert.equal(await page.locator('#canvas-manual').isVisible(), false);
       assert.equal(await page.locator('#canvas-review').isVisible(), false);
       await reflow(page);
@@ -45,10 +82,8 @@ try {
       assert.equal(await page.locator('#canvas-review').isVisible(), false);
       await page.getByLabel('What matters to you?').fill(raw);
       await page.keyboard.press('Tab');
-      assert.equal(await focusId(page), 'canvas-enter-manual');
-      assert.notEqual(await page.locator('#canvas-enter-manual').evaluate((node) => getComputedStyle(node).outlineStyle), 'none');
-      await page.keyboard.press('Tab');
       assert.equal(await focusId(page), 'canvas-review-selection');
+      assert.notEqual(await page.locator('#canvas-review-selection').evaluate((node) => getComputedStyle(node).outlineStyle), 'none');
       const beforeReview = await page.evaluate(() => scrollY);
       await page.keyboard.press('Enter');
       assert.equal(await page.evaluate(() => scrollY), beforeReview);

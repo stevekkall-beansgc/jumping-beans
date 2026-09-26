@@ -9,22 +9,22 @@ export const INTEREST_PRODUCTS = Object.freeze([
   Object.freeze({
     sku: "NIV-77007Q45",
     name: "Nivada Grenchen Autochron Reverse Panda - Bracelet",
-    currentPrice: 1083,
+    currentPrice: 1088,
   }),
   Object.freeze({
     sku: "NIV-77006Q45",
     name: "Nivada Grenchen Autochron Panda - Bracelet",
-    currentPrice: 1083,
+    currentPrice: 1088,
   }),
   Object.freeze({
     sku: "NIV-77005Q45",
     name: "Nivada Grenchen Autochron Blue - Bracelet",
-    currentPrice: 1083,
+    currentPrice: 1088,
   }),
   Object.freeze({
     sku: "NIV-77004Q45",
     name: "Nivada Grenchen Autochron Orange - Bracelet",
-    currentPrice: 1083,
+    currentPrice: 1088,
   }),
 ]);
 
