@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "source": {
     "path": "vendor/beanlabs-design-system",
-    "ref": "beanlabs@db815c6",
-    "version": "1.0.0"
+    "ref": "beanlabs@5866a32",
+    "version": "1.0.1"
   },
   "artifacts": {
     "tokens.json": {
-      "sha256": "cf709e2d37ac263a4df164e0c3c5c68e411b5840c1552bae3978515cfb5724f6"
+      "sha256": "6a1c7fe6f9b9ac87a9c889e18b2fb33afd2fa94b24a1b153501133bca70b60a7"
     },
     "tokens.css": {
-      "sha256": "38a13b1055cac4290c6e4c22eed086f6f81244a776e72c87f5400c35ce403dc6"
+      "sha256": "89633006c5ceada47fc3598aecfba564df57f22fb9cada67d3d1de9d37a92223"
     },
     "primitives.css": {
-      "sha256": "1b23a102d3b802f5b143b5021487a5063ff90515daa31568945c8a4bda0b1fd6"
+      "sha256": "d5603c90646382a473efcd6e27fc28e55b78531608bbb55e91a2aa9e8c915ba6"
     }
   },
   "generatedBy": "node scripts/sync-static-ui.mjs"

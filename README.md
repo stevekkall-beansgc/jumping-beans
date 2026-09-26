@@ -86,7 +86,7 @@ store behind `/api/register-interest` and `/api/interest-summary`, and a
 
 Repository operating rules and test commands live in [AGENTS.md](AGENTS.md).
 
-## Bean Labs UI standard
+## Legume Labs UI standard
 
 The central source is `../../labs/beanlabs/shared/design-system` from this repo
 (`tokens.json` is canonical; `tokens.css` is the zero-build distribution). The

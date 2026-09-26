@@ -1,4 +1,4 @@
-/* Bean Labs zero-build primitives. Requires tokens.css v1.0.0 or later. */
+/* Legume Labs zero-build primitives. Requires tokens.css v1.0.0 or later. */
 
 /*
  * All public selectors use the bl- prefix and :where() to keep specificity low.
