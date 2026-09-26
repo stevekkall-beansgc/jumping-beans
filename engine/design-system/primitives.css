@@ -1,5 +1,5 @@
-/* GENERATED from vendor/beanlabs-design-system/primitives.css; ref=beanlabs@db815c6; version=1.0.0; primitives.css sha256=1b23a102d3b802f5b143b5021487a5063ff90515daa31568945c8a4bda0b1fd6. Run node scripts/sync-static-ui.mjs; do not edit. */
-/* Bean Labs zero-build primitives. Requires tokens.css v1.0.0 or later. */
+/* GENERATED from vendor/beanlabs-design-system/primitives.css; ref=beanlabs@5866a32; version=1.0.1; primitives.css sha256=d5603c90646382a473efcd6e27fc28e55b78531608bbb55e91a2aa9e8c915ba6. Run node scripts/sync-static-ui.mjs; do not edit. */
+/* Legume Labs zero-build primitives. Requires tokens.css v1.0.0 or later. */
 
 /*
  * All public selectors use the bl- prefix and :where() to keep specificity low.

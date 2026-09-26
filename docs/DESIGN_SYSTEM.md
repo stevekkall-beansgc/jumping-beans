@@ -1,6 +1,6 @@
-# Bean Labs design-system adapter
+# Legume Labs design-system adapter
 
-Jumping Beans follows the Bean Labs design-system release `beanlabs@db815c6`.
+Jumping Beans follows the Legume Labs design-system release `beanlabs@db815c6`.
 This repo carries a reviewed snapshot in `vendor/beanlabs-design-system` so a
 standalone checkout and CI run do not depend on a sibling workspace. The source
 files products must read before a material refresh are `README.md`,
@@ -58,7 +58,7 @@ node engine/bundle-static.mjs --check
 node scripts/check-product.mjs
 ```
 
-The checked-in snapshot is the default source. To refresh it from a Bean Labs
+The checked-in snapshot is the default source. To refresh it from a Legume Labs
 checkout, set `BEANLABS_DESIGN_SYSTEM_DIR` to the central design-system
 directory, update `sourceRef` to the reviewed central commit, copy the central
 `tokens.json`, `tokens.css`, and `primitives.css` into
