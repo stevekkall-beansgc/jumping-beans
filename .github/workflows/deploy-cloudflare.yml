@@ -27,7 +27,7 @@ permissions:
 jobs:
   validate:
     if: inputs.confirm == 'DEPLOY'
-    runs-on: ubuntu-latest
+    runs-on: beans-mac  # proposed local runner; production approval remains required
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
@@ -41,6 +41,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
+
+      - name: Require pre-provisioned jq
+        shell: bash
+        run: command -v jq >/dev/null 2>&1 || { echo 'jq is required on the runner; provision it separately before running this workflow' >&2; exit 1; }
 
       # No checked-out repository code is executed and no production secret is
       # available to this gate.
@@ -75,7 +79,7 @@ jobs:
 
   deploy:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: beans-mac  # proposed local runner; production approval remains required
     timeout-minutes: 60
     environment: production
     env:
@@ -90,6 +94,10 @@ jobs:
         with:
           ref: ${{ inputs.release_sha }}
           persist-credentials: false
+
+      - name: Require pre-provisioned jq
+        shell: bash
+        run: command -v jq >/dev/null 2>&1 || { echo 'jq is required on the runner; provision it separately before running this workflow' >&2; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -226,7 +234,11 @@ jobs:
       - name: Install the Chromium acceptance runtime
         run: |
           npm install --prefix "$RUNNER_TEMP/jb-browser" --no-save --no-package-lock playwright@1.62.1
-          "$RUNNER_TEMP/jb-browser/node_modules/.bin/playwright" install --with-deps chromium
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            "$RUNNER_TEMP/jb-browser/node_modules/.bin/playwright" install chromium
+          else
+            "$RUNNER_TEMP/jb-browser/node_modules/.bin/playwright" install --with-deps chromium
+          fi
 
       - name: Verify all three self-serve storefront journeys
         env:
@@ -264,7 +276,7 @@ jobs:
   rollback:
     needs: [validate, deploy]
     if: ${{ always() && needs.validate.result == 'success' && needs.deploy.result != 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: beans-mac  # proposed local runner; production approval remains required
     timeout-minutes: 15
     environment: production
     env:
@@ -272,6 +284,10 @@ jobs:
       RELEASE_MARKER: Jumping Beans ${{ inputs.release_sha }} · GitHub run ${{ github.run_id }} attempt ${{ github.run_attempt }}
       ENGINE_SCRIPT: jumping-beans-engine
     steps:
+      - name: Require pre-provisioned jq
+        shell: bash
+        run: command -v jq >/dev/null 2>&1 || { echo 'jq is required on the runner; provision it separately before running this workflow' >&2; exit 1; }
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
