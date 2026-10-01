@@ -6,7 +6,8 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Keep untrusted fork PRs off the persistent self-hosted Mac.
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-latest' || 'beans-mac' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
